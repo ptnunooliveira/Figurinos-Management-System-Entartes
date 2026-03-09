@@ -1,0 +1,35 @@
+@startuml
+title Diagrama de Sequência - Cancelar Reserva
+
+actor EncarregadoEducacao
+
+boundary PaginaReserva
+control GestorReserva
+entity Reserva
+
+EncarregadoEducacao -> PaginaReserva : solicitarCancelamento(reservaID)
+activate EncarregadoEducacao
+activate PaginaReserva
+
+PaginaReserva -> GestorReserva : cancelarReserva(reservaID)
+activate GestorReserva
+
+GestorReserva -> Reserva : localizarReserva(reservaID)
+activate Reserva
+Reserva --> GestorReserva : reservaEncontrada
+deactivate Reserva
+
+GestorReserva -> Reserva : cancelarReserva()
+activate Reserva
+Reserva --> GestorReserva : reservaCancelada
+deactivate Reserva
+
+GestorReserva --> PaginaReserva : confirmarCancelamento()
+deactivate GestorReserva
+
+PaginaReserva --> EncarregadoEducacao : cancelamentoConfirmado()
+
+deactivate PaginaReserva
+deactivate EncarregadoEducacao
+
+@enduml

@@ -1,0 +1,42 @@
+@startuml
+title Diagrama de Sequência - Submeter Anúncio
+
+actor Anunciante
+
+boundary PaginaAnuncio
+control GestorAnuncio
+entity AnuncioMarketplace
+
+Anunciante -> PaginaAnuncio : criarAnuncio()
+activate Anunciante
+activate PaginaAnuncio
+
+PaginaAnuncio -> GestorAnuncio : iniciarCriacaoAnuncio()
+activate GestorAnuncio
+
+GestorAnuncio --> PaginaAnuncio : apresentarFormulario()
+deactivate GestorAnuncio
+
+Anunciante -> PaginaAnuncio : submeterDadosAnuncio(dados)
+PaginaAnuncio -> GestorAnuncio : criarAnuncio(dados)
+activate GestorAnuncio
+
+GestorAnuncio -> AnuncioMarketplace : criarAnuncio(dados)
+activate AnuncioMarketplace
+AnuncioMarketplace --> GestorAnuncio : anuncioCriado
+deactivate AnuncioMarketplace
+
+GestorAnuncio -> AnuncioMarketplace : definirEstadoPendente()
+activate AnuncioMarketplace
+AnuncioMarketplace --> GestorAnuncio : estadoAtualizado
+deactivate AnuncioMarketplace
+
+GestorAnuncio --> PaginaAnuncio : confirmarSubmissao()
+deactivate GestorAnuncio
+
+PaginaAnuncio --> Anunciante : anuncioSubmetido()
+
+deactivate PaginaAnuncio
+deactivate Anunciante
+
+@enduml

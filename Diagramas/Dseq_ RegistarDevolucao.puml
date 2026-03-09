@@ -1,0 +1,68 @@
+@startuml
+title Diagrama de Sequência - Registar Devolução e Gerar Ocorrência
+
+actor Administrador
+
+boundary PaginaDevolucao
+control GestorDevolucao
+entity Reserva
+entity Devolucao
+entity Ocorrencia
+
+Administrador -> PaginaDevolucao : iniciarDevolucao(reservaID)
+activate Administrador
+activate PaginaDevolucao
+
+PaginaDevolucao -> GestorDevolucao : obterReserva(reservaID)
+activate GestorDevolucao
+
+GestorDevolucao -> Reserva : localizarReserva(reservaID)
+activate Reserva
+Reserva --> GestorDevolucao : reservaEncontrada
+deactivate Reserva
+
+GestorDevolucao --> PaginaDevolucao : apresentarDadosReserva()
+deactivate GestorDevolucao
+
+Administrador -> PaginaDevolucao : registarEstadoFinal(figurino)
+PaginaDevolucao -> GestorDevolucao : registarDevolucao(dadosDevolucao)
+activate GestorDevolucao
+
+GestorDevolucao -> Devolucao : criarDevolucao(dadosDevolucao)
+activate Devolucao
+Devolucao --> GestorDevolucao : devolucaoCriada
+deactivate Devolucao
+
+GestorDevolucao -> Devolucao : compararEstados()
+activate Devolucao
+Devolucao --> GestorDevolucao : resultadoComparacao
+deactivate Devolucao
+
+alt sem danos nem irregularidades
+    GestorDevolucao -> Reserva : concluirDevolucao()
+    activate Reserva
+    Reserva --> GestorDevolucao : devolucaoConcluida
+    deactivate Reserva
+
+    GestorDevolucao --> PaginaDevolucao : confirmarDevolucao()
+    
+
+    PaginaDevolucao --> Administrador : devolucaoRegistada()
+
+else com danos ou irregularidades
+    GestorDevolucao -> Ocorrencia : criarOcorrencia(descricao)
+    activate Ocorrencia
+    Ocorrencia --> GestorDevolucao : ocorrenciaCriada
+    deactivate Ocorrencia
+
+    GestorDevolucao --> PaginaDevolucao : confirmarDevolucaoComOcorrencia()
+  deactivate GestorDevolucao  
+
+    PaginaDevolucao --> Administrador : devolucaoRegistadaComOcorrencia()
+deactivate GestorDevolucao
+deactivate PaginaDevolucao
+deactivate Administrador
+end
+
+
+@enduml

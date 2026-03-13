@@ -1,0 +1,56 @@
+@startuml
+title Diagrama de Sequência - Registar Levantamento
+
+actor Administrador
+
+boundary PaginaLevantamento
+control GestorReserva
+entity Reserva
+entity Checklist
+
+Administrador -> PaginaLevantamento : iniciarLevantamento(reservaID)
+activate Administrador
+activate PaginaLevantamento
+
+PaginaLevantamento -> GestorReserva : obterReserva(reservaID)
+activate GestorReserva
+GestorReserva --> PaginaLevantamento : reserva : Reserva
+deactivate GestorReserva
+
+PaginaLevantamento -> GestorReserva : gerarChecklistLevantamento(reserva)
+activate GestorReserva
+
+GestorReserva -> Reserva : gerarChecklistLevantamento()
+activate Reserva
+Reserva --> GestorReserva : checklist : Checklist
+deactivate Reserva
+
+GestorReserva --> PaginaLevantamento : checklist : Checklist
+deactivate GestorReserva
+
+Administrador -> PaginaLevantamento : registarEstadoInicial(figurino, estadoCondicao)
+
+PaginaLevantamento -> GestorReserva : adicionarItemChecklist(checklist, figurino, estadoCondicao)
+activate GestorReserva
+
+GestorReserva -> Checklist : adicionarItem(f : Figurino, ec : EstadoCondicao)
+activate Checklist
+Checklist --> GestorReserva : bool
+deactivate Checklist
+
+PaginaLevantamento -> GestorReserva : confirmarLevantamento(checklist)
+
+GestorReserva -> Checklist : finalizarChecklist()
+activate Checklist
+Checklist --> GestorReserva : bool
+deactivate Checklist
+
+GestorReserva --> PaginaLevantamento : bool
+deactivate GestorReserva
+
+PaginaLevantamento --> Administrador : bool
+
+deactivate PaginaLevantamento
+deactivate Administrador
+
+@enduml

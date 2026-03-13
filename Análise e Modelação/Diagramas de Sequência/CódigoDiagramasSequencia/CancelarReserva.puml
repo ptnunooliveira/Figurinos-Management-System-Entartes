@@ -1,0 +1,32 @@
+@startuml
+title Diagrama de Sequência - Cancelar Reserva
+
+actor Aluno
+
+boundary PaginaReserva
+control GestorReserva
+entity Reserva
+
+Aluno -> PaginaReserva : solicitarCancelamento(reservaID)
+activate Aluno
+activate PaginaReserva
+
+PaginaReserva -> GestorReserva : cancelarReserva(reservaID, motivo)
+activate GestorReserva
+
+GestorReserva --> GestorReserva : obterReserva(reservaID)
+
+GestorReserva -> Reserva : cancelarReserva(motivo : string)
+activate Reserva
+Reserva --> GestorReserva : bool
+deactivate Reserva
+
+GestorReserva --> PaginaReserva : bool
+deactivate GestorReserva
+
+PaginaReserva --> Aluno : bool
+
+deactivate PaginaReserva
+deactivate Aluno
+
+@enduml

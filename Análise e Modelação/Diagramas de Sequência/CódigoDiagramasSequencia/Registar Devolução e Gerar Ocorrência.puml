@@ -1,0 +1,70 @@
+@startuml
+title Diagrama de Sequência - Registar Devolução e Gerar Ocorrência
+
+actor Administrador
+
+boundary PaginaDevolucao
+control GestorReserva
+entity Reserva
+entity Devolucao
+entity Ocorrencia
+
+Administrador -> PaginaDevolucao : iniciarDevolucao(reservaID)
+activate Administrador
+activate PaginaDevolucao
+
+PaginaDevolucao -> GestorReserva : obterReserva(reservaID)
+activate GestorReserva
+GestorReserva --> PaginaDevolucao : reserva : Reserva
+deactivate GestorReserva
+
+PaginaDevolucao --> Administrador : reserva : Reserva
+
+Administrador -> PaginaDevolucao : registarEstadoFinal(linhasReserva)
+
+PaginaDevolucao -> GestorReserva : registarDevolucao(reserva, linhasReserva)
+activate GestorReserva
+
+GestorReserva -> Reserva : gerarDevolucao(List<LinhaReserva>)
+activate Reserva
+Reserva -> Devolucao ** : create
+activate Devolucao
+Reserva --> GestorReserva : devolucao : Devolucao
+deactivate Reserva
+
+GestorReserva -> Devolucao : criarChecklistDevolucao()
+Devolucao --> GestorReserva : checklist : Checklist
+
+GestorReserva -> Devolucao : compararEstados()
+Devolucao --> GestorReserva : bool
+deactivate Devolucao
+
+alt sem danos nem irregularidades
+    GestorReserva -> Devolucao : confirmarRececao()
+    activate Devolucao
+    Devolucao --> GestorReserva : bool
+    deactivate Devolucao
+
+    GestorReserva --> PaginaDevolucao : bool
+
+    PaginaDevolucao --> Administrador : bool
+
+else com danos ou irregularidades
+    GestorReserva -> Devolucao : gerarOcorrencia(f : Figurino, d : string)
+    activate Devolucao
+    Devolucao -> Ocorrencia ** : create
+    activate Ocorrencia
+    Ocorrencia --> Devolucao : ocorrencia : Ocorrencia
+    deactivate Ocorrencia
+    Devolucao --> GestorReserva : ocorrencia : Ocorrencia
+    deactivate Devolucao
+
+    GestorReserva --> PaginaDevolucao : ocorrencia : Ocorrencia
+    deactivate GestorReserva
+
+    PaginaDevolucao --> Administrador : ocorrencia : Ocorrencia
+    deactivate PaginaDevolucao
+    deactivate Administrador
+end
+
+@enduml

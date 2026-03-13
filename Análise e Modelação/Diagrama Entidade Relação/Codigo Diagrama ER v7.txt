@@ -1,0 +1,188 @@
+Table utilizador {
+  id int [pk]
+  nome varchar
+  email varchar
+  pw_hashed varchar
+  contacto varchar
+  data_registo date
+  ativo boolean
+}
+Table funcionario {
+  id_utilizador int [pk, ref: > utilizador.id]
+  n_mecanografico int
+  cargo varchar
+}
+Table aluno {
+  id_utilizador int [pk, ref: > utilizador.id]
+  numeroAluno int
+}
+Table categoria {
+  id int [pk]
+  nomeCategoria varchar
+}
+Table figurino {
+  id int [pk]
+  descricao text
+  tamanho varchar
+  localizacao varchar
+  id_categoria int [ref: > categoria.id]
+  id_tipo int [ref: > tipo_figurino.id]
+  id_sexo int [ref: > sexo.id]
+  id_estado_figurino int [ref: > estado_condicao.id]
+}
+Table tipo_figurino {
+  id int [pk]
+  nome varchar
+}
+
+Table sexo {
+  id int [pk]
+  nome varchar
+}
+Table acessorio {
+  id int [pk]
+  nome varchar
+}
+Table figurino_acessorio {
+  id_figurino int [pk, ref: > figurino.id]
+  id_acessorio int [pk, ref: > acessorio.id]
+}
+Table reserva {
+  id int [pk]
+  dataReserva date
+  id_estado int [ref: > estado_reserva.id]
+  id_utilizador int [ref: > utilizador.id]
+  id_funcionario int [ref: > funcionario.id_utilizador]
+}
+Table estado_reserva {
+  id int [pk]
+  nome varchar
+}
+
+Table linha_reserva {
+  id int [pk]
+  id_reserva int [ref: > reserva.id]
+  id_anuncio int [ref: > anuncio_escola.id]
+  dataInicio date
+  dataFim date
+  valorDiario double
+  id_estado_linha_reserva int [ref: > estado_linha_reserva.id]
+}
+Table estado_linha_reserva {
+  id int [pk]
+  nome varchar
+}
+Table ocorrencia {
+  id int [pk]
+  descricao text
+  valor double
+  dataRegisto date
+  id_estado int [ref: > estado_ocorrencia.id]
+  id_linha_reserva int [ref: > linha_reserva.id]
+}
+Table estado_ocorrencia {
+  id int [pk]
+  nome varchar
+}
+Table conta_corrente {
+  id int [pk]
+  valor double
+  exportadoFaturacao boolean
+  dataExportacao date
+  id_utilizador int [ref: > utilizador.id]
+  id_tipo_movimento int [ref: > tipo_movimento_contacorrente.id]
+  id_ocorrencia int [ref: > ocorrencia.id]
+  id_linha_reserva int [ref: > linha_reserva.id]
+}
+Table tipo_movimento_contacorrente {
+  id int [pk]
+  nome varchar
+}
+Table anuncio_marketplace {
+  id int [pk]
+  titulo varchar
+  dataAnuncio date
+  dataAprovacao date
+  motivoRejeicao text
+  descricao text
+  tamanho varchar
+  id_utilizador int [ref: > utilizador.id]
+  id_categoria int [ref: > categoria.id]
+  id_tipo int [ref: > tipo_figurino.id]
+  id_sexo int [ref: > sexo.id]
+  id_estado int [ref: > estado_anuncio.id]
+  
+}
+Table anuncio_escola {
+  id int [pk]
+  id_figurino int [ref: > figurino.id]
+  valorDiarioAluguer double
+  id_estado int [ref: > estado_anuncio.id]
+}
+Table estado_anuncio {
+  id int [pk]
+  nome varchar
+  descricao text
+}
+Table tipo_checklist {
+  id int [pk]
+  nome varchar
+}
+Table checklist {
+  id int [pk]
+  dataAssinatura date
+  id_reserva int [ref: > reserva.id]
+  id_funcionario int [ref: > funcionario.id_utilizador]
+  assinaturaFuncionario varchar
+  assinaturaEncarregado varchar
+  id_tipo_checklist int [ref: > tipo_checklist.id]
+}
+Table checklist_item {
+  id int [pk]
+  id_checklist int [ref: > checklist.id]
+  idFigurino int [ref: > figurino.id]
+  id_estado int [ref: > estado_condicao.id]
+  observacoes text
+}
+Table estado_condicao {
+  id int [pk]
+  nome varchar
+}
+Table orcamento {
+  id int [pk]
+  id_ocorrencia int [ref: > ocorrencia.id]
+  fornecedor varchar
+  descricao text
+  valor double
+  dataOrcamento date
+  aprovado boolean
+}
+Table propostaCobranca {
+  id int [pk]
+  id_ocorrencia int [ref: > ocorrencia.id]
+  valor double
+  dataProposta date
+  id_estadoPropostaCobranca int [ref: > estadoPropostaCobranca.id]
+}
+Table estadoPropostaCobranca {
+  id int [pk]
+  nome varchar
+}
+Table contestacao {
+  id int [pk]
+  id_proposta_cobranca int [ref: > propostaCobranca.id]
+  descricao text
+  valorContraproposta double
+  data date
+  id_utilizador int [ref: > utilizador.id]
+}
+Table devolucao{
+  id int [pk]
+  dataDevolucao date
+  id_linha_reserva int [ref: > linha_reserva.id]
+  id_checkList int [ref: > checklist.id]
+}
+
+Ref: "anuncio_marketplace"."id_tipo" < "anuncio_marketplace"."id_sexo"
+
+Ref: "anuncio_marketplace"."id_sexo" < "anuncio_marketplace"."id_estado"

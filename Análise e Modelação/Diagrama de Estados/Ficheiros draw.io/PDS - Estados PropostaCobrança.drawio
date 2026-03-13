@@ -1,0 +1,108 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36" version="29.6.1">
+  <diagram name="Página-1" id="GfcVV9BMlqVGjE-v7VGj">
+    <mxGraphModel grid="1" page="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="_5khDI3myDvH1cCQGEpD-1" parent="1" style="shape=umlFrame;whiteSpace=wrap;html=1;pointerEvents=0;recursiveResize=0;container=1;collapsible=0;width=160;" value="PropostaCobrança" vertex="1">
+          <mxGeometry height="390" width="800" x="40" y="160" as="geometry" />
+        </mxCell>
+        <mxCell id="_5khDI3myDvH1cCQGEpD-2" edge="1" parent="_5khDI3myDvH1cCQGEpD-1" source="_5khDI3myDvH1cCQGEpD-3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="_5khDI3myDvH1cCQGEpD-5">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="35" y="100" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="_5khDI3myDvH1cCQGEpD-3" parent="_5khDI3myDvH1cCQGEpD-1" style="ellipse;fillColor=strokeColor;html=1;" value="" vertex="1">
+          <mxGeometry height="30" width="30" x="20" y="50" as="geometry" />
+        </mxCell>
+        <mxCell id="_5khDI3myDvH1cCQGEpD-4" edge="1" parent="_5khDI3myDvH1cCQGEpD-1" source="_5khDI3myDvH1cCQGEpD-5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="_5khDI3myDvH1cCQGEpD-8">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="155" y="140" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="_5khDI3myDvH1cCQGEpD-5" parent="_5khDI3myDvH1cCQGEpD-1" style="html=1;align=center;verticalAlign=top;rounded=1;absoluteArcSize=1;arcSize=10;dashed=0;whiteSpace=wrap;" value="Criada" vertex="1">
+          <mxGeometry height="40" width="110" x="100" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="_5khDI3myDvH1cCQGEpD-6" parent="_5khDI3myDvH1cCQGEpD-1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Proposta registada no sistema" vertex="1">
+          <mxGeometry height="30" width="60" x="30" y="116" as="geometry" />
+        </mxCell>
+        <mxCell id="_5khDI3myDvH1cCQGEpD-7" edge="1" parent="_5khDI3myDvH1cCQGEpD-1" source="_5khDI3myDvH1cCQGEpD-8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="_5khDI3myDvH1cCQGEpD-11">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="320" y="180" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="_5khDI3myDvH1cCQGEpD-8" parent="_5khDI3myDvH1cCQGEpD-1" style="html=1;align=center;verticalAlign=top;rounded=1;absoluteArcSize=1;arcSize=10;dashed=0;whiteSpace=wrap;" value="Enviada" vertex="1">
+          <mxGeometry height="40" width="110" x="260" y="120" as="geometry" />
+        </mxCell>
+        <mxCell id="_5khDI3myDvH1cCQGEpD-9" parent="_5khDI3myDvH1cCQGEpD-1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Proposta enviada ao cliente" vertex="1">
+          <mxGeometry height="30" width="120" x="130" y="140" as="geometry" />
+        </mxCell>
+        <mxCell id="5CrSJas0vCjyvlVCmG0Y-2" edge="1" parent="_5khDI3myDvH1cCQGEpD-1" source="_5khDI3myDvH1cCQGEpD-11" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="5CrSJas0vCjyvlVCmG0Y-1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="470" y="100" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5CrSJas0vCjyvlVCmG0Y-6" edge="1" parent="_5khDI3myDvH1cCQGEpD-1" source="_5khDI3myDvH1cCQGEpD-11" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="5CrSJas0vCjyvlVCmG0Y-5">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="550" y="180" />
+              <mxPoint x="550" y="180" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5CrSJas0vCjyvlVCmG0Y-9" edge="1" parent="_5khDI3myDvH1cCQGEpD-1" source="_5khDI3myDvH1cCQGEpD-11" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="5CrSJas0vCjyvlVCmG0Y-8">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="_5khDI3myDvH1cCQGEpD-11" parent="_5khDI3myDvH1cCQGEpD-1" style="html=1;align=center;verticalAlign=top;rounded=1;absoluteArcSize=1;arcSize=10;dashed=0;whiteSpace=wrap;" value="Em análise" vertex="1">
+          <mxGeometry height="40" width="110" x="420" y="160" as="geometry" />
+        </mxCell>
+        <mxCell id="_5khDI3myDvH1cCQGEpD-12" parent="_5khDI3myDvH1cCQGEpD-1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Cliente recebe a proposta e analisa" vertex="1">
+          <mxGeometry height="30" width="110" x="310" y="182" as="geometry" />
+        </mxCell>
+        <mxCell id="_5khDI3myDvH1cCQGEpD-18" parent="_5khDI3myDvH1cCQGEpD-1" style="ellipse;html=1;shape=endState;fillColor=strokeColor;" value="" vertex="1">
+          <mxGeometry height="30" width="30" x="710" y="320" as="geometry" />
+        </mxCell>
+        <mxCell id="5CrSJas0vCjyvlVCmG0Y-4" edge="1" parent="_5khDI3myDvH1cCQGEpD-1" source="5CrSJas0vCjyvlVCmG0Y-1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="_5khDI3myDvH1cCQGEpD-5">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="615" y="40" />
+              <mxPoint x="155" y="40" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5CrSJas0vCjyvlVCmG0Y-1" parent="_5khDI3myDvH1cCQGEpD-1" style="html=1;align=center;verticalAlign=top;rounded=1;absoluteArcSize=1;arcSize=10;dashed=0;whiteSpace=wrap;" value="Contestada" vertex="1">
+          <mxGeometry height="40" width="110" x="560" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="5CrSJas0vCjyvlVCmG0Y-3" parent="_5khDI3myDvH1cCQGEpD-1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Cliente contesta proposta" vertex="1">
+          <mxGeometry height="30" width="120" x="450" y="70" as="geometry" />
+        </mxCell>
+        <mxCell id="5CrSJas0vCjyvlVCmG0Y-7" edge="1" parent="_5khDI3myDvH1cCQGEpD-1" source="5CrSJas0vCjyvlVCmG0Y-5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="_5khDI3myDvH1cCQGEpD-18">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="5CrSJas0vCjyvlVCmG0Y-5" parent="_5khDI3myDvH1cCQGEpD-1" style="html=1;align=center;verticalAlign=top;rounded=1;absoluteArcSize=1;arcSize=10;dashed=0;whiteSpace=wrap;" value="Aceite" vertex="1">
+          <mxGeometry height="40" width="110" x="670" y="160" as="geometry" />
+        </mxCell>
+        <mxCell id="5CrSJas0vCjyvlVCmG0Y-10" edge="1" parent="_5khDI3myDvH1cCQGEpD-1" source="5CrSJas0vCjyvlVCmG0Y-8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="_5khDI3myDvH1cCQGEpD-18">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="5CrSJas0vCjyvlVCmG0Y-8" parent="_5khDI3myDvH1cCQGEpD-1" style="html=1;align=center;verticalAlign=top;rounded=1;absoluteArcSize=1;arcSize=10;dashed=0;whiteSpace=wrap;" value="Rejeitada" vertex="1">
+          <mxGeometry height="40" width="110" x="420" y="315" as="geometry" />
+        </mxCell>
+        <mxCell id="5CrSJas0vCjyvlVCmG0Y-11" parent="_5khDI3myDvH1cCQGEpD-1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Proposta aceite" vertex="1">
+          <mxGeometry height="30" width="100" x="550" y="152" as="geometry" />
+        </mxCell>
+        <mxCell id="5CrSJas0vCjyvlVCmG0Y-13" parent="_5khDI3myDvH1cCQGEpD-1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Proposta rejeitada" vertex="1">
+          <mxGeometry height="30" width="60" x="420" y="270" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

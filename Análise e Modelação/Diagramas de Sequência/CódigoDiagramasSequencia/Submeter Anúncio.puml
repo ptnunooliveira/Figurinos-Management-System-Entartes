@@ -1,0 +1,46 @@
+@startuml
+title Diagrama de Sequência - Validar / Publicar Anúncio
+
+actor Administrador
+
+boundary PaginaValidacaoAnuncio
+control GestorAnuncio
+entity Funcionario
+entity AnuncioMarketplace
+
+Administrador -> PaginaValidacaoAnuncio : consultarAnunciosPendentes()
+activate Administrador
+activate PaginaValidacaoAnuncio
+
+PaginaValidacaoAnuncio -> GestorAnuncio : obterAnunciosPendentes()
+activate GestorAnuncio
+GestorAnuncio --> PaginaValidacaoAnuncio : List<AnuncioMarketplace>
+deactivate GestorAnuncio
+
+PaginaValidacaoAnuncio --> Administrador : List<AnuncioMarketplace>
+
+Administrador -> PaginaValidacaoAnuncio : selecionarAnuncio(anuncio)
+
+PaginaValidacaoAnuncio -> GestorAnuncio : validarAnuncio(anuncio)
+activate GestorAnuncio
+
+GestorAnuncio -> Funcionario : aprovarAnuncio(am : AnuncioMarketplace)
+activate Funcionario
+
+Funcionario -> AnuncioMarketplace : aprovar()
+activate AnuncioMarketplace
+AnuncioMarketplace --> Funcionario : bool
+deactivate AnuncioMarketplace
+
+Funcionario --> GestorAnuncio : bool
+deactivate Funcionario
+
+GestorAnuncio --> PaginaValidacaoAnuncio : bool
+deactivate GestorAnuncio
+
+PaginaValidacaoAnuncio --> Administrador : bool
+
+deactivate PaginaValidacaoAnuncio
+deactivate Administrador
+
+@enduml

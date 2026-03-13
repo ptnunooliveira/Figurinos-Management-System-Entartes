@@ -1,0 +1,55 @@
+@startuml
+title Diagrama de Sequência - Efetuar Reserva
+
+actor Aluno
+boundary PaginaReserva
+control GestorReserva
+entity Figurino
+entity Reserva
+
+Aluno -> PaginaReserva : acederCatalogo()
+activate Aluno
+activate PaginaReserva
+
+PaginaReserva -> GestorReserva : solicitarFigurinosDisponiveis(dataInicio, dataFim)
+activate GestorReserva
+
+GestorReserva -> Figurino : verificarDisponibilidade(i : DateTime, f : DateTime)
+activate Figurino
+Figurino --> GestorReserva : bool
+deactivate Figurino
+
+alt figurino disponível
+    GestorReserva --> PaginaReserva : List<Figurino>
+    deactivate GestorReserva
+
+    Aluno -> PaginaReserva : selecionarFigurino(figurino, dataInicio, dataFim)
+
+    PaginaReserva -> GestorReserva : efetuarReserva(figurino, dataInicio, dataFim)
+    activate GestorReserva
+
+    GestorReserva -> Reserva ** : create
+    activate Reserva
+
+    GestorReserva -> Reserva : adicionarLinha(f : Figurino, inicio : DateTime, fim : DateTime)
+    Reserva --> GestorReserva : bool
+
+    GestorReserva -> Reserva : confirmarReserva()
+    Reserva --> GestorReserva : bool
+    deactivate Reserva
+
+    GestorReserva --> PaginaReserva : reserva : Reserva
+    deactivate GestorReserva
+
+    PaginaReserva --> Aluno : reserva : Reserva
+
+else figurino indisponível
+    GestorReserva --> PaginaReserva : false
+    deactivate GestorReserva
+
+    PaginaReserva --> Aluno : false
+deactivate PaginaReserva
+deactivate Aluno
+end
+
+@enduml

@@ -1,3 +1,5 @@
+Teste, consegues ver Nuno?
+
 # 1. Enquadramento
 
 Este projeto é desenvolvido no âmbito da iniciativa Projeto 50+10 do 2.º ano da Licenciatura em Engenharia de Sistemas Informáticos do IPCA, ano letivo 2025/2026.

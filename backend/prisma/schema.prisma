@@ -1,0 +1,300 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model acessorio {
+  id                 Int                  @id
+  nome               String?              @db.VarChar(255)
+  figurino_acessorio figurino_acessorio[]
+}
+
+model aluno {
+  id_utilizador Int        @id
+  numeroaluno   Int?
+  utilizador    utilizador @relation(fields: [id_utilizador], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_aluno_utilizador")
+}
+
+model anuncio_escola {
+  id                 Int             @id
+  id_figurino        Int?
+  valordiarioaluguer Float?
+  id_estado          Int?
+  estado_anuncio     estado_anuncio? @relation(fields: [id_estado], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_anuncio_escola_estado")
+  figurino           figurino?       @relation(fields: [id_figurino], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_anuncio_escola_figurino")
+  linha_reserva      linha_reserva[]
+}
+
+model anuncio_marketplace {
+  id             Int             @id
+  titulo         String?         @db.VarChar(255)
+  dataanuncio    DateTime?       @db.Date
+  dataaprovacao  DateTime?       @db.Date
+  motivorejeicao String?
+  descricao      String?
+  tamanho        String?         @db.VarChar(50)
+  id_utilizador  Int?
+  id_categoria   Int?
+  id_tipo        Int?
+  id_sexo        Int?
+  id_estado      Int?
+  categoria      categoria?      @relation(fields: [id_categoria], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_anuncio_marketplace_categoria")
+  estado_anuncio estado_anuncio? @relation(fields: [id_estado], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_anuncio_marketplace_estado")
+  sexo           sexo?           @relation(fields: [id_sexo], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_anuncio_marketplace_sexo")
+  tipo_figurino  tipo_figurino?  @relation(fields: [id_tipo], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_anuncio_marketplace_tipo")
+  utilizador     utilizador?     @relation(fields: [id_utilizador], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_anuncio_marketplace_utilizador")
+}
+
+model categoria {
+  id                  Int                   @id
+  nomecategoria       String?               @db.VarChar(255)
+  anuncio_marketplace anuncio_marketplace[]
+  figurino            figurino[]
+}
+
+model checklist {
+  id                    Int              @id
+  dataassinatura        DateTime?        @db.Date
+  id_reserva            Int?
+  id_funcionario        Int?
+  assinaturafuncionario String?          @db.VarChar(255)
+  assinaturaencarregado String?          @db.VarChar(255)
+  id_tipo_checklist     Int?
+  funcionario           funcionario?     @relation(fields: [id_funcionario], references: [id_utilizador], onDelete: NoAction, onUpdate: NoAction, map: "fk_checklist_funcionario")
+  reserva               reserva?         @relation(fields: [id_reserva], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_checklist_reserva")
+  tipo_checklist        tipo_checklist?  @relation(fields: [id_tipo_checklist], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_checklist_tipo")
+  checklist_item        checklist_item[]
+  devolucao             devolucao[]
+}
+
+model checklist_item {
+  id              Int              @id
+  id_checklist    Int?
+  idfigurino      Int?
+  id_estado       Int?
+  observacoes     String?
+  checklist       checklist?       @relation(fields: [id_checklist], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_checklist_item_checklist")
+  estado_condicao estado_condicao? @relation(fields: [id_estado], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_checklist_item_estado")
+  figurino        figurino?        @relation(fields: [idfigurino], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_checklist_item_figurino")
+}
+
+model conta_corrente {
+  id                           Int                           @id
+  valor                        Float?
+  exportadofaturacao           Boolean?
+  dataexportacao               DateTime?                     @db.Date
+  id_utilizador                Int?
+  id_tipo_movimento            Int?
+  id_ocorrencia                Int?
+  id_linha_reserva             Int?
+  linha_reserva                linha_reserva?                @relation(fields: [id_linha_reserva], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_conta_corrente_linha_reserva")
+  ocorrencia                   ocorrencia?                   @relation(fields: [id_ocorrencia], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_conta_corrente_ocorrencia")
+  tipo_movimento_contacorrente tipo_movimento_contacorrente? @relation(fields: [id_tipo_movimento], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_conta_corrente_tipo_movimento")
+  utilizador                   utilizador?                   @relation(fields: [id_utilizador], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_conta_corrente_utilizador")
+}
+
+model contestacao {
+  id                   Int               @id
+  id_proposta_cobranca Int?
+  descricao            String?
+  valorcontraproposta  Float?
+  data                 DateTime?         @db.Date
+  id_utilizador        Int?
+  propostacobranca     propostacobranca? @relation(fields: [id_proposta_cobranca], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_contestacao_proposta")
+  utilizador           utilizador?       @relation(fields: [id_utilizador], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_contestacao_utilizador")
+}
+
+model devolucao {
+  id               Int            @id
+  datadevolucao    DateTime?      @db.Date
+  id_linha_reserva Int?
+  id_checklist     Int?
+  checklist        checklist?     @relation(fields: [id_checklist], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_devolucao_checklist")
+  linha_reserva    linha_reserva? @relation(fields: [id_linha_reserva], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_devolucao_linha_reserva")
+}
+
+model estado_anuncio {
+  id                  Int                   @id
+  nome                String?               @db.VarChar(100)
+  descricao           String?
+  anuncio_escola      anuncio_escola[]
+  anuncio_marketplace anuncio_marketplace[]
+}
+
+model estado_condicao {
+  id             Int              @id
+  nome           String?          @db.VarChar(100)
+  checklist_item checklist_item[]
+  figurino       figurino[]
+}
+
+model estado_linha_reserva {
+  id            Int             @id
+  nome          String?         @db.VarChar(100)
+  linha_reserva linha_reserva[]
+}
+
+model estado_ocorrencia {
+  id         Int          @id
+  nome       String?      @db.VarChar(100)
+  ocorrencia ocorrencia[]
+}
+
+model estado_reserva {
+  id      Int       @id
+  nome    String?   @db.VarChar(100)
+  reserva reserva[]
+}
+
+model estadopropostacobranca {
+  id               Int                @id
+  nome             String?            @db.VarChar(100)
+  propostacobranca propostacobranca[]
+}
+
+model figurino {
+  id                 Int                  @id
+  descricao          String?
+  tamanho            String?              @db.VarChar(50)
+  localizacao        String?              @db.VarChar(255)
+  id_categoria       Int?
+  id_tipo            Int?
+  id_sexo            Int?
+  id_estado_figurino Int?
+  anuncio_escola     anuncio_escola[]
+  checklist_item     checklist_item[]
+  categoria          categoria?           @relation(fields: [id_categoria], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_figurino_categoria")
+  estado_condicao    estado_condicao?     @relation(fields: [id_estado_figurino], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_figurino_estado")
+  sexo               sexo?                @relation(fields: [id_sexo], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_figurino_sexo")
+  tipo_figurino      tipo_figurino?       @relation(fields: [id_tipo], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_figurino_tipo")
+  figurino_acessorio figurino_acessorio[]
+}
+
+model figurino_acessorio {
+  id_figurino  Int
+  id_acessorio Int
+  acessorio    acessorio @relation(fields: [id_acessorio], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_figac_acessorio")
+  figurino     figurino  @relation(fields: [id_figurino], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_figac_figurino")
+
+  @@id([id_figurino, id_acessorio])
+}
+
+model funcionario {
+  id_utilizador   Int         @id
+  n_mecanografico Int?
+  cargo           String?     @db.VarChar(255)
+  checklist       checklist[]
+  utilizador      utilizador  @relation(fields: [id_utilizador], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_funcionario_utilizador")
+  reserva         reserva[]
+}
+
+model linha_reserva {
+  id                      Int                   @id
+  id_reserva              Int?
+  id_anuncio              Int?
+  datainicio              DateTime?             @db.Date
+  datafim                 DateTime?             @db.Date
+  valordiario             Float?
+  id_estado_linha_reserva Int?
+  conta_corrente          conta_corrente[]
+  devolucao               devolucao[]
+  anuncio_escola          anuncio_escola?       @relation(fields: [id_anuncio], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_linha_reserva_anuncio")
+  estado_linha_reserva    estado_linha_reserva? @relation(fields: [id_estado_linha_reserva], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_linha_reserva_estado")
+  reserva                 reserva?              @relation(fields: [id_reserva], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_linha_reserva_reserva")
+  ocorrencia              ocorrencia[]
+}
+
+model ocorrencia {
+  id                Int                @id
+  descricao         String?
+  valor             Float?
+  dataregisto       DateTime?          @db.Date
+  id_estado         Int?
+  id_linha_reserva  Int?
+  conta_corrente    conta_corrente[]
+  estado_ocorrencia estado_ocorrencia? @relation(fields: [id_estado], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_ocorrencia_estado")
+  linha_reserva     linha_reserva?     @relation(fields: [id_linha_reserva], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_ocorrencia_linha_reserva")
+  orcamento         orcamento[]
+  propostacobranca  propostacobranca[]
+}
+
+model orcamento {
+  id            Int         @id
+  id_ocorrencia Int?
+  fornecedor    String?     @db.VarChar(255)
+  descricao     String?
+  valor         Float?
+  dataorcamento DateTime?   @db.Date
+  aprovado      Boolean?
+  ocorrencia    ocorrencia? @relation(fields: [id_ocorrencia], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_orcamento_ocorrencia")
+}
+
+model propostacobranca {
+  id                        Int                     @id
+  id_ocorrencia             Int?
+  valor                     Float?
+  dataproposta              DateTime?               @db.Date
+  id_estadopropostacobranca Int?
+  contestacao               contestacao[]
+  estadopropostacobranca    estadopropostacobranca? @relation(fields: [id_estadopropostacobranca], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_proposta_estado")
+  ocorrencia                ocorrencia?             @relation(fields: [id_ocorrencia], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_proposta_ocorrencia")
+}
+
+model reserva {
+  id             Int             @id
+  datareserva    DateTime?       @db.Date
+  id_estado      Int?
+  id_utilizador  Int?
+  id_funcionario Int?
+  checklist      checklist[]
+  linha_reserva  linha_reserva[]
+  estado_reserva estado_reserva? @relation(fields: [id_estado], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_reserva_estado")
+  funcionario    funcionario?    @relation(fields: [id_funcionario], references: [id_utilizador], onDelete: NoAction, onUpdate: NoAction, map: "fk_reserva_funcionario")
+  utilizador     utilizador?     @relation(fields: [id_utilizador], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_reserva_utilizador")
+}
+
+model sexo {
+  id                  Int                   @id
+  nome                String?               @db.VarChar(100)
+  anuncio_marketplace anuncio_marketplace[]
+  figurino            figurino[]
+}
+
+model tipo_checklist {
+  id        Int         @id
+  nome      String?     @db.VarChar(100)
+  checklist checklist[]
+}
+
+model tipo_figurino {
+  id                  Int                   @id
+  nome                String?               @db.VarChar(255)
+  anuncio_marketplace anuncio_marketplace[]
+  figurino            figurino[]
+}
+
+model tipo_movimento_contacorrente {
+  id             Int              @id
+  nome           String?          @db.VarChar(100)
+  conta_corrente conta_corrente[]
+}
+
+model utilizador {
+  id                  Int                   @id
+  nome                String?               @db.VarChar(255)
+  email               String?               @db.VarChar(255)
+  pw_hashed           String?               @db.VarChar(255)
+  contacto            String?               @db.VarChar(50)
+  data_registo        DateTime?             @db.Date
+  ativo               Boolean?
+  aluno               aluno?
+  anuncio_marketplace anuncio_marketplace[]
+  conta_corrente      conta_corrente[]
+  contestacao         contestacao[]
+  funcionario         funcionario?
+  reserva             reserva[]
+}

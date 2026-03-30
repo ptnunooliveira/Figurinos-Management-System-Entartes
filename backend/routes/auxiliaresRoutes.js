@@ -1,0 +1,22 @@
+/**
+ * ------------------------------------------------------------------------
+ * File: auxiliaresRoutes.js
+ * Author: Tiago Gonçalves
+ * Date: 2026-03-30
+ * Version: 1.0
+ * Description:
+ * Routes das tabelas auxiliares
+ * ------------------------------------------------------------------------
+ */
+
+const express = require("express");
+const route = express.Router();
+const controller = require("../controllers/auxiliaresController");
+
+route.get("/categorias", controller.getCategorias);
+route.get("/tipos-figurino", controller.getTiposFigurino);
+route.get("/sexos", controller.getSexos);
+route.get("/acessorios", controller.getAcessorios);
+route.get("/estados-condicao", controller.getEstadosCondicao);
+
+module.exports = route;

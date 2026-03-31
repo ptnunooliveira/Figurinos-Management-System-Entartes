@@ -9,7 +9,7 @@
  * ------------------------------------------------------------------------
  */
 
-// Importar objeto da api express
+// Importar objetos
 const express = require("express");
 const dotenv = require("dotenv");
 dotenv.config();

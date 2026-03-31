@@ -9,7 +9,7 @@
  * ------------------------------------------------------------------------
  */
 
-// Importar o cliente Prisma conforme definido no teu generator
+// Importar o cliente Prisma conforme definido no generator
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 

@@ -54,4 +54,11 @@ router.put('/:id', updateAnuncioEscola);
  */
 router.delete('/:id', deleteAnuncioEscola);
 
+/**
+ * @route   PATCH /anuncios-escola/:id
+ * @desc    Atualizar parcialmente anúncio da escola
+ * @access  Privado (funcionário)
+ */
+router.patch('/:id', patchAnuncioEscola);
+
 module.exports = router;

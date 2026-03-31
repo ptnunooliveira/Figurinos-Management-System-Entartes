@@ -118,10 +118,28 @@ const deleteAnuncioEscola = async (req, res) => {
   }
 };
 
+// ATUALIZAR PARCIALMENTE ANÚNCIO DA ESCOLA
+const patchAnuncioEscola = async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+
+    const anuncio = await prisma.anuncio_escola.update({
+      where: { id },
+      data: req.body,
+    });
+
+    return res.status(200).json(anuncio);
+  } catch (error) {
+    console.error('Erro ao atualizar anúncio da escola:', error);
+    return res.status(500).json({ message: 'Erro ao atualizar anúncio da escola.' });
+  }
+};
+
 module.exports = {
   createAnuncioEscola,
   getAllAnunciosEscola,
   getAnuncioEscolaById,
   updateAnuncioEscola,
+  patchAnuncioEscola,
   deleteAnuncioEscola
 };

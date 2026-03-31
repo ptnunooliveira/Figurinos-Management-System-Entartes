@@ -1,15 +1,24 @@
+/**
+ * ------------------------------------------------------------
+ * File: anunciosEscola.controller.js
+ * Author: Marina Silva
+ * Date: 2026-03-31
+ * Version: 1.0
+ * Description:
+ * Controller responsável pelos anúncios da escola.
+ * Recebe os pedidos HTTP, chama o service
+ * e devolve as respostas ao cliente.
+ * ------------------------------------------------------------
+ */
+
 const { PrismaClient } = require('../../generated/prisma');
 const prisma = new PrismaClient();
 
-/**
- * POST /anuncios-escola
- * Cria um novo anúncio da escola.
- */
-exports.createAnuncioEscola = async (req, res) => {
+// CRIAR ANÚNCIO DA ESCOLA
+const createAnuncioEscola = async (req, res) => {
   try {
     const { id, id_figurino, valordiarioaluguer, id_estado } = req.body;
 
-    // Validação básica dos campos obrigatórios
     if (id === undefined || id === null) {
       return res.status(400).json({ message: 'O campo "id" é obrigatório.' });
     }
@@ -26,15 +35,12 @@ exports.createAnuncioEscola = async (req, res) => {
     return res.status(201).json(novoAnuncio);
   } catch (error) {
     console.error('Erro ao criar anúncio da escola:', error);
-    return res.status(500).json({ message: 'Erro interno ao criar o anúncio da escola.' });
+    return res.status(500).json({ message: 'Erro ao criar anúncio da escola.' });
   }
 };
 
-/**
- * GET /anuncios-escola
- * Lista todos os anúncios da escola.
- */
-exports.getAllAnunciosEscola = async (req, res) => {
+// LISTAR TODOS OS ANÚNCIOS DA ESCOLA
+const getAllAnunciosEscola = async (req, res) => {
   try {
     const anuncios = await prisma.anuncio_escola.findMany({
       include: {
@@ -46,15 +52,12 @@ exports.getAllAnunciosEscola = async (req, res) => {
     return res.status(200).json(anuncios);
   } catch (error) {
     console.error('Erro ao listar anúncios da escola:', error);
-    return res.status(500).json({ message: 'Erro interno ao listar anúncios da escola.' });
+    return res.status(500).json({ message: 'Erro ao listar anúncios da escola.' });
   }
 };
 
-/**
- * GET /anuncios-escola/:id
- * Obtém um anúncio da escola pelo ID.
- */
-exports.getAnuncioEscolaById = async (req, res) => {
+// OBTER ANÚNCIO DA ESCOLA POR ID
+const getAnuncioEscolaById = async (req, res) => {
   try {
     const id = parseInt(req.params.id);
 
@@ -73,6 +76,52 @@ exports.getAnuncioEscolaById = async (req, res) => {
     return res.status(200).json(anuncio);
   } catch (error) {
     console.error('Erro ao obter anúncio da escola:', error);
-    return res.status(500).json({ message: 'Erro interno ao obter o anúncio da escola.' });
+    return res.status(500).json({ message: 'Erro ao obter anúncio da escola.' });
   }
+};
+
+// ATUALIZAR ANÚNCIO DA ESCOLA
+const updateAnuncioEscola = async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const { id_figurino, valordiarioaluguer, id_estado } = req.body;
+
+    const anuncio = await prisma.anuncio_escola.update({
+      where: { id },
+      data: {
+        id_figurino: id_figurino ?? null,
+        valordiarioaluguer: valordiarioaluguer ?? null,
+        id_estado: id_estado ?? null,
+      },
+    });
+
+    return res.status(200).json(anuncio);
+  } catch (error) {
+    console.error('Erro ao atualizar anúncio da escola:', error);
+    return res.status(500).json({ message: 'Erro ao atualizar anúncio da escola.' });
+  }
+};
+
+// ELIMINAR ANÚNCIO DA ESCOLA
+const deleteAnuncioEscola = async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+
+    await prisma.anuncio_escola.delete({
+      where: { id },
+    });
+
+    return res.status(204).send();
+  } catch (error) {
+    console.error('Erro ao eliminar anúncio da escola:', error);
+    return res.status(500).json({ message: 'Erro ao eliminar anúncio da escola.' });
+  }
+};
+
+module.exports = {
+  createAnuncioEscola,
+  getAllAnunciosEscola,
+  getAnuncioEscolaById,
+  updateAnuncioEscola,
+  deleteAnuncioEscola
 };

@@ -1,21 +1,23 @@
 /**
  * ------------------------------------------------------------
- * File: anunciosEscola.controller.js
+ * File: anunciosEscolaController.js
  * Author: Marina Silva
  * Date: 2026-03-31
  * Version: 1.0
+ * 
  * Description:
- * Controller responsável pelos anúncios da escola.
- * Recebe os pedidos HTTP, chama o service
- * e devolve as respostas ao cliente.
+ * Controller responsável por gerir as operações relacionadas
+ * com anúncios da escola. Recebe os pedidos HTTP das routes e delega
+ * a lógica de negócio ao service.
+ * Arquitetura: Route -> Controller -> Service
  * ------------------------------------------------------------
  */
 
 const { PrismaClient } = require('../../generated/prisma');
 const prisma = new PrismaClient();
 
-// CRIAR ANÚNCIO DA ESCOLA
-const createAnuncioEscola = async (req, res) => {
+// Função do controller responsável por criar um anúncio da escola
+const criarAnuncioEscola = async (req, res) => {
   try {
     const { id, id_figurino, valordiarioaluguer, id_estado } = req.body;
 
@@ -33,14 +35,14 @@ const createAnuncioEscola = async (req, res) => {
     });
 
     return res.status(201).json(novoAnuncio);
-  } catch (error) {
-    console.error('Erro ao criar anúncio da escola:', error);
-    return res.status(500).json({ message: 'Erro ao criar anúncio da escola.' });
+  } catch (erro) {
+    console.error('Erro no controller de anúncios da escola:', erro);
+    return res.status(500).json({ erro: 'Ocorreu um erro ao criar o anúncio da escola.' });
   }
 };
 
-// LISTAR TODOS OS ANÚNCIOS DA ESCOLA
-const getAllAnunciosEscola = async (req, res) => {
+// Função do controller responsável por listar todos os anúncios da escola
+const listarAnunciosEscola = async (req, res) => {
   try {
     const anuncios = await prisma.anuncio_escola.findMany({
       include: {
@@ -50,14 +52,14 @@ const getAllAnunciosEscola = async (req, res) => {
     });
 
     return res.status(200).json(anuncios);
-  } catch (error) {
-    console.error('Erro ao listar anúncios da escola:', error);
-    return res.status(500).json({ message: 'Erro ao listar anúncios da escola.' });
+  } catch (erro) {
+    console.error('Erro no controller de anúncios da escola:', erro);
+    return res.status(500).json({ erro: 'Ocorreu um erro ao listar os anúncios da escola.' });
   }
 };
 
-// OBTER ANÚNCIO DA ESCOLA POR ID
-const getAnuncioEscolaById = async (req, res) => {
+// Função do controller responsável por obter um anúncio da escola por ID
+const obterAnuncioEscolaPorId = async (req, res) => {
   try {
     const id = parseInt(req.params.id);
 
@@ -70,56 +72,18 @@ const getAnuncioEscolaById = async (req, res) => {
     });
 
     if (!anuncio) {
-      return res.status(404).json({ message: 'Anúncio da escola não encontrado.' });
+      return res.status(404).json({ erro: 'Anúncio da escola não encontrado.' });
     }
 
     return res.status(200).json(anuncio);
-  } catch (error) {
-    console.error('Erro ao obter anúncio da escola:', error);
-    return res.status(500).json({ message: 'Erro ao obter anúncio da escola.' });
+  } catch (erro) {
+    console.error('Erro no controller de anúncios da escola:', erro);
+    return res.status(500).json({ erro: 'Ocorreu um erro ao obter o anúncio da escola.' });
   }
 };
 
-// ATUALIZAR ANÚNCIO DA ESCOLA
-const updateAnuncioEscola = async (req, res) => {
-  try {
-    const id = parseInt(req.params.id);
-    const { id_figurino, valordiarioaluguer, id_estado } = req.body;
-
-    const anuncio = await prisma.anuncio_escola.update({
-      where: { id },
-      data: {
-        id_figurino: id_figurino ?? null,
-        valordiarioaluguer: valordiarioaluguer ?? null,
-        id_estado: id_estado ?? null,
-      },
-    });
-
-    return res.status(200).json(anuncio);
-  } catch (error) {
-    console.error('Erro ao atualizar anúncio da escola:', error);
-    return res.status(500).json({ message: 'Erro ao atualizar anúncio da escola.' });
-  }
-};
-
-// ELIMINAR ANÚNCIO DA ESCOLA
-const deleteAnuncioEscola = async (req, res) => {
-  try {
-    const id = parseInt(req.params.id);
-
-    await prisma.anuncio_escola.delete({
-      where: { id },
-    });
-
-    return res.status(204).send();
-  } catch (error) {
-    console.error('Erro ao eliminar anúncio da escola:', error);
-    return res.status(500).json({ message: 'Erro ao eliminar anúncio da escola.' });
-  }
-};
-
-// ATUALIZAR PARCIALMENTE ANÚNCIO DA ESCOLA
-const patchAnuncioEscola = async (req, res) => {
+// Função do controller responsável por atualizar um anúncio da escola
+const atualizarAnuncioEscola = async (req, res) => {
   try {
     const id = parseInt(req.params.id);
 
@@ -129,17 +93,32 @@ const patchAnuncioEscola = async (req, res) => {
     });
 
     return res.status(200).json(anuncio);
-  } catch (error) {
-    console.error('Erro ao atualizar anúncio da escola:', error);
-    return res.status(500).json({ message: 'Erro ao atualizar anúncio da escola.' });
+  } catch (erro) {
+    console.error('Erro no controller de anúncios da escola:', erro);
+    return res.status(500).json({ erro: 'Ocorreu um erro ao atualizar o anúncio da escola.' });
+  }
+};
+
+// Função do controller responsável por eliminar um anúncio da escola
+const eliminarAnuncioEscola = async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+
+    await prisma.anuncio_escola.delete({
+      where: { id },
+    });
+
+    return res.status(204).send();
+  } catch (erro) {
+    console.error('Erro no controller de anúncios da escola:', erro);
+    return res.status(500).json({ erro: 'Ocorreu um erro ao eliminar o anúncio da escola.' });
   }
 };
 
 module.exports = {
-  createAnuncioEscola,
-  getAllAnunciosEscola,
-  getAnuncioEscolaById,
-  updateAnuncioEscola,
-  patchAnuncioEscola,
-  deleteAnuncioEscola
+  criarAnuncioEscola,
+  listarAnunciosEscola,
+  obterAnuncioEscolaPorId,
+  atualizarAnuncioEscola,
+  eliminarAnuncioEscola
 };

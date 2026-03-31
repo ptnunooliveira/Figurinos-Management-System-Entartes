@@ -12,11 +12,11 @@
 const express = require('express');
 const router = express.Router();
 const { 
-  createAnuncioEscola, 
-  getAllAnunciosEscola, 
-  getAnuncioEscolaById,
-  updateAnuncioEscola,
-  deleteAnuncioEscola
+  criarAnuncioEscola, 
+  listarAnunciosEscola, 
+  obterAnuncioEscolaPorId,
+  atualizarAnuncioEscola,
+  eliminarAnuncioEscola
 } = require('../controllers/anunciosEscola.controller');
 
 /**
@@ -24,41 +24,41 @@ const {
  * @desc    Criar um novo anúncio da escola
  * @access  Privado (funcionário)
  */
-router.post('/', createAnuncioEscola);
+router.post('/', criarAnuncioEscola);
 
 /**
  * @route   GET /anuncios-escola
  * @desc    Listar todos os anúncios da escola
  * @access  Público
  */
-router.get('/', getAllAnunciosEscola);
+router.get('/', listarAnunciosEscola);
 
 /**
  * @route   GET /anuncios-escola/:id
  * @desc    Obter anúncio da escola por ID
  * @access  Público
  */
-router.get('/:id', getAnuncioEscolaById);
+router.get('/:id', obterAnuncioEscolaPorId);
 
 /**
  * @route   PUT /anuncios-escola/:id
  * @desc    Atualizar anúncio da escola
  * @access  Privado (funcionário)
  */
-router.put('/:id', updateAnuncioEscola);
-
-/**
- * @route   DELETE /anuncios-escola/:id
- * @desc    Eliminar anúncio da escola
- * @access  Privado (funcionário)
- */
-router.delete('/:id', deleteAnuncioEscola);
+router.put('/:id', atualizarAnuncioEscola);
 
 /**
  * @route   PATCH /anuncios-escola/:id
  * @desc    Atualizar parcialmente anúncio da escola
  * @access  Privado (funcionário)
  */
-router.patch('/:id', patchAnuncioEscola);
+router.patch('/:id', atualizarAnuncioEscola);
+
+/**
+ * @route   DELETE /anuncios-escola/:id
+ * @desc    Eliminar anúncio da escola
+ * @access  Privado (funcionário)
+ */
+router.delete('/:id', eliminarAnuncioEscola);
 
 module.exports = router;

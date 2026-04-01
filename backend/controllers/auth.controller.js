@@ -76,10 +76,10 @@ const login = async (req, res) => {
 const me = async (req, res) => {
     try {
         // O utilizador autenticado vem do middleware
-        const userId = req.user.id;
+        const user = req.user;
 
         // Chamar o service para obter os dados do utilizador
-        const result = await authService.getMe(userId);
+        const result = await authService.getMe(user);
 
         // Devolver resposta de sucesso
         return res.status(200).json(result);

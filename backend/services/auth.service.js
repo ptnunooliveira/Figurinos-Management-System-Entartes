@@ -92,17 +92,25 @@ const login = async ({ email, password }) => {
 // OBTER UTILIZADOR AUTENTICADO
 // ------------------------------------------------------------
 
-const getMe = async (userId) => {
+const getMe = async (user) => {
 
-    // FUTURO:
+    // FUTURO :
     // ir buscar utilizador à base de dados
 
-    // Simular utilizador
+    // Simular utilizador (primeira versão, sem token)
+    // return {
+    //     id: userId,
+    //     nome: "Utilizador Teste",
+    //     email: "teste@email.com"
+    // };
+
+    // Nesta fase, ainda sem base de dados,
+    // devolvemos os dados que vieram no token
     return {
-        id: userId,
-        nome: "Utilizador Teste",
-        email: "teste@email.com"
+        id: user.id,
+        email: user.email
     };
+
 };
 
 

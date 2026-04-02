@@ -100,7 +100,7 @@ const getMe = async (user) => {
     // Simular utilizador (primeira versão, sem token)
     // return {
     //     id: userId,
-    //     nome: "Utilizador Teste",
+    //     nome: "Utilizador Teste",  
     //     email: "teste@email.com"
     // };
 

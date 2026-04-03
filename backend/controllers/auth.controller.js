@@ -35,9 +35,9 @@ const register = async (req, res) => {
         // Devolver resposta de sucesso
         return res.status(201).json(result);
 
-    } catch (error) {
+        } catch (error) {
         return res.status(500).json({
-            message: "Erro ao registar utilizador."
+            message: error.message || "Erro ao registar utilizador."
         });
     }
 };
@@ -65,7 +65,7 @@ const login = async (req, res) => {
 
     } catch (error) {
         return res.status(500).json({
-            message: "Erro ao fazer login."
+            message: error.message || "Erro ao fazer login."
         });
     }
 };
@@ -75,18 +75,18 @@ const login = async (req, res) => {
 
 const me = async (req, res) => {
     try {
-        // O utilizador autenticado vem do middleware
-        const user = req.user;
+                // O utilizador autenticado vem do middleware
+        const userId = req.user.id;
 
         // Chamar o service para obter os dados do utilizador
-        const result = await authService.getMe(user);
+        const result = await authService.getMe(userId);
 
         // Devolver resposta de sucesso
         return res.status(200).json(result);
 
-    } catch (error) {
+        } catch (error) {
         return res.status(500).json({
-            message: "Erro ao obter dados do utilizador."
+            message: error.message || "Erro ao obter dados do utilizador."
         });
     }
 };

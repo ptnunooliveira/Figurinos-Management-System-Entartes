@@ -2,12 +2,12 @@
  * ------------------------------------------------------------
  * File: auth.service.js
  * Author: Nelson Cruz
- * Date: 2026-03-29
+ * Date: 2026-04-03
  * Version: 1.0
  * Description:
  * Service responsável pela lógica de autenticação.
  * Aqui tratamos da criação de utilizadores,
- * validação de login e geração de token.
+ * validação de login e obtenção do utilizador autenticado.
  * ------------------------------------------------------------
  */
 
@@ -15,63 +15,66 @@
 const { hashPassword, comparePassword } = require("../utils/hash");
 const { generateToken } = require("../utils/token");
 
-// (FUTURO) Importar Prisma
-// const { PrismaClient } = require("@prisma/client");
-// const prisma = new PrismaClient();
+// Importar Prisma
+const prisma = require("../prisma/client");
 
 
-// ------------------------------------------------------------
 // REGISTAR UTILIZADOR
-// ------------------------------------------------------------
-
 const register = async ({ nome, email, password }) => {
+    // Verificar se já existe utilizador com este email
+    const existingUser = await prisma.utilizador.findUnique({
+        where: {
+            email: email
+        }
+    });
 
-    // FUTURO:
-    // verificar se já existe utilizador com este email
+    if (existingUser) {
+        throw new Error("Já existe um utilizador com este email.");
+    }
 
     // Criar hash da password
     const hashedPassword = await hashPassword(password);
 
-    // FUTURO:
-    // guardar utilizador na base de dados com Prisma
-
-    // Simular utilizador criado (temporário)
-    const user = {
-        id: 1,
-        nome,
-        email,
-        pw_hashed: hashedPassword
-    };
+    // Criar utilizador na base de dados
+    const newUser = await prisma.utilizador.create({
+        data: {
+            nome: nome,
+            email: email,
+            pw_hashed: hashedPassword
+        }
+    });
 
     return {
         message: "Utilizador registado com sucesso.",
         user: {
-            id: user.id,
-            nome: user.nome,
-            email: user.email
+            id: newUser.id,
+            nome: newUser.nome,
+            email: newUser.email
         }
     };
 };
 
 
-// ------------------------------------------------------------
 // LOGIN
-// ------------------------------------------------------------
-
 const login = async ({ email, password }) => {
+    // Procurar utilizador pelo email
+    const user = await prisma.utilizador.findUnique({
+        where: {
+            email: email
+        }
+    });
 
-    // FUTURO:
-    // procurar utilizador na base de dados pelo email
+    // Verificar se o utilizador existe
+    if (!user) {
+        throw new Error("Credenciais inválidas.");
+    }
 
-    // Simular utilizador (temporário)
-    const user = {
-        id: 1,
-        nome: "Utilizador Teste",
-        email: email,
-        pw_hashed: await hashPassword("123456") // password simulada
-    };
+    // Verificar se o utilizador está ativo
+    if (!user.ativo) {
+        throw new Error("Utilizador inativo.");
+    }
 
-    // Comparar password
+    // Comparar password recebida com a password guardada
     const isMatch = await comparePassword(password, user.pw_hashed);
 
     if (!isMatch) {
@@ -88,29 +91,25 @@ const login = async ({ email, password }) => {
 };
 
 
-// ------------------------------------------------------------
 // OBTER UTILIZADOR AUTENTICADO
-// ------------------------------------------------------------
+const getMe = async (userId) => {
+    // Procurar utilizador na base de dados
+    const user = await prisma.utilizador.findUnique({
+        where: {
+            id: userId
+        }
+    });
 
-const getMe = async (user) => {
+    // Verificar se existe
+    if (!user) {
+        throw new Error("Utilizador não encontrado.");
+    }
 
-    // FUTURO :
-    // ir buscar utilizador à base de dados
-
-    // Simular utilizador (primeira versão, sem token)
-    // return {
-    //     id: userId,
-    //     nome: "Utilizador Teste",  
-    //     email: "teste@email.com"
-    // };
-
-    // Nesta fase, ainda sem base de dados,
-    // devolvemos os dados que vieram no token
     return {
         id: user.id,
+        nome: user.nome,
         email: user.email
     };
-
 };
 
 

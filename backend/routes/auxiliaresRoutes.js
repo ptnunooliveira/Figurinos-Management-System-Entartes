@@ -16,12 +16,12 @@ const controller = require("../controllers/auxiliaresController");
 
 // Definição das routes
 route.get("/categorias", controller.getCategorias);
+route.post("/categorias", controller.createCategoria);
+route.get("/categorias/:nome", controller.getCategoriaByNome);
 route.get("/tipos-figurino", controller.getTiposFigurino);
 route.get("/sexos", controller.getSexos);
 route.get("/acessorios", controller.getAcessorios);
 route.get("/estados-condicao", controller.getEstadosCondicao);
-route.post("/categorias", controller.createCategoria);
-route.get("/categorias/:nome", controller.getCategoriaByNome);
 
 // Exportação do objeto route para ser utilizado no app.js
 module.exports = route;

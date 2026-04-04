@@ -50,7 +50,7 @@ model anuncio_marketplace {
 }
 
 model categoria {
-  id                  Int                   @id
+  id                  Int                   @id @default(autoincrement())
   nomecategoria       String?               @db.VarChar(255)
   anuncio_marketplace anuncio_marketplace[]
   figurino            figurino[]

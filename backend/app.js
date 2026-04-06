@@ -15,7 +15,8 @@ const express = require("express");
 const dotenv = require("dotenv");
 
 // Importar rotas
-const authRoutes = require("./routes/auth.routes");
+const authRoutes = require("./routes/authRoutes");
+const userRoutes = require('./routes/userRoutes');
 
 // Inicializar variáveis de ambiente (.env)
 dotenv.config();
@@ -39,7 +40,8 @@ app.get("/", (req, res) => {
 // Rotas de autenticação
 app.use("/auth", authRoutes);
 
+// Rotas de utilizadores
+app.use('/users', userRoutes);
 
-// EXPORTAR APP
-
+// EXPORTAR APP, sempre no final do ficheiro
 module.exports = app;

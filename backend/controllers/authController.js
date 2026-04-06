@@ -12,7 +12,7 @@
  */
 
 // Importar service de autenticação
-const authService = require("../services/auth.service");
+const authService = require("../services/authService");
 
 
 // REGISTAR UTILIZADOR

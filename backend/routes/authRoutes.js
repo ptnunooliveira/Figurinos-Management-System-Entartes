@@ -18,10 +18,10 @@ const express = require("express");
 const router = express.Router();
 
 // Importar controller de autenticação
-const authController = require("../controllers/auth.controller");
+const authController = require("../controllers/authController");
 
 // Importar middleware de autenticação
-const authMiddleware = require("../middleware/auth.middleware");
+const authMiddleware = require("../middleware/authMiddleware");
 
 
 // ROTAS PÚBLICAS
@@ -38,5 +38,4 @@ router.get("/me", authMiddleware, authController.me);
 
 
 // EXPORTAR ROUTER
-
 module.exports = router;

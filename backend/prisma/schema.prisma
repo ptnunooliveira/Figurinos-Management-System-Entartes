@@ -291,6 +291,7 @@ model utilizador {
   contacto            String?               @db.VarChar(50)
   data_registo        DateTime              @default(now()) @db.Date
   ativo               Boolean               @default(true)
+  perfil              String                @default("utilizador") @db.VarChar(50)
   aluno               aluno?
   anuncio_marketplace anuncio_marketplace[]
   conta_corrente      conta_corrente[]

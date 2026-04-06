@@ -18,7 +18,6 @@ const { generateToken } = require("../utils/token");
 // Importar Prisma
 const prisma = require("../prisma/client");
 
-
 // REGISTAR UTILIZADOR
 const register = async ({ nome, email, password }) => {
     // Verificar se já existe utilizador com este email
@@ -40,7 +39,9 @@ const register = async ({ nome, email, password }) => {
         data: {
             nome: nome,
             email: email,
-            pw_hashed: hashedPassword
+            pw_hashed: hashedPassword,
+            perfil: "utilizador", // perfil padrão
+            ativo: true
         }
     });
 
@@ -49,11 +50,11 @@ const register = async ({ nome, email, password }) => {
         user: {
             id: newUser.id,
             nome: newUser.nome,
-            email: newUser.email
+            email: newUser.email,
+            perfil: newUser.perfil
         }
     };
 };
-
 
 // LOGIN
 const login = async ({ email, password }) => {
@@ -90,7 +91,6 @@ const login = async ({ email, password }) => {
     };
 };
 
-
 // OBTER UTILIZADOR AUTENTICADO
 const getMe = async (userId) => {
     // Procurar utilizador na base de dados
@@ -108,10 +108,10 @@ const getMe = async (userId) => {
     return {
         id: user.id,
         nome: user.nome,
-        email: user.email
+        email: user.email,
+        perfil: user.perfil
     };
 };
-
 
 // EXPORTAR FUNÇÕES
 module.exports = {

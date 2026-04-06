@@ -9,7 +9,7 @@
  * Service responsável pela lógica de negócio das reservas.
  * Este ficheiro comunica diretamente com a base de dados
  * através do Prisma ORM.
- * Arquitetura: Route -> Controller -> Service -> Database
+ * Arquitetura: Route -> Middleware -> Controller -> Service -> Database
  * ------------------------------------------------------------
  */
 
@@ -26,7 +26,23 @@ const obterTodasReservas = async () => {
     return reservas;
 };
 
+const obterReservasDoUtilizador = async (idUtilizador) => {
+
+    const reservas = await prisma.reserva.findMany({
+
+        where: {
+            id_utilizador: idUtilizador
+        },
+        orderBy: {
+            datareserva: 'desc'
+        }
+    });
+
+    return reservas;
+};
+
 // Exporta a função para ser utilizada no controller
 module.exports = {
-    obterTodasReservas
+    obterTodasReservas,
+    obterReservasDoUtilizador
 };

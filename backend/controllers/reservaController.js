@@ -9,7 +9,7 @@
  * Controller responsável por gerir as operações relacionadas
  * com reservas. Recebe os pedidos HTTP das routes e delega
  * a lógica de negócio ao service.
- * Arquitetura: Route -> Controller -> Service
+ * Arquitetura: Route -> Middleware -> Controller -> Service
  * ------------------------------------------------------------
  */
 
@@ -18,7 +18,7 @@
 const reservaService = require('../services/reservaService.js');
 
 // Função do controller responsável por listar todas as reservas
-const listarReservas = async(req, res) => {
+const obterTodasReservas = async(req, res) => {
 
     try{
 
@@ -32,6 +32,26 @@ const listarReservas = async(req, res) => {
     }
 };
 
+const obterReservasDoUtilizador = async(req, res) => {
+
+    try{
+
+        const reservas = await reservaService.obterReservasDoUtilizador(req.user.id);
+
+        if(reservas.length === 0){
+
+            return res.status(200).json({mensagem: "Sem reservas."});
+        }
+
+        return res.status(200).json(reservas);
+    } catch (erro) {
+
+        console.error("Erro ao listar as reservas do utilizador:", erro);
+        return res.status(500).json({erro: "Erro interno do servidor."});
+    }
+};
+
 module.exports = {
-    listarReservas
+    obterTodasReservas,
+    obterReservasDoUtilizador
 };

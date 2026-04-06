@@ -10,7 +10,7 @@
  * A route apenas recebe o pedido e encaminha para o controller.
  * O controller será responsável por chamar o service onde
  * está a lógica de negócio.
- * Arquitetura: Route -> Controller -> Service
+ * Arquitetura: Route -> Middleware -> Controller -> Service
  * ------------------------------------------------------------
  */
 
@@ -22,6 +22,7 @@ const router = express.Router();
 const reservaController = require('../controllers/reservaController.js');
 
 // Define a rota GET para o caminho raiz "/"
-router.get('/', reservaController.listarReservas);  
+router.get('/', reservaController.obterTodasReservas); //Falta adicionar o middleware
+router.get('/mine', reservaController.obterReservasDoUtilizador); // Falta adicionar o middleware
 
 module.exports = router;

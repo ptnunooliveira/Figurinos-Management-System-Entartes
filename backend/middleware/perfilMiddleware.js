@@ -18,14 +18,13 @@ const verificarPerfil = (perfilPermitido) => {
             });
         }
 
-        // Compara o cargo do token com o cargo exigido pela rota
+        // Compara o perfil do token com o perfil exigido pela rota
         if (req.user.perfil !== perfilPermitido) {
             return res.status(403).json({
                 erro: `Acesso negado. Ação exclusiva para o perfil: ${perfilPermitido}.`
             });
         }
 
-        // 3. Sucesso! Passa a execução para o Controller
         next();
     };
 };

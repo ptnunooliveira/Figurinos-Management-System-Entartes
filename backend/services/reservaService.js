@@ -26,6 +26,8 @@ const obterTodasReservas = async () => {
     return reservas;
 };
 
+
+// Função responsável por obter todas as reservas de um determinado utilizador
 const obterReservasDoUtilizador = async (idUtilizador) => {
 
     const reservas = await prisma.reserva.findMany({
@@ -41,8 +43,23 @@ const obterReservasDoUtilizador = async (idUtilizador) => {
     return reservas;
 };
 
+
+// Função responsável por obter uma reserva específica
+const obterReserva = async (idReserva) => {
+
+    const reserva = await prisma.reserva.findUnique({
+        where: {
+            id: idReserva
+        }
+    });
+
+    return reserva;
+};
+
+
 // Exporta a função para ser utilizada no controller
 module.exports = {
     obterTodasReservas,
-    obterReservasDoUtilizador
+    obterReservasDoUtilizador,
+    obterReserva
 };

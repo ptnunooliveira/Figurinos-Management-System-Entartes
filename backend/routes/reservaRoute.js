@@ -16,13 +16,20 @@
 
 // Importa o módulo Express para criar rotas
 const express = require('express');
+
 // Cria um objeto router do Express para definir as rotas
 const router = express.Router();
+
 // Importa o controlador das reservas
 const reservaController = require('../controllers/reservaController.js');
+const authMiddleware = require('../middleware/authMiddleware.js');
+const perfilMiddleware = require('../middleware/perfilMiddleware.js');
 
-// Define a rota GET para o caminho raiz "/"
-router.get('/', reservaController.obterTodasReservas); //Falta adicionar o middleware
-router.get('/mine', reservaController.obterReservasDoUtilizador); // Falta adicionar o middleware
+
+// Definição das rotas GET
+router.get('/', authMiddleware, perfilMiddleware('FUNCIONARIO'), reservaController.obterTodasReservas);
+router.get('/mine', authMiddleware, perfilMiddleware('ALUNO'), reservaController.obterReservasDoUtilizador);
+router.get('/aluno/:id', authMiddleware, perfilMiddleware('FUNCIONARIO'), reservaController.obterReservasDoAluno);
+router.get('/:id', authMiddleware, reservaController.obterReserva);
 
 module.exports = router;

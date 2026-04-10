@@ -10,17 +10,22 @@
  * ------------------------------------------------------------------------
  */
 
+// Importar Prisma Client
 const { PrismaClient } = require("@prisma/client");
+
+// Instanciar cliente Prisma
 const prisma = new PrismaClient();
 
 //#region categoria
 
+// Obter lista de categorias
 const obterCategorias = async () => {
   return prisma.categoria.findMany({
     orderBy: { nomecategoria: "asc" },
   });
 };
 
+// Obter categoria por nome (case-insensitive)
 const obterCategoriaPorNome = async (nome) => {
   return prisma.categoria.findFirst({
     where: {
@@ -32,7 +37,7 @@ const obterCategoriaPorNome = async (nome) => {
   });
 };
 
-// auto incremento dentro da função
+// Criar nova categoria
 const criarCategoria = async (nomecategoria) => {
   // Evita nomes duplicados (case-insensitive)
   const existente = await prisma.categoria.findFirst({
@@ -49,7 +54,8 @@ const criarCategoria = async (nomecategoria) => {
     err.code = "P2002";
     throw err;
   }
-    const max = await prisma.categoria.aggregate({
+  // Calcular proximo ID manualmente
+  const max = await prisma.categoria.aggregate({
     _max: { id: true },
   });
 
@@ -88,7 +94,9 @@ const criarCategoria = async (nomecategoria) => {
 //   });
 // };
 
+// Atualizar nome de categoria por ID
 const atualizarCategoria = async (id, nomecategoria) => {
+  // Verificar duplicado ignorando o proprio registo
   const existente = await prisma.categoria.findFirst({
     where: {
       nomecategoria: {
@@ -115,12 +123,14 @@ const atualizarCategoria = async (id, nomecategoria) => {
 
 //#region tipo-figurino
 
+// Obter lista de tipos de figurino
 const obterTiposFigurino = async () => {
   return prisma.tipo_figurino.findMany({
     orderBy: { nome: "asc" },
   });
 };
 
+// Obter tipo de figurino por nome (case-insensitive)
 const obterTipoFigurinoPorNome = async (nome) => {
   return prisma.tipo_figurino.findFirst({
     where: {
@@ -132,6 +142,7 @@ const obterTipoFigurinoPorNome = async (nome) => {
   });
 };
 
+// Criar novo tipo de figurino
 const criarTipoFigurino = async (nome) => {
   const existente = await obterTipoFigurinoPorNome(nome);
 
@@ -141,6 +152,7 @@ const criarTipoFigurino = async (nome) => {
     throw err;
   }
 
+  // Calcular proximo ID manualmente
   const max = await prisma.tipo_figurino.aggregate({
     _max: { id: true },
   });
@@ -155,7 +167,9 @@ const criarTipoFigurino = async (nome) => {
   });
 };
 
+// Atualizar nome de tipo de figurino por ID
 const atualizarTipoFigurino = async (id, nome) => {
+  // Verificar duplicado ignorando o proprio registo
   const existente = await prisma.tipo_figurino.findFirst({
     where: {
       nome: {
@@ -182,12 +196,14 @@ const atualizarTipoFigurino = async (id, nome) => {
 
 //#region sexos
 
+// Obter lista de sexos
 const obterSexos = async () => {
   return prisma.sexo.findMany({
     orderBy: { nome: "asc" },
   });
 };
 
+// Obter sexo por nome (case-insensitive)
 const obterSexoPorNome = async (nome) => {
   return prisma.sexo.findFirst({
     where: {
@@ -199,6 +215,7 @@ const obterSexoPorNome = async (nome) => {
   });
 };
 
+// Criar novo sexo
 const criarSexo = async (nome) => {
   const existente = await obterSexoPorNome(nome);
 
@@ -208,6 +225,7 @@ const criarSexo = async (nome) => {
     throw err;
   }
 
+  // Calcular proximo ID manualmente
   const max = await prisma.sexo.aggregate({
     _max: { id: true },
   });
@@ -222,7 +240,9 @@ const criarSexo = async (nome) => {
   });
 };
 
+// Atualizar nome de sexo por ID
 const atualizarSexo = async (id, nome) => {
+  // Verificar duplicado ignorando o proprio registo
   const existente = await prisma.sexo.findFirst({
     where: {
       nome: {
@@ -249,12 +269,14 @@ const atualizarSexo = async (id, nome) => {
 
 //#region acessorios
 
+// Obter lista de acessorios
 const obterAcessorios = async () => {
   return prisma.acessorio.findMany({
     orderBy: { nome: "asc" },
   });
 };
 
+// Obter acessorio por nome (case-insensitive)
 const obterAcessorioPorNome = async (nome) => {
   return prisma.acessorio.findFirst({
     where: {
@@ -266,6 +288,7 @@ const obterAcessorioPorNome = async (nome) => {
   });
 };
 
+// Criar novo acessorio
 const criarAcessorio = async (nome) => {
   const existente = await obterAcessorioPorNome(nome);
 
@@ -275,6 +298,7 @@ const criarAcessorio = async (nome) => {
     throw err;
   }
 
+  // Calcular proximo ID manualmente
   const max = await prisma.acessorio.aggregate({
     _max: { id: true },
   });
@@ -289,7 +313,9 @@ const criarAcessorio = async (nome) => {
   });
 };
 
+// Atualizar nome de acessorio por ID
 const atualizarAcessorio = async (id, nome) => {
+  // Verificar duplicado ignorando o proprio registo
   const existente = await prisma.acessorio.findFirst({
     where: {
       nome: {
@@ -316,12 +342,14 @@ const atualizarAcessorio = async (id, nome) => {
 
 //#region estados-condicao
 
+// Obter lista de estados de condicao
 const obterEstadosCondicao = async () => {
   return prisma.estado_condicao.findMany({
     orderBy: { nome: "asc" },
   });
 };
 
+// Obter estado de condicao por nome (case-insensitive)
 const obterEstadoCondicaoPorNome = async (nome) => {
   return prisma.estado_condicao.findFirst({
     where: {
@@ -333,6 +361,7 @@ const obterEstadoCondicaoPorNome = async (nome) => {
   });
 };
 
+// Criar novo estado de condicao
 const criarEstadoCondicao = async (nome) => {
   const existente = await obterEstadoCondicaoPorNome(nome);
 
@@ -342,6 +371,7 @@ const criarEstadoCondicao = async (nome) => {
     throw err;
   }
 
+  // Calcular proximo ID manualmente
   const max = await prisma.estado_condicao.aggregate({
     _max: { id: true },
   });
@@ -356,7 +386,9 @@ const criarEstadoCondicao = async (nome) => {
   });
 };
 
+// Atualizar nome de estado de condicao por ID
 const atualizarEstadoCondicao = async (id, nome) => {
+  // Verificar duplicado ignorando o proprio registo
   const existente = await prisma.estado_condicao.findFirst({
     where: {
       nome: {
@@ -381,6 +413,7 @@ const atualizarEstadoCondicao = async (id, nome) => {
 
 //#endregion estados-condicao
 
+// EXPORTAR FUNCOES
 module.exports = {
   obterCategorias,
   obterCategoriaPorNome,

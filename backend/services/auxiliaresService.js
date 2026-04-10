@@ -13,6 +13,8 @@
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 
+//#region categoria
+
 const obterCategorias = async () => {
   return prisma.categoria.findMany({
     orderBy: { nomecategoria: "asc" },
@@ -30,38 +32,7 @@ const obterCategoriaPorNome = async (nome) => {
   });
 };
 
-//auto incremento dentro da função
-// const criarCategoria = async (nomecategoria) => {
-//   // Evita nomes duplicados (case-insensitive)
-//   const existente = await prisma.categoria.findFirst({
-//     where: {
-//       nomecategoria: {
-//         equals: nomecategoria,
-//         mode: "insensitive",
-//       },
-//     },
-//   });
-
-//   if (existente) {
-//     const err = new Error("Categoria já existe");
-//     err.code = "P2002";
-//     throw err;
-//   }
-//     const max = await prisma.categoria.aggregate({
-//     _max: { id: true },
-//   });
-
-//   const novoId = (max._max.id || 0) + 1;
-
-//   return prisma.categoria.create({
-//     data: {
-//       id: novoId,
-//       nomecategoria,
-//     },
-//   });
-// };
-
-// auto incremento alterado no schema.prisma
+// auto incremento dentro da função
 const criarCategoria = async (nomecategoria) => {
   // Evita nomes duplicados (case-insensitive)
   const existente = await prisma.categoria.findFirst({
@@ -78,13 +49,71 @@ const criarCategoria = async (nomecategoria) => {
     err.code = "P2002";
     throw err;
   }
+    const max = await prisma.categoria.aggregate({
+    _max: { id: true },
+  });
+
+  const novoId = (max._max.id || 0) + 1;
 
   return prisma.categoria.create({
     data: {
+      id: novoId,
       nomecategoria,
     },
   });
 };
+
+// // auto incremento alterado no schema.prisma
+// const criarCategoria = async (nomecategoria) => {
+//   // Evita nomes duplicados (case-insensitive)
+//   const existente = await prisma.categoria.findFirst({
+//     where: {
+//       nomecategoria: {
+//         equals: nomecategoria,
+//         mode: "insensitive",
+//       },
+//     },
+//   });
+
+//   if (existente) {
+//     const err = new Error("Categoria já existe");
+//     err.code = "P2002";
+//     throw err;
+//   }
+
+//   return prisma.categoria.create({
+//     data: {
+//       nomecategoria,
+//     },
+//   });
+// };
+
+const atualizarCategoria = async (id, nomecategoria) => {
+  const existente = await prisma.categoria.findFirst({
+    where: {
+      nomecategoria: {
+        equals: nomecategoria,
+        mode: "insensitive",
+      },
+      NOT: { id },
+    },
+  });
+
+  if (existente) {
+    const err = new Error("Categoria ja existe");
+    err.code = "P2002";
+    throw err;
+  }
+
+  return prisma.categoria.update({
+    where: { id },
+    data: { nomecategoria },
+  });
+};
+
+//#endregion categoria
+
+//#region tipo-figurino
 
 const obterTiposFigurino = async () => {
   return prisma.tipo_figurino.findMany({
@@ -126,6 +155,33 @@ const criarTipoFigurino = async (nome) => {
   });
 };
 
+const atualizarTipoFigurino = async (id, nome) => {
+  const existente = await prisma.tipo_figurino.findFirst({
+    where: {
+      nome: {
+        equals: nome,
+        mode: "insensitive",
+      },
+      NOT: { id },
+    },
+  });
+
+  if (existente) {
+    const err = new Error("Tipo de figurino ja existe");
+    err.code = "P2002";
+    throw err;
+  }
+
+  return prisma.tipo_figurino.update({
+    where: { id },
+    data: { nome },
+  });
+};
+
+//#endregion tipo-figurino
+
+//#region sexos
+
 const obterSexos = async () => {
   return prisma.sexo.findMany({
     orderBy: { nome: "asc" },
@@ -165,6 +221,33 @@ const criarSexo = async (nome) => {
     },
   });
 };
+
+const atualizarSexo = async (id, nome) => {
+  const existente = await prisma.sexo.findFirst({
+    where: {
+      nome: {
+        equals: nome,
+        mode: "insensitive",
+      },
+      NOT: { id },
+    },
+  });
+
+  if (existente) {
+    const err = new Error("Sexo ja existe");
+    err.code = "P2002";
+    throw err;
+  }
+
+  return prisma.sexo.update({
+    where: { id },
+    data: { nome },
+  });
+};
+
+//#endregion sexos
+
+//#region acessorios
 
 const obterAcessorios = async () => {
   return prisma.acessorio.findMany({
@@ -206,6 +289,33 @@ const criarAcessorio = async (nome) => {
   });
 };
 
+const atualizarAcessorio = async (id, nome) => {
+  const existente = await prisma.acessorio.findFirst({
+    where: {
+      nome: {
+        equals: nome,
+        mode: "insensitive",
+      },
+      NOT: { id },
+    },
+  });
+
+  if (existente) {
+    const err = new Error("Acessorio ja existe");
+    err.code = "P2002";
+    throw err;
+  }
+
+  return prisma.acessorio.update({
+    where: { id },
+    data: { nome },
+  });
+};
+
+//#endregion acessorios
+
+//#region estados-condicao
+
 const obterEstadosCondicao = async () => {
   return prisma.estado_condicao.findMany({
     orderBy: { nome: "asc" },
@@ -246,20 +356,50 @@ const criarEstadoCondicao = async (nome) => {
   });
 };
 
+const atualizarEstadoCondicao = async (id, nome) => {
+  const existente = await prisma.estado_condicao.findFirst({
+    where: {
+      nome: {
+        equals: nome,
+        mode: "insensitive",
+      },
+      NOT: { id },
+    },
+  });
+
+  if (existente) {
+    const err = new Error("Estado de condicao ja existe");
+    err.code = "P2002";
+    throw err;
+  }
+
+  return prisma.estado_condicao.update({
+    where: { id },
+    data: { nome },
+  });
+};
+
+//#endregion estados-condicao
+
 module.exports = {
   obterCategorias,
   obterCategoriaPorNome,
   criarCategoria,
+  atualizarCategoria,
   obterTiposFigurino,
   obterTipoFigurinoPorNome,
   criarTipoFigurino,
+  atualizarTipoFigurino,
   obterSexos,
   obterSexoPorNome,
   criarSexo,
+  atualizarSexo,
   obterAcessorios,
   obterAcessorioPorNome,
   criarAcessorio,
+  atualizarAcessorio,
   obterEstadosCondicao,
   obterEstadoCondicaoPorNome,
   criarEstadoCondicao,
+  atualizarEstadoCondicao,
 };

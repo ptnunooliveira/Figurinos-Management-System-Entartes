@@ -92,8 +92,78 @@ const obterTiposFigurino = async () => {
   });
 };
 
+const obterTipoFigurinoPorNome = async (nome) => {
+  return prisma.tipo_figurino.findFirst({
+    where: {
+      nome: {
+        equals: nome,
+        mode: "insensitive",
+      },
+    },
+  });
+};
+
+const criarTipoFigurino = async (nome) => {
+  const existente = await obterTipoFigurinoPorNome(nome);
+
+  if (existente) {
+    const err = new Error("Tipo de figurino já existe");
+    err.code = "P2002";
+    throw err;
+  }
+
+  const max = await prisma.tipo_figurino.aggregate({
+    _max: { id: true },
+  });
+
+  const novoId = (max._max.id || 0) + 1;
+
+  return prisma.tipo_figurino.create({
+    data: {
+      id: novoId,
+      nome,
+    },
+  });
+};
+
 const obterSexos = async () => {
-  return prisma.sexo.findMany();
+  return prisma.sexo.findMany({
+    orderBy: { nome: "asc" },
+  });
+};
+
+const obterSexoPorNome = async (nome) => {
+  return prisma.sexo.findFirst({
+    where: {
+      nome: {
+        equals: nome,
+        mode: "insensitive",
+      },
+    },
+  });
+};
+
+const criarSexo = async (nome) => {
+  const existente = await obterSexoPorNome(nome);
+
+  if (existente) {
+    const err = new Error("Genero já existe");
+    err.code = "P2002";
+    throw err;
+  }
+
+  const max = await prisma.sexo.aggregate({
+    _max: { id: true },
+  });
+
+  const novoId = (max._max.id || 0) + 1;
+
+  return prisma.sexo.create({
+    data: {
+      id: novoId,
+      nome,
+    },
+  });
 };
 
 const obterAcessorios = async () => {
@@ -102,16 +172,94 @@ const obterAcessorios = async () => {
   });
 };
 
+const obterAcessorioPorNome = async (nome) => {
+  return prisma.acessorio.findFirst({
+    where: {
+      nome: {
+        equals: nome,
+        mode: "insensitive",
+      },
+    },
+  });
+};
+
+const criarAcessorio = async (nome) => {
+  const existente = await obterAcessorioPorNome(nome);
+
+  if (existente) {
+    const err = new Error("Acessorio já existe");
+    err.code = "P2002";
+    throw err;
+  }
+
+  const max = await prisma.acessorio.aggregate({
+    _max: { id: true },
+  });
+
+  const novoId = (max._max.id || 0) + 1;
+
+  return prisma.acessorio.create({
+    data: {
+      id: novoId,
+      nome,
+    },
+  });
+};
+
 const obterEstadosCondicao = async () => {
-  return prisma.estado_condicao.findMany();
+  return prisma.estado_condicao.findMany({
+    orderBy: { nome: "asc" },
+  });
+};
+
+const obterEstadoCondicaoPorNome = async (nome) => {
+  return prisma.estado_condicao.findFirst({
+    where: {
+      nome: {
+        equals: nome,
+        mode: "insensitive",
+      },
+    },
+  });
+};
+
+const criarEstadoCondicao = async (nome) => {
+  const existente = await obterEstadoCondicaoPorNome(nome);
+
+  if (existente) {
+    const err = new Error("Estado de condicao já existe");
+    err.code = "P2002";
+    throw err;
+  }
+
+  const max = await prisma.estado_condicao.aggregate({
+    _max: { id: true },
+  });
+
+  const novoId = (max._max.id || 0) + 1;
+
+  return prisma.estado_condicao.create({
+    data: {
+      id: novoId,
+      nome,
+    },
+  });
 };
 
 module.exports = {
   obterCategorias,
-  obterTiposFigurino,
-  obterSexos,
-  obterAcessorios,
-  obterEstadosCondicao,
   obterCategoriaPorNome,
   criarCategoria,
+  obterTiposFigurino,
+  obterTipoFigurinoPorNome,
+  criarTipoFigurino,
+  obterSexos,
+  obterSexoPorNome,
+  criarSexo,
+  obterAcessorios,
+  obterAcessorioPorNome,
+  criarAcessorio,
+  obterEstadosCondicao,
+  obterEstadoCondicaoPorNome,
+  criarEstadoCondicao,
 };

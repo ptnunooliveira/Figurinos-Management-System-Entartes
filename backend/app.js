@@ -1,7 +1,7 @@
 /**
  * ------------------------------------------------------------
  * File: app.js
- * Authors: Nelson Cruz, Tiago Goncalves
+ * Authors: Nelson Cruz, Tiago Goncalves, Nuno Oliveira
  * Date: 2026-04-10
  * Version: 1.0
  * Description:
@@ -49,7 +49,7 @@ app.use('/users', userRoutes);
 app.use('/reservas', reservasRoutes);
 
 // Rotas de tabelas auxiliares
-app.use('/api', auxiliaresRoutes);
+app.use('/pesquisa', auxiliaresRoutes);
 
 // EXPORTAR APP, sempre no final do ficheiro
 module.exports = app;

@@ -4,11 +4,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-<<<<<<< HEAD
   url = env("DATABASE_URL")
-=======
-  url      = env("DATABASE_URL")
->>>>>>> origin/main
 }
 
 model acessorio {

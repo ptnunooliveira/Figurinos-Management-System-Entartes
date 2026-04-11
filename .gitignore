@@ -116,4 +116,6 @@ dist
 .pnp.*
 
 node_modules/
-.env    
+.env 
+backend/tree.txt
+tree.txt   

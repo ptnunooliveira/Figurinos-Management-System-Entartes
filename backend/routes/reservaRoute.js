@@ -31,6 +31,9 @@ router.get('/teste-db', reservaController.obterTodasReservas);
 router.get('/', authMiddleware, perfilMiddleware('FUNCIONARIO'), reservaController.obterTodasReservas);
 router.get('/mine', authMiddleware, perfilMiddleware('ALUNO'), reservaController.obterReservasDoUtilizador);
 router.get('/aluno/:id', authMiddleware, perfilMiddleware('FUNCIONARIO'), reservaController.obterReservasDoAluno);
-router.get('/:id', authMiddleware, reservaController.obterReserva);
+router.get('/:id', authMiddleware, reservaController.obterDetalhesReserva);
+
+// Definiçã0 das rotas POST
+router.post('/', authMiddleware, perfilMiddleware(["FUNCIONARIO", "ALUNO"]), reservaController.criarReserva);
 
 module.exports = router;

@@ -18,19 +18,32 @@
 const reservaService = require('../services/reservaService.js');
 
 
+/////////////////////////////////////////////////////////////////////////////////
+//                                  GET                                        //
+/////////////////////////////////////////////////////////////////////////////////
+
+
 // Função do controller responsável por obter todas as reservas
 const obterTodasReservas = async (req, res) => {
 
     try {
 
+        const { estado, ordem } = req.query;
+
+        const filtros = {
+            estado: estado,
+            ordenarPorData: ordem
+        };
+
         // Chama o método do service // "await" aguarda a resposta da operação
-        const reservas = await reservaService.obterTodasReservas();
-        res.json(reservas);
+        const reservas = await reservaService.obterTodasReservas(filtros);
+
+        return res.status(200).json(reservas);
 
     } catch (erro) {
 
         console.error("Erro no controller de reservas:", erro);
-        res.status(500).json({ erro: "Ocorreu um erro ao processar o pedido das reservas." });
+        return res.status(500).json({ erro: "Ocorreu um erro ao processar o pedido das reservas." });
     }
 };
 
@@ -40,7 +53,15 @@ const obterReservasDoUtilizador = async (req, res) => {
 
     try {
 
-        const reservas = await reservaService.obterReservasDoUtilizador(req.user.id);
+        const { estado, ordem } = req.query;
+
+        const filtros = {
+
+            estado: estado,
+            ordenarPorData: ordem
+        };
+
+        const reservas = await reservaService.obterReservasDoUtilizador(req.user.id, filtros);
 
         if (reservas.length === 0) {
 
@@ -86,17 +107,17 @@ const obterReservasDoAluno = async (req, res) => {
 
 
 // Função do controller responsável por obter uma reserva específica
-const obterReserva = async (req, res) => {
+const obterReservaPorID = async (req, res) => {
 
     try {
 
         const idReserva = parseInt(req.params.id);
         if (isNaN(idReserva)) {
 
-            return res.status(400).json({ erro: "O ID do Aluno tem que ser um número válido." });
+            return res.status(400).json({ erro: "O ID da Reserva tem que ser um número válido." });
         }
 
-        const reserva = await reservaService.obterReserva(idReserva);
+        const reserva = await reservaService.obterReservaPorID(idReserva);
         if (!reserva) {
 
             return res.status(404).json({ erro: "Reserva não encontrada." });
@@ -104,7 +125,7 @@ const obterReserva = async (req, res) => {
 
         if (req.user.perfil !== 'FUNCIONARIO' && req.user.id !== reserva.id_utilizador) {
 
-            return res.status(403).json({ erro: "Acesso negado. Não tens permissões para ver os detalhes da reserva." });
+            return res.status(403).json({ erro: "Acesso negado. Não tens permissões para ver a reserva." });
         }
 
         return res.status(200).json(reserva);
@@ -117,9 +138,110 @@ const obterReserva = async (req, res) => {
 };
 
 
+const obterDetalhesReserva = async (req, res) => {
+
+    try{
+        
+        const idReserva = parseInt(req.params.id);
+        if (isNaN(idReserva)) {
+
+            return res.status(400).json({ erro: "O ID da Reserva tem que ser um número válido." });
+        }
+
+        const reservaDetalhada = await reservaService.obterDetalhesReserva(idReserva);
+        if(!reservaDetalhada){
+
+            return res.status(404).json({ erro: "Reserva não encontrada." });
+        }
+
+        if(req.user.perfil !== 'FUNCIONARIO' && req.user.id !== reserva.id_utilizador){
+
+            return res.status(403).json({ erro: "Acesso negado. Sem permissões para visualizar esta reserva." });
+        }
+
+        return res.status(200).json(reservaDetalhada);
+
+    } catch(erro){
+
+        console.error("Erro ao obter detalhes da reserva:", erro);
+        return res.status(500).json({ erro: "Erro interno do servidor." });
+    }
+};
+
+
+/////////////////////////////////////////////////////////////////////////////////
+//                                  CREATE                                     //
+/////////////////////////////////////////////////////////////////////////////////
+
+
+const criarReserva = async (req, res) => {
+
+    try{
+        const idUtilizador = req.user.id;
+        const dadosBody = req.body;
+
+        if(dadosBody.linhas.length === 0 || !dadosBody){
+
+            return res.status(400).json({ erro: "Pedido inválido. A reserva tem que conter pelo menos uma linha. "});
+        }
+
+        const novaReserva = await reservaService.criarReserva(idUtilizador, dadosBody);
+    
+        return res.status(200).json(novaReserva);
+
+    } catch(erro){
+        
+        console.log("Erro ao criar reserva.", erro);
+        return res.status(500).json({ erro: "Erro interno ao processar a reserva." });
+    }
+};
+
+
+/////////////////////////////////////////////////////////////////////////////////
+//                                  UPDATE                                     //
+/////////////////////////////////////////////////////////////////////////////////
+
+
+const atualizarEstadoReserva = async (req, res) => {
+
+    try{
+
+        const dadosBody = req.body;
+        const idReserva = parseInt(req.params.id);
+        if(isNaN(idReserva)){
+
+            return res.status(400).json({ erro: "O ID da Reserva tem que ser um número válido." });
+        }
+
+        if(!dadosBody || !dadosBody.id_estado){
+
+                return res.status(400).json({ erro: "Pedido inválido. O Pedido tem de conter um novo estado. "});
+            }
+
+
+        if(req.user.perfil !== 'FUNCIONARIO'){
+
+            return res.status(403).json({ erro: "Acesso negado. Sem permissões para editar esta Reserva." });
+        }
+
+        const reserva = await reservaService.atualizarEstadoReserva(idReserva, dadosBody.id_estado);
+
+        return res.status(200).json(reserva);
+
+    } catch(erro){
+
+        console.log("Erro ao editar a reserva", erro);
+        return res.status(500).json({ erro: "Erro interno ao processar a atualização do estado da reserva." });
+    }
+};
+
+
 module.exports = {
     obterTodasReservas,
     obterReservasDoUtilizador,
     obterReservasDoAluno,
-    obterReserva
+    obterReservaPorID,
+    obterDetalhesReserva,
+    criarReserva,
+    atualizarEstadoReserva
 };

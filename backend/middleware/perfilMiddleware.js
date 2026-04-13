@@ -9,6 +9,8 @@
  */
 
 const verificarPerfil = (perfilPermitido) => {
+
+    const perfisPermitidos = Array.isArray(perfilPermitido) ? perfilPermitido : [perfilPermitido];
     
     return (req, res, next) => {
         
@@ -19,10 +21,9 @@ const verificarPerfil = (perfilPermitido) => {
         }
 
         // Compara o perfil do token com o perfil exigido pela rota
-        if (req.user.perfil !== perfilPermitido) {
-            return res.status(403).json({
-                erro: `Acesso negado. Ação exclusiva para o perfil: ${perfilPermitido}.`
-            });
+        if (!perfisPermitidos.includes(req.user.perfil)) {
+
+            return res.status(403).json({ erro: `Acesso negado. Ação exclusiva para o perfil: ${perfilPermitido}.` });
         }
 
         next();

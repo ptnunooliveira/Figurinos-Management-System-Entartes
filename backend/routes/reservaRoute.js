@@ -27,6 +27,7 @@ const perfilMiddleware = require('../middleware/perfilMiddleware.js');
 
 
 // Definição das rotas GET
+router.get('/teste-db', reservaController.obterTodasReservas);
 router.get('/', authMiddleware, perfilMiddleware('FUNCIONARIO'), reservaController.obterTodasReservas);
 router.get('/mine', authMiddleware, perfilMiddleware('ALUNO'), reservaController.obterReservasDoUtilizador);
 router.get('/aluno/:id', authMiddleware, perfilMiddleware('FUNCIONARIO'), reservaController.obterReservasDoAluno);

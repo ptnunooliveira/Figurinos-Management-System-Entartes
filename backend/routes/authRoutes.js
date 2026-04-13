@@ -22,11 +22,16 @@ const authController = require("../controllers/authController");
 
 // Importar middleware de autenticação
 const authMiddleware = require("../middleware/authMiddleware");
-
+const perfilMiddleware = require("../middleware/perfilMiddleware");
 
 // ROTAS PÚBLICAS
 // Registar novo utilizador
-router.post("/register", authController.register);
+router.post(
+    "/register",
+    authMiddleware,
+    perfilMiddleware("ADMIN"),
+    authController.register
+);
 
 // Fazer login
 router.post("/login", authController.login);

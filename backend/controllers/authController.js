@@ -20,17 +20,17 @@ const authService = require("../services/authService");
 const register = async (req, res) => {
     try {
         // Obter dados enviados no body
-        const { nome, email, password } = req.body;
+        const { nome, email, password, perfil } = req.body;
 
         // Validação básica dos campos obrigatórios
-        if (!nome || !email || !password) {
+        if (!nome || !email || !password || !perfil) {
             return res.status(400).json({
                 message: "Nome, email e password são obrigatórios."
             });
         }
 
         // Chamar o service para registar utilizador
-        const result = await authService.register({ nome, email, password });
+        const result = await authService.register({ nome, email, password, perfil });
 
         // Devolver resposta de sucesso
         return res.status(201).json(result);

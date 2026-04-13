@@ -59,7 +59,7 @@ exports.createCategoria = async (req, res) => {
     const nomecategoria = normalizarNome(req.body.nomecategoria, req.body.nome);
 
     if (!nomecategoria) {
-      return res.status(400).json({ error: "Campo 'nomecategoria' e obrigatorio." });
+      return res.status(400).json({ error: "Campo nome é obrigatorio." });
     }
 
     const nova = await service.criarCategoria(nomecategoria);

@@ -1,10 +1,10 @@
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+  url = env("DATABASE_URL")
 }
 
 model acessorio {
@@ -283,14 +283,21 @@ model tipo_movimento_contacorrente {
   conta_corrente conta_corrente[]
 }
 
+enum TipoPerfil {
+  ALUNO
+  FUNCIONARIO
+  ADMIN
+}
+
 model utilizador {
-  id                  Int                   @id
-  nome                String?               @db.VarChar(255)
-  email               String?               @db.VarChar(255)
-  pw_hashed           String?               @db.VarChar(255)
+  id                  Int                   @id @default(autoincrement())
+  nome                String                @db.VarChar(255)
+  email               String                @unique @db.VarChar(255)
+  pw_hashed           String                @db.VarChar(255)
   contacto            String?               @db.VarChar(50)
-  data_registo        DateTime?             @db.Date
-  ativo               Boolean?
+  data_registo        DateTime              @default(now()) @db.Date
+  ativo               Boolean               @default(true)
+  perfil              TipoPerfil            @default(ALUNO)
   aluno               aluno?
   anuncio_marketplace anuncio_marketplace[]
   conta_corrente      conta_corrente[]

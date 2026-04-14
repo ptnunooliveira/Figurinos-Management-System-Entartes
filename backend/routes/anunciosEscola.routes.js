@@ -11,20 +11,22 @@
 
 const express = require('express');
 const router = express.Router();
-const { 
-  criarAnuncioEscola, 
-  listarAnunciosEscola, 
+const {
+  criarAnuncioEscola,
+  listarAnunciosEscola,
   obterAnuncioEscolaPorId,
   atualizarAnuncioEscola,
   eliminarAnuncioEscola
 } = require('../controllers/anunciosEscola.controller');
+const authMiddleware = require('../middleware/authMiddleware');
+const verificarPerfil = require('../middleware/perfilMiddleware');
 
 /**
  * @route   POST /anuncios-escola
  * @desc    Criar um novo anúncio da escola
  * @access  Privado (funcionário)
  */
-router.post('/', criarAnuncioEscola);
+router.post('/', authMiddleware, verificarPerfil(['FUNCIONARIO', 'ADMIN']), criarAnuncioEscola);
 
 /**
  * @route   GET /anuncios-escola
@@ -45,20 +47,20 @@ router.get('/:id', obterAnuncioEscolaPorId);
  * @desc    Atualizar anúncio da escola
  * @access  Privado (funcionário)
  */
-router.put('/:id', atualizarAnuncioEscola);
+router.put('/:id', authMiddleware, verificarPerfil(['FUNCIONARIO', 'ADMIN']), atualizarAnuncioEscola);
 
 /**
  * @route   PATCH /anuncios-escola/:id
  * @desc    Atualizar parcialmente anúncio da escola
  * @access  Privado (funcionário)
  */
-router.patch('/:id', atualizarAnuncioEscola);
+router.patch('/:id', authMiddleware, verificarPerfil(['FUNCIONARIO', 'ADMIN']), atualizarAnuncioEscola);
 
 /**
  * @route   DELETE /anuncios-escola/:id
  * @desc    Eliminar anúncio da escola
  * @access  Privado (funcionário)
  */
-router.delete('/:id', eliminarAnuncioEscola);
+router.delete('/:id', authMiddleware, verificarPerfil(['FUNCIONARIO', 'ADMIN']), eliminarAnuncioEscola);
 
 module.exports = router;

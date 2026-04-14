@@ -69,31 +69,6 @@ const criarCategoria = async (nomecategoria) => {
   });
 };
 
-// // auto incremento alterado no schema.prisma
-// const criarCategoria = async (nomecategoria) => {
-//   // Evita nomes duplicados (case-insensitive)
-//   const existente = await prisma.categoria.findFirst({
-//     where: {
-//       nomecategoria: {
-//         equals: nomecategoria,
-//         mode: "insensitive",
-//       },
-//     },
-//   });
-
-//   if (existente) {
-//     const err = new Error("Categoria já existe");
-//     err.code = "P2002";
-//     throw err;
-//   }
-
-//   return prisma.categoria.create({
-//     data: {
-//       nomecategoria,
-//     },
-//   });
-// };
-
 // Atualizar nome de categoria por ID
 const atualizarCategoria = async (id, nomecategoria) => {
   // Verificar duplicado ignorando o proprio registo

@@ -22,7 +22,7 @@ const verificarPerfil = (perfilPermitido) => {
         // Compara o perfil do token com os perfis exigidos pela rota
         if (!perfisPermitidos.includes(req.user.perfil)) {
             return res.status(403).json({
-                erro: `Acesso negado. Ação exclusiva para os perfis: ${perfisPermitidos.join(", ")}.`
+                erro: "Acesso negado. Nível de permissão insuficiente."
             });
         }
 

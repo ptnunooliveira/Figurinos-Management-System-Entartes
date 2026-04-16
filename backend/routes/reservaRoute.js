@@ -24,6 +24,7 @@ const router = express.Router();
 const reservaController = require('../controllers/reservaController.js');
 const authMiddleware = require('../middleware/authMiddleware.js');
 const perfilMiddleware = require('../middleware/perfilMiddleware.js');
+const verificarPerfil = require('../middleware/perfilMiddleware.js');
 
 
 // Definição das rotas GET
@@ -33,7 +34,12 @@ router.get('/mine', authMiddleware, perfilMiddleware('ALUNO'), reservaController
 router.get('/aluno/:id', authMiddleware, perfilMiddleware('FUNCIONARIO'), reservaController.obterReservasDoAluno);
 router.get('/:id', authMiddleware, reservaController.obterDetalhesReserva);
 
-// Definiçã0 das rotas POST
+// Definição das rotas POST
 router.post('/', authMiddleware, perfilMiddleware(["FUNCIONARIO", "ALUNO"]), reservaController.criarReserva);
+
+// Definição das rotas PATCH
+router.patch('/:id/estado', authMiddleware, verificarPerfil('FUNCIONARIO'), reservaController.atualizarEstadoReserva);
+router.patch('/mine/:id/cancelar', authMiddleware, perfilMiddleware('ALUNO'), reservaController.cancelarReserva);
+
 
 module.exports = router;

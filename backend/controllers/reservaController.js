@@ -236,6 +236,38 @@ const atualizarEstadoReserva = async (req, res) => {
 };
 
 
+const cancelarReserva = async (req, res) => {
+
+    try {
+
+        const idAluno = req.user.id;
+        const idReserva = parseInt(req.params.id);
+
+        if(isNaN(idReserva)) {
+
+            return res.status(400).json({ erro: "O ID da reserva inválido." });
+        }
+
+        const reservaCancelada = await reservaService.cancelarReserva(idReserva, idAluno);
+
+        return res.status(200).json({ mensagem: "Reserva cancelada com sucesso.", reserva: reservaCancelada});
+
+    } catch(erro){
+
+        console.log("Erro ao editar a reserva", erro);
+
+        if (erro.status === 400 || erro.status === 403) {
+            return res.status(erro.status).json({ erro: erro.message });
+        }
+        if (erro.code === 'P2025') {
+            return res.status(404).json({ erro: "Reserva não encontrada." });
+        }
+
+        return res.status(500).json({ erro: "Erro interno ao processar a atualização do estado da reserva." });
+    }
+};
+
+
 module.exports = {
     obterTodasReservas,
     obterReservasDoUtilizador,
@@ -243,5 +275,6 @@ module.exports = {
     obterReservaPorID,
     obterDetalhesReserva,
     criarReserva,
-    atualizarEstadoReserva
+    atualizarEstadoReserva,
+    cancelarReserva
 };

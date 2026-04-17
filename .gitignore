@@ -115,6 +115,10 @@ dist
 .yarn/install-state.gz
 .pnp.*
 
+<<<<<<< HEAD
+/generated/prisma
+=======
 node_modules/
 .env    
 tree.txt
+>>>>>>> 4ea0fdf9fa1abd92840ae19308f96367794a2dde

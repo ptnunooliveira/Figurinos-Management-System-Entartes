@@ -1,5 +1,9 @@
 {
   "dependencies": {
+<<<<<<< HEAD
+    "@prisma/client": "^7.5.0",
+    "express": "^5.2.1"
+=======
     "@prisma/client": "^6.19.3",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.6",
@@ -10,5 +14,6 @@
   },
   "devDependencies": {
     "@types/express": "^5.0.6"
+>>>>>>> 4ea0fdf9fa1abd92840ae19308f96367794a2dde
   }
 }

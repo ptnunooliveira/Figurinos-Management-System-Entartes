@@ -9,8 +9,9 @@
  */
 
 const verificarPerfil = (perfilPermitido) => {
-    const perfisPermitidos = Array.isArray(perfilPermitido) ? perfilPermitido : [perfilPermitido];
 
+    const perfisPermitidos = Array.isArray(perfilPermitido) ? perfilPermitido : [perfilPermitido];
+    
     return (req, res, next) => {
         
         if (!req.user || !req.user.perfil) {
@@ -19,11 +20,10 @@ const verificarPerfil = (perfilPermitido) => {
             });
         }
 
-        // Compara o perfil do token com os perfis exigidos pela rota
+        // Compara o perfil do token com o perfil exigido pela rota
         if (!perfisPermitidos.includes(req.user.perfil)) {
-            return res.status(403).json({
-                erro: "Acesso negado. Nível de permissão insuficiente."
-            });
+
+            return res.status(403).json({ erro: `Acesso negado. Ação exclusiva para o perfil: ${perfilPermitido}.` });
         }
 
         next();

@@ -445,3 +445,84 @@ exports.getEstadoCondicaoByNome = async (req, res) => {
 };
 
 //#endregion
+
+//#region pesquisa/estados-reserva
+
+// GET /pesquisa/estados-reserva
+exports.getEstadosReserva = async (req, res) => {
+  try {
+    const data = await service.obterEstadosReserva();
+    return res.status(200).json(data);
+  } catch (error) {
+    return res.status(500).json({ error: "Erro ao procurar estados de reserva." });
+  }
+};
+
+// POST /pesquisa/estados-reserva
+exports.createEstadosReserva = async (req, res) => {
+  try {
+    const nome = normalizarNome(req.body.nome, req.body.estado_reserva);
+
+    if (!nome) {
+      return res.status(400).json({ error: "Campo 'nome' e obrigatorio." });
+    }
+
+    const novo = await service.criarEstadoReserva(nome);
+    return res.status(201).json(novo);
+  } catch (error) {
+    return responderErroEscrita(res, error, {
+      duplicado: "Estado de reserva ja existe.",
+      naoEncontrado: "Estado de reserva nao encontrado.",
+      generico: "Erro ao criar estado de reserva.",
+    });
+  }
+};
+
+// PATCH /pesquisa/estados-reserva/:id
+exports.updateEstadosReserva = async (req, res) => {
+  try {
+    const id = parseId(req.params.id);
+
+    if (!id) {
+      return res.status(400).json({ error: "Parametro 'id' invalido." });
+    }
+
+    const nome = normalizarNome(req.body.nome, req.body.estado_reserva);
+
+    if (!nome) {
+      return res.status(400).json({ error: "Campo 'nome' e obrigatorio." });
+    }
+
+    const atualizado = await service.atualizarEstadoReserva(id, nome);
+    return res.status(200).json(atualizado);
+  } catch (error) {
+    return responderErroEscrita(res, error, {
+      duplicado: "Estado de reserva ja existe.",
+      naoEncontrado: "Estado de reserva nao encontrado.",
+      generico: "Erro ao atualizar estado de reserva.",
+    });
+  }
+};
+
+// GET /pesquisa/estados-reserva/:nome
+exports.getEstadoReservaByNome = async (req, res) => {
+  try {
+    const nome = normalizarNome(req.params.nome);
+
+    if (!nome) {
+      return res.status(400).json({ error: "Estado de reserva nao selecionado." });
+    }
+
+    const estado = await service.obterEstadoReservaPorNome(nome);
+
+    if (!estado) {
+      return res.status(404).json({ error: "Estado de reserva nao encontrado." });
+    }
+
+    return res.status(200).json(estado);
+  } catch (error) {
+    return res.status(500).json({ error: "Erro ao procurar estado de reserva." });
+  }
+};
+
+//#endregion

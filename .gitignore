@@ -1,4 +1,4 @@
-# Logs
+    # Logs
 logs
 *.log
 npm-debug.log*
@@ -115,7 +115,13 @@ dist
 .yarn/install-state.gz
 .pnp.*
 
+<<<<<<< HEAD
+/generated/prisma
+=======
 node_modules/
-.env 
-backend/tree.txt
-tree.txt   
+<<<<<<< HEAD
+.env    
+=======
+.env    
+>>>>>>> 4ea0fdf9fa1abd92840ae19308f96367794a2dde
+>>>>>>> main

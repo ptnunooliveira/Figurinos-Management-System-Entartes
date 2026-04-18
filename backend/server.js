@@ -21,7 +21,6 @@ const PORT = process.env.PORT || 3000;
 
 
 // ARRANCAR SERVIDOR
-
 app.listen(PORT, () => {
     console.log(`Servidor a correr na porta ${PORT}`);
 }); 

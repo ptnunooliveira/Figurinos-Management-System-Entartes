@@ -50,7 +50,7 @@ model anuncio_marketplace {
 }
 
 model categoria {
-  id                  Int                   @id
+  id                  Int                   @id @default(autoincrement())
   nomecategoria       String?               @db.VarChar(255)
   anuncio_marketplace anuncio_marketplace[]
   figurino            figurino[]
@@ -283,6 +283,12 @@ model tipo_movimento_contacorrente {
   conta_corrente conta_corrente[]
 }
 
+enum TipoPerfil {
+  ALUNO
+  FUNCIONARIO
+  ADMIN
+}
+
 model utilizador {
   id                  Int                   @id @default(autoincrement())
   nome                String                @db.VarChar(255)
@@ -291,7 +297,7 @@ model utilizador {
   contacto            String?               @db.VarChar(50)
   data_registo        DateTime              @default(now()) @db.Date
   ativo               Boolean               @default(true)
-  perfil              String                @default("utilizador") @db.VarChar(50)
+  perfil              TipoPerfil            @default(ALUNO)
   aluno               aluno?
   anuncio_marketplace anuncio_marketplace[]
   conta_corrente      conta_corrente[]

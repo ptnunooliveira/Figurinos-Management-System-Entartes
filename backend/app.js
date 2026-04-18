@@ -1,11 +1,11 @@
 /**
  * ------------------------------------------------------------
  * File: app.js
- * Author: Nelson Cruz
- * Date: 2026-03-29
+ * Authors: Nelson Cruz, Tiago Goncalves, Nuno Oliveira
+ * Date: 2026-04-10
  * Version: 1.0
  * Description:
- * Configuração principal da aplicação Express.
+ * Configuracao principal da aplicacao Express.
  * Aqui definimos middlewares globais e registamos as rotas.
  * ------------------------------------------------------------
  */
@@ -17,6 +17,8 @@ const dotenv = require("dotenv");
 // Importar rotas
 const authRoutes = require("./routes/authRoutes");
 const userRoutes = require('./routes/userRoutes');
+const reservasRoutes = require('./routes/reservaRoute');
+const auxiliaresRoutes = require("./routes/auxiliaresRoutes");
 
 // Inicializar variáveis de ambiente (.env)
 dotenv.config();
@@ -42,6 +44,12 @@ app.use("/auth", authRoutes);
 
 // Rotas de utilizadores
 app.use('/users', userRoutes);
+
+// Rotas de reservas
+app.use('/reservas', reservasRoutes);
+
+// Rotas de tabelas auxiliares
+app.use('/pesquisa', auxiliaresRoutes);
 
 // EXPORTAR APP, sempre no final do ficheiro
 module.exports = app;

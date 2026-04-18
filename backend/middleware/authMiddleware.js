@@ -1,6 +1,6 @@
 /**
  * ------------------------------------------------------------
- * File: auth.middleware.js
+ * File: authMiddleware.js
  * Author: Nelson Cruz
  * Date: 2026-03-29
  * Version: 1.0

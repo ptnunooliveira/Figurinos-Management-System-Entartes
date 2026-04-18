@@ -19,12 +19,9 @@ const { generateToken } = require("../utils/token");
 const prisma = require("../prisma/client");
 
 // REGISTAR UTILIZADOR
-const register = async ({ nome, email, password }) => {
-    // Verificar se já existe utilizador com este email
+const register = async ({ nome, email, password, perfil }) => {
     const existingUser = await prisma.utilizador.findUnique({
-        where: {
-            email: email
-        }
+        where: { email }
     });
 
     if (existingUser) {
@@ -32,15 +29,21 @@ const register = async ({ nome, email, password }) => {
     }
 
     // Criar hash da password
-    const hashedPassword = await hashPassword(password);
+    const perfisValidos = ["ALUNO", "FUNCIONARIO", "ADMIN"];
 
+    if (!perfil || !perfisValidos.includes(perfil)) {
+        throw new Error("Perfil inválido.");
+    }
+
+    const hashedPassword = await hashPassword(password);
+    
     // Criar utilizador na base de dados
     const newUser = await prisma.utilizador.create({
         data: {
-            nome: nome,
-            email: email,
+            nome,
+            email,
             pw_hashed: hashedPassword,
-            perfil: "utilizador", // perfil padrão
+            perfil,
             ativo: true
         }
     });
@@ -51,7 +54,8 @@ const register = async ({ nome, email, password }) => {
             id: newUser.id,
             nome: newUser.nome,
             email: newUser.email,
-            perfil: newUser.perfil
+            perfil: newUser.perfil,
+            ativo: newUser.ativo
         }
     };
 };

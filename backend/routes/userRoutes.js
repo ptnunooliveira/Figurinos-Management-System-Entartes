@@ -14,10 +14,10 @@ const router = express.Router();
 
 const userController = require('../controllers/userController');
 const authMiddleware = require('../middleware/authMiddleware'); 
-const isAdmin = require("../middleware/isAdmin");
+const perfilMiddleware = require("../middleware/perfilMiddleware");
 
 // LISTAR UTILIZADORES (apenas admin)
-router.get("/", authMiddleware, isAdmin, userController.getAllUsers);
+router.get("/", authMiddleware, perfilMiddleware('FUNCIONARIO'), userController.getAllUsers);
 
 // OBTER UTILIZADOR POR ID
 router.get('/:id', authMiddleware, userController.getUserById);
@@ -26,6 +26,6 @@ router.get('/:id', authMiddleware, userController.getUserById);
 router.put('/:id', authMiddleware, userController.updateUser);
 
 // DESATIVAR UTILIZADOR (apenas admin)
-router.delete("/:id", authMiddleware, isAdmin, userController.disableUser);
+router.delete("/:id", authMiddleware, perfilMiddleware('FUNCIONARIO'), userController.disableUser);
 
 module.exports = router;

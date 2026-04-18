@@ -4,7 +4,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url = env("DATABASE_URL")
+  url      = env("DATABASE_URL")
 }
 
 model acessorio {
@@ -50,7 +50,7 @@ model anuncio_marketplace {
 }
 
 model categoria {
-  id                  Int                   @id
+  id                  Int                   @id @default(autoincrement())
   nomecategoria       String?               @db.VarChar(255)
   anuncio_marketplace anuncio_marketplace[]
   figurino            figurino[]

@@ -1,4 +1,4 @@
-# Logs
+    # Logs
 logs
 *.log
 npm-debug.log*
@@ -119,6 +119,9 @@ dist
 /generated/prisma
 =======
 node_modules/
+<<<<<<< HEAD
 .env    
-tree.txt
+=======
+.env    
 >>>>>>> 4ea0fdf9fa1abd92840ae19308f96367794a2dde
+>>>>>>> main

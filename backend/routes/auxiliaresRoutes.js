@@ -47,5 +47,11 @@ route.post("/estados-condicao", authMiddleware, perfilMiddleware(["FUNCIONARIO",
 route.patch("/estados-condicao/:id", authMiddleware, perfilMiddleware(["FUNCIONARIO", "ADMIN"]), controller.updateEstadoCondicao);
 route.get("/estados-condicao/:nome", authMiddleware, controller.getEstadoCondicaoByNome);
 
+// Rotas para estados da reserva
+route.get("/estados-reserva", authMiddleware, controller.getEstadosReserva);
+route.post("/estados-reserva", authMiddleware, perfilMiddleware(["FUNCIONARIO", "ADMIN"]), controller.createEstadosReserva);
+route.patch("/estados-reserva/:id", authMiddleware, perfilMiddleware(["FUNCIONARIO", "ADMIN"]), controller.updateEstadosReserva);
+route.get("/estados-reserva/:nome", authMiddleware, controller.getEstadoReservaByNome);
+
 // Exportação do objeto route para ser utilizado no app.js
 module.exports = route;

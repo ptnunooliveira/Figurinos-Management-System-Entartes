@@ -388,6 +388,80 @@ const atualizarEstadoCondicao = async (id, nome) => {
 
 //#endregion estados-condicao
 
+//#region estados-reserva
+
+// Obter lista de estados de reserva
+const obterEstadosReserva = async () => {
+  return prisma.estado_reserva.findMany({
+    orderBy: { nome: "asc" },
+  });
+};
+
+// Obter estado de reserva por nome (case-insensitive)
+const obterEstadoReservaPorNome = async (nome) => {
+  return prisma.estado_reserva.findFirst({
+    where: {
+      nome: {
+        equals: nome,
+        mode: "insensitive",
+      },
+    },
+  });
+};
+
+// Criar novo estado de reserva
+const criarEstadoReserva = async (nome) => {
+  const existente = await obterEstadoReservaPorNome(nome);
+
+  if (existente) {
+    const err = new Error("Estado de reserva ja existe");
+    err.code = "P2002";
+    throw err;
+  }
+
+  // Calcular proximo ID manualmente
+  const max = await prisma.estado_reserva.aggregate({
+    _max: { id: true },
+  });
+
+  const novoId = (max._max.id || 0) + 1;
+
+  return prisma.estado_reserva.create({
+    data: {
+      id: novoId,
+      nome,
+    },
+  });
+};
+
+// Atualizar nome de estado de reserva por ID
+const atualizarEstadoReserva = async (id, nome) => {
+  // Verificar duplicado ignorando o proprio registo
+  const existente = await prisma.estado_reserva.findFirst({
+    where: {
+      nome: {
+        equals: nome,
+        mode: "insensitive",
+      },
+      NOT: { id },
+    },
+  });
+
+  if (existente) {
+    const err = new Error("Estado de reserva ja existe");
+    err.code = "P2002";
+    throw err;
+  }
+
+  return prisma.estado_reserva.update({
+    where: { id },
+    data: { nome },
+  });
+};
+
+
+//#endregion
+
 // EXPORTAR FUNCOES
 module.exports = {
   obterCategorias,
@@ -410,4 +484,8 @@ module.exports = {
   obterEstadoCondicaoPorNome,
   criarEstadoCondicao,
   atualizarEstadoCondicao,
+  obterEstadosReserva,
+  obterEstadoReservaPorNome,
+  criarEstadoReserva,
+  atualizarEstadoReserva,
 };

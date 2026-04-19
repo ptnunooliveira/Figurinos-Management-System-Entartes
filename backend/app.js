@@ -19,6 +19,9 @@ const authRoutes = require("./routes/authRoutes");
 const userRoutes = require('./routes/userRoutes');
 const reservasRoutes = require('./routes/reservaRoute');
 const auxiliaresRoutes = require("./routes/auxiliaresRoutes");
+// Adicionado Nelson em 19-04-2026: Rota para gerir dados especificos dos perfis
+const perfilRoutes = require("./routes/perfilRoutes");
+
 
 // Inicializar variáveis de ambiente (.env)
 dotenv.config();
@@ -50,6 +53,9 @@ app.use('/reservas', reservasRoutes);
 
 // Rotas de tabelas auxiliares
 app.use('/pesquisa', auxiliaresRoutes);
+
+// Rotas de perfis
+app.use('/perfis', perfilRoutes);
 
 // EXPORTAR APP, sempre no final do ficheiro
 module.exports = app;

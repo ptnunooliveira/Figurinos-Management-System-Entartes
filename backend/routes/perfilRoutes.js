@@ -23,4 +23,12 @@ router.patch(
     perfilController.preencherDadosAluno
 );
 
+// Apenas ADMIN pode preencher dados especificos de funcionarios.
+router.patch(
+    "/funcionarios/:idUtilizador",
+    authMiddleware,
+    perfilMiddleware(["ADMIN"]),
+    perfilController.preencherDadosFuncionario
+);
+
 module.exports = router;

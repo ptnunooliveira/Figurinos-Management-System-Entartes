@@ -47,8 +47,5 @@ app.use('/users', userRoutes);
 // Rotas de reservas
 app.use('/reservas', reservasRoutes);
 
-// Rotas de figurinos
-app.use('/figurinos', figurinosRoute);
-
 // EXPORTAR APP, sempre no final do ficheiro
 module.exports = app;

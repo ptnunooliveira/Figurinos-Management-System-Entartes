@@ -21,6 +21,8 @@ const reservasRoutes = require('./routes/reservaRoute');
 const auxiliaresRoutes = require("./routes/auxiliaresRoutes");
 // Adicionado Nelson em 19-04-2026: Rota para gerir dados especificos dos perfis
 const perfilRoutes = require("./routes/perfilRoutes");
+// Adicionado Nelson em 20-04-2026: Rota para gerir operacoes de figurinos, incluindo acessorios.
+const figurinoRoutes = require("./routes/figurinoRoutes");
 
 
 // Inicializar variáveis de ambiente (.env)
@@ -56,6 +58,9 @@ app.use('/pesquisa', auxiliaresRoutes);
 
 // Rotas de perfis
 app.use('/perfis', perfilRoutes);
+
+// Adicionado Nelson em 20-04-2026: Rotas de figurinos.
+app.use('/figurinos', figurinoRoutes);
 
 // EXPORTAR APP, sempre no final do ficheiro
 module.exports = app;

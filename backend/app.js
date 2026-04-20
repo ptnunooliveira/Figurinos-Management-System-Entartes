@@ -18,7 +18,6 @@ const dotenv = require("dotenv");
 const authRoutes = require("./routes/authRoutes");
 const userRoutes = require('./routes/userRoutes');
 const reservasRoutes = require('./routes/reservaRoute');
-const figurinosRoute = require('./routes/figurinoRoute.js');
 
 // Inicializar variáveis de ambiente (.env)
 dotenv.config();

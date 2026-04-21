@@ -25,10 +25,10 @@ const prisma = new PrismaClient();
 const TRANSICOES_PERMITIDAS = {
 
     1: [2, 5],  // PENDENTE -> APROVADA OU CANCELADA
-    2: [3, 5],  // APROVADA -> LEVANTADA OU CANCELADA
-    3: [4, 6],  // LEVANTADA -> DEVOLVIDA OU ATRASADA
-    6: [4]      // ATRASADA -> DEVOLVIDA
-                // DEVOLVIDA[4] E CANCELADA[5] SÃO ESTADOS FINAIS
+    2: [3, 5],  // CONFIRMADA -> EM CURSO OU CANCELADA
+    3: [4, 6],  // EM CURSO -> CONCLUIDA OU ATRASADA
+    6: [4]      // ATRASADA -> CONCLUIDA
+                // CONCLUIDA[4] E CANCELADA[5] SÃO ESTADOS FINAIS
 }
 
 /////////////////////////////////////////////////////////////////////////////////

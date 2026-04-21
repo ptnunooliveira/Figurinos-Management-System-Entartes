@@ -3,7 +3,7 @@
  * File: reservasRoutes.js
  * Author: Nuno Oliveira
  * Date: 2026-03-29
- * Version: 1.0
+ * Version: 2.0
  * 
  * Description:
  * Definição das rotas HTTP relacionadas com Reservas.
@@ -22,6 +22,7 @@ const router = express.Router();
 
 // Importa o controlador das reservas
 const reservaController = require('../controllers/reservaController.js');
+const checklistController = require('../controllers/checklistController.js');
 const authMiddleware = require('../middleware/authMiddleware.js');
 const perfilMiddleware = require('../middleware/perfilMiddleware.js');
 
@@ -31,6 +32,7 @@ router.get('/', authMiddleware, perfilMiddleware('FUNCIONARIO'), reservaControll
 router.get('/mine', authMiddleware, perfilMiddleware('ALUNO'), reservaController.obterReservasDoUtilizador);
 router.get('/aluno/:id', authMiddleware, perfilMiddleware('FUNCIONARIO'), reservaController.obterReservasDoAluno);
 router.get('/:id', authMiddleware, reservaController.obterDetalhesReserva);
+router.get('/:id/checklists', authMiddleware, perfilMiddleware(["FUNCIONARIO", "ADMIN"]), checklistController.obterChecklistReserva);
 
 // Definição das rotas POST
 router.post('/', authMiddleware, perfilMiddleware(["FUNCIONARIO", "ALUNO"]), reservaController.criarReserva);

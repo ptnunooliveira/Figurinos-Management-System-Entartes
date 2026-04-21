@@ -24,3 +24,12 @@ const router = express.Router();
 const checklistController = require('../controllers/checklistController.js');
 const authMiddleware = require('../middleware/authMiddleware.js');
 const perfilMiddleware = require('../middleware/perfilMiddleware.js');
+
+
+// GET
+router.get('/:id', authMiddleware, perfilMiddleware(["FUNCIONARIO", "ADMIN"]), checklistController.obterChecklistPorID);
+
+// POST
+router.post('/', authMiddleware, perfilMiddleware(["FUNCIONARIO", "ADMIN"]), checklistController.criarChecklist);
+
+module.exports = router;

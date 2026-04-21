@@ -3,7 +3,7 @@
  * File: app.js
  * Authors: Nelson Cruz, Tiago Goncalves, Nuno Oliveira
  * Date: 2026-04-10
- * Version: 1.0
+ * Version: 3.0
  * Description:
  * Configuracao principal da aplicacao Express.
  * Aqui definimos middlewares globais e registamos as rotas.
@@ -18,8 +18,9 @@ const dotenv = require("dotenv");
 const authRoutes = require("./routes/authRoutes");
 const userRoutes = require('./routes/userRoutes');
 const reservasRoutes = require('./routes/reservaRoutes');
-const figurinosRoute = require('./routes/figurinoRoute.js');
+const figurinosRoutes = require('./routes/figurinoRoute.js');
 const auxiliaresRoutes = require("./routes/auxiliaresRoutes");
+const checklistsRoutes = require('./routes/checklistRoutes.js');
 
 // Inicializar variáveis de ambiente (.env)
 dotenv.config();
@@ -50,9 +51,12 @@ app.use('/users', userRoutes);
 app.use('/reservas', reservasRoutes);
 
 // Rotas de figurinos
-app.use('/figurinos', figurinosRoute);
+app.use('/figurinos', figurinosRoutes);
+
 // Rotas de tabelas auxiliares
 app.use('/pesquisa', auxiliaresRoutes);
+
+app.use('/checklists', checklistsRoutes);
 
 // EXPORTAR APP, sempre no final do ficheiro
 module.exports = app;

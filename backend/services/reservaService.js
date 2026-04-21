@@ -167,7 +167,7 @@ const verificarDisponibilidade = async (idAnuncio, dataInicioPedida, dataFimPedi
 
 
 // Função que cria nova reserva juntamente com as linhas_reserva - não aceita reservas vazias
-const criarReserva = async (idUtilizador, dadosBody) => {
+const criarReserva = async (idUtilizador, idFuncionario, dadosBody) => {
 
     // Estado inicial da reserva, bem como da linha da reserva como 'PENDENTE'
     const ID_ESTADO_RESERVA = 1;
@@ -190,6 +190,7 @@ const criarReserva = async (idUtilizador, dadosBody) => {
         data: {
 
             id_utilizador: idUtilizador,
+            id_funcionario: idFuncionario,
             datareserva: new Date(),
             id_estado: ID_ESTADO_RESERVA,
 
@@ -222,7 +223,7 @@ const criarReserva = async (idUtilizador, dadosBody) => {
 /////////////////////////////////////////////////////////////////////////////////
 
 
-const atualizarEstadoReserva = async (idReserva, idNovoEstado) => {
+const atualizarEstadoReserva = async (idReserva, idNovoEstado, idFuncionario) => {
 
     const reservaAtual = await prisma.reserva.findUnique({
 
@@ -242,7 +243,10 @@ const atualizarEstadoReserva = async (idReserva, idNovoEstado) => {
     const reservaAtualizada = await prisma.reserva.update({
 
         where: { id: idReserva },
-        data: { id_estado: idNovoEstado }
+        data: { 
+            id_estado: idNovoEstado,
+            id_funcionario: idFuncionario
+        }
     });
 
     return reservaAtualizada;

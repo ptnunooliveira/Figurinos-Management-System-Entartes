@@ -104,6 +104,79 @@ const criarChecklist = async (idFuncionario, dadosChecklist) => {
         }
     });
 
+    // Checklist de levantamento
+    if(dadosChecklist.id_tipo_checklist === 1){
+
+        const ID_ESTADO_RESERVA_EM_CURSO = 3;
+        const ID_ESTADO_LINHA_EM_CURSO = 3;
+
+        await prisma.linha_reserva.updateMany({
+            where: { id_reserva: dadosChecklist.id_reserva },
+            data: { id_estado_linha_reserva: ID_ESTADO_LINHA_EM_CURSO }
+        });
+
+        await prisma.reserva.update({
+            where: {id: dadosChecklist.id_reserva },
+            data: {
+                id_estado: ID_ESTADO_RESERVA_EM_CURSO,
+                id_funcionario: idFuncionario
+            }
+        });
+
+        console.log(`Automação: Reserva ${dadosChecklist.id_reserva} passou a EM CURSO.`);
+    }
+
+    // Checklist de devolução
+    if(dadosChecklist.id_tipo_checklist === 2){
+
+        const ID_ESTADO_RESERVA_CONCLUIDA = 4;
+        const ID_ESTADO_LINHA_CONCLUIDA = 4;
+
+        for(const item of dadosChecklist.itens){
+
+            const linhaPendente = await prisma.linha_reserva.findFirst({
+                where: {
+                    id_reserva: dadosChecklist.id_reserva,
+                    id_estado_linha_reserva: { not: ID_ESTADO_LINHA_CONCLUIDA}
+                }
+            });
+
+            if(linhaPendente){
+
+                await prisma.linha_reserva.update({
+                    where: { id: linhaPendente.id },
+                    data: { id_estado_linha_reserva: ID_ESTADO_LINHA_CONCLUIDA }
+                });
+            }
+        }
+
+        const todasAsLinhas = await prisma.linha_reserva.findMany({
+            where: { id_reserva: dadosChecklist.id_reserva },
+            select: { id_estado_linha_reserva: true }
+        });
+
+        const tudoDevolvido = todasAsLinhas.every((linha) =>
+            linha.id_estado_linha_reserva === ID_ESTADO_LINHA_CONCLUIDA
+        );
+
+        if(tudoDevolvido){
+            await prisma.reserva.update({
+                where: { id: dadosChecklist.id_reserva },
+                data: {
+                    id_estado: ID_ESTADO_RESERVA_CONCLUIDA,
+                    id_funcionario: idFuncionario
+                }
+            });
+
+            console.log(`Reserva ${dadosChecklist.id_reserva} concluída com sucesso!`);
+        }
+        else{
+
+            console.log(`Reserva ${dadosChecklist.id_reserva} continua em curso (Devolução Parcial).`);
+        }
+
+    }
+
     return novaChecklist;
 };
 

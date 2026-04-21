@@ -16,6 +16,29 @@ const { PrismaClient } = require("@prisma/client");
 // Instanciar cliente Prisma
 const prisma = new PrismaClient();
 
+const formatarData = (valor) => {
+  if (!valor) {
+    return null;
+  }
+
+  return valor.toISOString().slice(0, 10);
+};
+
+const mapearAnuncioMarketplace = (anuncio) => {
+  return {
+    id: anuncio.id,
+    titulo: anuncio.titulo,
+    dataanuncio: formatarData(anuncio.dataanuncio),
+    dataaprovacao: formatarData(anuncio.dataaprovacao),
+    descricao: anuncio.descricao,
+    tamanho: anuncio.tamanho,
+    categoria: anuncio.categoria?.nomecategoria ?? null,
+    tipo_figurino: anuncio.tipo_figurino?.nome ?? null,
+    sexo: anuncio.sexo?.nome ?? null,
+    utilizador: anuncio.utilizador?.nome ?? null,
+  };
+};
+
 const obterEstadoAnuncioPorNome = async (nomeEstado) => {
   return prisma.estado_anuncio.findFirst({
     where: {
@@ -28,22 +51,43 @@ const obterEstadoAnuncioPorNome = async (nomeEstado) => {
 };
 
 const obterAnuncioMarketplacePorId = async (id) => {
-  return prisma.anuncio_marketplace.findUnique({
+  const anuncio = await prisma.anuncio_marketplace.findUnique({
     where: { id },
-    include: {
-      categoria: true,
-      tipo_figurino: true,
-      sexo: true,
-      estado_anuncio: true,
+    select: {
+      id: true,
+      titulo: true,
+      dataanuncio: true,
+      dataaprovacao: true,
+      descricao: true,
+      tamanho: true,
+      categoria: {
+        select: {
+          nomecategoria: true,
+        },
+      },
+      tipo_figurino: {
+        select: {
+          nome: true,
+        },
+      },
+      sexo: {
+        select: {
+          nome: true,
+        },
+      },
       utilizador: {
         select: {
-          id: true,
           nome: true,
-          email: true,
         },
       },
     },
   });
+
+  if (!anuncio) {
+    return null;
+  }
+
+  return mapearAnuncioMarketplace(anuncio);
 };
 
 const criarAnuncioMarketplace = async ({ titulo, descricao, tamanho, id_categoria, id_tipo, id_sexo, id_utilizador }) => {
@@ -80,35 +124,138 @@ const criarAnuncioMarketplace = async ({ titulo, descricao, tamanho, id_categori
 };
 
 const obterAnunciosMarketplace = async () => {
-  return prisma.anuncio_marketplace.findMany({
+  const estadoPublicado = await obterEstadoAnuncioPorNome("Publicado");
+
+  if (!estadoPublicado) {
+    const err = new Error("Estado 'Publicado' nao encontrado.");
+    err.code = "ESTADO_NAO_ENCONTRADO";
+    throw err;
+  }
+
+  const anuncios = await prisma.anuncio_marketplace.findMany({
+    where: {
+      id_estado: estadoPublicado.id,
+    },
     orderBy: { id: "desc" },
-    include: {
-      categoria: true,
-      tipo_figurino: true,
-      sexo: true,
-      estado_anuncio: true,
+    select: {
+      id: true,
+      titulo: true,
+      dataanuncio: true,
+      dataaprovacao: true,
+      descricao: true,
+      tamanho: true,
+      categoria: {
+        select: {
+          nomecategoria: true,
+        },
+      },
+      tipo_figurino: {
+        select: {
+          nome: true,
+        },
+      },
+      sexo: {
+        select: {
+          nome: true,
+        },
+      },
       utilizador: {
         select: {
-          id: true,
           nome: true,
-          email: true,
         },
       },
     },
   });
+
+  return anuncios.map(mapearAnuncioMarketplace);
+};
+
+const obterAnunciosMarketplaceGestao = async (estadoNome) => {
+  const where = {};
+
+  if (estadoNome) {
+    const estado = await obterEstadoAnuncioPorNome(estadoNome);
+
+    if (!estado) {
+      const err = new Error(`Estado '${estadoNome}' nao encontrado.`);
+      err.code = "ESTADO_NAO_ENCONTRADO";
+      throw err;
+    }
+
+    where.id_estado = estado.id;
+  }
+
+  const anuncios = await prisma.anuncio_marketplace.findMany({
+    where,
+    orderBy: { id: "desc" },
+    select: {
+      id: true,
+      titulo: true,
+      dataanuncio: true,
+      dataaprovacao: true,
+      descricao: true,
+      tamanho: true,
+      categoria: {
+        select: {
+          nomecategoria: true,
+        },
+      },
+      tipo_figurino: {
+        select: {
+          nome: true,
+        },
+      },
+      sexo: {
+        select: {
+          nome: true,
+        },
+      },
+      utilizador: {
+        select: {
+          nome: true,
+        },
+      },
+    },
+  });
+
+  return anuncios.map(mapearAnuncioMarketplace);
 };
 
 const obterAnunciosMarketplacePorUtilizador = async (idUtilizador) => {
-  return prisma.anuncio_marketplace.findMany({
+  const anuncios = await prisma.anuncio_marketplace.findMany({
     where: { id_utilizador: idUtilizador },
     orderBy: { id: "desc" },
-    include: {
-      categoria: true,
-      tipo_figurino: true,
-      sexo: true,
-      estado_anuncio: true,
+    select: {
+      id: true,
+      titulo: true,
+      dataanuncio: true,
+      dataaprovacao: true,
+      descricao: true,
+      tamanho: true,
+      categoria: {
+        select: {
+          nomecategoria: true,
+        },
+      },
+      tipo_figurino: {
+        select: {
+          nome: true,
+        },
+      },
+      sexo: {
+        select: {
+          nome: true,
+        },
+      },
+      utilizador: {
+        select: {
+          nome: true,
+        },
+      },
     },
   });
+
+  return anuncios.map(mapearAnuncioMarketplace);
 };
 
 const atualizarAnuncioMarketplace = async (id, idUtilizador, dados) => {
@@ -234,6 +381,7 @@ const eliminarAnuncioMarketplace = async (id, idUtilizador) => {
 module.exports = {
   criarAnuncioMarketplace,
   obterAnunciosMarketplace,
+  obterAnunciosMarketplaceGestao,
   obterAnunciosMarketplacePorUtilizador,
   obterAnuncioMarketplacePorId,
   atualizarAnuncioMarketplace,

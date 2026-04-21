@@ -30,6 +30,10 @@ const mapearErro = (res, error, mensagemGenerica) => {
     return res.status(404).json({ error: error.message });
   }
 
+  if (error.code === "ESTADO_NAO_ENCONTRADO") {
+    return res.status(404).json({ error: error.message });
+  }
+
   if (error.code === "FORBIDDEN_OWNER") {
     return res.status(403).json({ error: error.message });
   }
@@ -97,6 +101,22 @@ exports.getMarketplace = async (req, res) => {
     return res.status(200).json(data);
   } catch (error) {
     return res.status(500).json({ error: "Erro ao obter anuncios de marketplace." });
+  }
+};
+
+// GET /marketplace/gestao
+exports.getMarketplaceGestao = async (req, res) => {
+  try {
+    const estado = req.query.estado === undefined ? null : normalizarTexto(req.query.estado);
+
+    if (req.query.estado !== undefined && !estado) {
+      return res.status(400).json({ error: "Query param 'estado' invalido." });
+    }
+
+    const data = await service.obterAnunciosMarketplaceGestao(estado);
+    return res.status(200).json(data);
+  } catch (error) {
+    return mapearErro(res, error, "Erro ao obter anuncios de marketplace para gestao.");
   }
 };
 
@@ -230,6 +250,7 @@ exports.deleteMarketplace = async (req, res) => {
 module.exports = {
   newMarketplace: exports.newMarketplace,
   getMarketplace: exports.getMarketplace,
+  getMarketplaceGestao: exports.getMarketplaceGestao,
   getMarketplaceById: exports.getMarketplaceById,
   editMarketplace: exports.editMarketplace,
   updateMarketplaceStatus: exports.updateMarketplaceStatus,

@@ -54,16 +54,9 @@ const criarCategoria = async (nomecategoria) => {
     err.code = "P2002";
     throw err;
   }
-  // Calcular proximo ID manualmente
-  const max = await prisma.categoria.aggregate({
-    _max: { id: true },
-  });
-
-  const novoId = (max._max.id || 0) + 1;
 
   return prisma.categoria.create({
     data: {
-      id: novoId,
       nomecategoria,
     },
   });

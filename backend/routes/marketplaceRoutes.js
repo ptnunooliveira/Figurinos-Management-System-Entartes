@@ -19,6 +19,7 @@ const perfilMiddleware = require("../middleware/perfilMiddleware");
 // Routes para marketplace
 route.post("/", authMiddleware, perfilMiddleware(["ALUNO"]), controller.newMarketplace);
 route.get("/", authMiddleware, controller.getMarketplace);
+route.get("/gestao", authMiddleware, perfilMiddleware(["FUNCIONARIO", "ADMIN"]), controller.getMarketplaceGestao);
 route.get("/:userid", authMiddleware, controller.getMarketplaceById);
 route.patch("/:id", authMiddleware, perfilMiddleware(["ALUNO"]), controller.editMarketplace);
 route.patch("/:id/aprovar", authMiddleware, perfilMiddleware(["FUNCIONARIO", "ADMIN"]), controller.updateMarketplaceStatus);

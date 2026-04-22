@@ -8,7 +8,7 @@ datasource db {
 }
 
 model acessorio {
-  id                 Int                  @id
+  id                 Int                  @id @default(autoincrement())
   nome               String?              @db.VarChar(255)
   figurino_acessorio figurino_acessorio[]
 }
@@ -126,7 +126,7 @@ model estado_anuncio {
 }
 
 model estado_condicao {
-  id             Int              @id
+  id             Int              @id @default(autoincrement())
   nome           String?          @db.VarChar(100)
   checklist_item checklist_item[]
   figurino       figurino[]
@@ -145,7 +145,7 @@ model estado_ocorrencia {
 }
 
 model estado_reserva {
-  id      Int       @id
+  id      Int       @id @default(autoincrement())
   nome    String?   @db.VarChar(100)
   reserva reserva[]
 }
@@ -258,7 +258,7 @@ model reserva {
 }
 
 model sexo {
-  id                  Int                   @id
+  id                  Int                   @id @default(autoincrement())
   nome                String?               @db.VarChar(100)
   anuncio_marketplace anuncio_marketplace[]
   figurino            figurino[]
@@ -271,7 +271,7 @@ model tipo_checklist {
 }
 
 model tipo_figurino {
-  id                  Int                   @id
+  id                  Int                   @id @default(autoincrement())
   nome                String?               @db.VarChar(255)
   anuncio_marketplace anuncio_marketplace[]
   figurino            figurino[]

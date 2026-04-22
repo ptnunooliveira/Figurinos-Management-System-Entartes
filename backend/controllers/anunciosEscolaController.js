@@ -34,8 +34,19 @@ const criarAnuncioEscola = async (req, res) => {
 
 // Função do controller responsável por listar todos os anúncios da escola
 const listarAnunciosEscola = async (req, res) => {
+
     try {
-        const anuncios = await anunciosEscolaService.obterTodosAnunciosEscola();
+
+        const { categoria, tamanho, sexo} = req.query;
+
+        const filtros = {
+
+            categoria: categoria,
+            tamanho: tamanho,
+            sexo: sexo
+        };
+
+        const anuncios = await anunciosEscolaService.obterTodosAnunciosEscola(filtros);
         return res.status(200).json(anuncios);
 
     } catch (erro) {

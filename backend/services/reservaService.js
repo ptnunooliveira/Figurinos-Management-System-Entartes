@@ -3,7 +3,7 @@
  * File: reservaService.js
  * Author: Nuno Oliveira
  * Date: 2026-03-29
- * Version: 1.0
+ * Version: 3.0
  * 
  * Description:
  * Service responsável pela lógica de negócio das reservas.
@@ -25,10 +25,10 @@ const prisma = new PrismaClient();
 const TRANSICOES_PERMITIDAS = {
 
     1: [2, 5],  // PENDENTE -> APROVADA OU CANCELADA
-    2: [3, 5],  // APROVADA -> LEVANTADA OU CANCELADA
-    3: [4, 6],  // LEVANTADA -> DEVOLVIDA OU ATRASADA
-    6: [4]      // ATRASADA -> DEVOLVIDA
-                // DEVOLVIDA[4] E CANCELADA[5] SÃO ESTADOS FINAIS
+    2: [3, 5],  // CONFIRMADA -> EM CURSO OU CANCELADA
+    3: [4, 6],  // EM CURSO -> CONCLUIDA OU ATRASADA
+    6: [4]      // ATRASADA -> CONCLUIDA
+                // CONCLUIDA[4] E CANCELADA[5] SÃO ESTADOS FINAIS
 }
 
 /////////////////////////////////////////////////////////////////////////////////
@@ -167,7 +167,7 @@ const verificarDisponibilidade = async (idAnuncio, dataInicioPedida, dataFimPedi
 
 
 // Função que cria nova reserva juntamente com as linhas_reserva - não aceita reservas vazias
-const criarReserva = async (idUtilizador, dadosBody) => {
+const criarReserva = async (idUtilizador, idFuncionario, dadosBody) => {
 
     // Estado inicial da reserva, bem como da linha da reserva como 'PENDENTE'
     const ID_ESTADO_RESERVA = 1;
@@ -190,6 +190,7 @@ const criarReserva = async (idUtilizador, dadosBody) => {
         data: {
 
             id_utilizador: idUtilizador,
+            id_funcionario: idFuncionario,
             datareserva: new Date(),
             id_estado: ID_ESTADO_RESERVA,
 
@@ -222,7 +223,7 @@ const criarReserva = async (idUtilizador, dadosBody) => {
 /////////////////////////////////////////////////////////////////////////////////
 
 
-const atualizarEstadoReserva = async (idReserva, idNovoEstado) => {
+const atualizarEstadoReserva = async (idReserva, idNovoEstado, idFuncionario) => {
 
     const reservaAtual = await prisma.reserva.findUnique({
 
@@ -242,8 +243,19 @@ const atualizarEstadoReserva = async (idReserva, idNovoEstado) => {
     const reservaAtualizada = await prisma.reserva.update({
 
         where: { id: idReserva },
-        data: { id_estado: idNovoEstado }
+        data: { 
+            id_estado: idNovoEstado,
+            id_funcionario: idFuncionario
+        }
     });
+
+    if (idNovoEstado === 5 || idNovoEstado === 6) {
+
+        await prisma.linha_reserva.updateMany({
+            where: { id_reserva: idReserva },
+            data: { id_estado_linha_reserva: novoEstado } 
+        });
+    }
 
     return reservaAtualizada;
 };
@@ -283,7 +295,18 @@ const cancelarReserva = async(idReserva, idAluno) => {
     const reservaAtualizada = await prisma.reserva.update({
 
         where: { id: idReserva },
-        data: {id_estado: ID_ESTADO_CANCELADA }
+        data: {
+            id_estado: ID_ESTADO_CANCELADA,
+            linha_reserva: {
+                updateMany: {
+                    where: { },
+                    data: { id_estado_linha_reserva: ID_ESTADO_CANCELADA }
+                }
+            }
+        },
+        include: {
+            linha_reserva: true
+        }
     });
 
     return reservaAtualizada;

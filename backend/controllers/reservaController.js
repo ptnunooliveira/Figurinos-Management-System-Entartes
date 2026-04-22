@@ -177,21 +177,41 @@ const obterDetalhesReserva = async (req, res) => {
 const criarReserva = async (req, res) => {
 
     try{
-        const idUtilizador = req.user.id;
+
+        let idUtilizador = req.user.id;
+        let idFuncionario = null;
         const dadosBody = req.body;
 
-        if(dadosBody.linhas.length === 0 || !dadosBody){
+        if(req.user.perfil === 'FUNCIONARIO' || req.user.perfil === 'ADMIN'){
+
+            idFuncionario = req.user.id;
+
+            if(!dadosBody.id_aluno) {
+
+                return res.status(400).json({ erro: "Pedido inválido. O Funcionário tem de enviar o ID do aluno no pedido." });
+            }
+
+            idUtilizador = parseInt(dadosBody.id_aluno);
+        }
+
+        if(dadosBody.linhas.length === 0 || !dadosBody.linhas){
 
             return res.status(400).json({ erro: "Pedido inválido. A reserva tem que conter pelo menos uma linha. "});
         }
 
-        const novaReserva = await reservaService.criarReserva(idUtilizador, dadosBody);
+        const novaReserva = await reservaService.criarReserva(idUtilizador, idFuncionario, dadosBody);
     
         return res.status(200).json(novaReserva);
 
     } catch(erro){
         
         console.log("Erro ao criar reserva.", erro);
+
+        if (erro.status) {
+
+            return res.status(erro.status).json({ erro: erro.message });
+        }
+
         return res.status(500).json({ erro: "Erro interno ao processar a reserva." });
     }
 };
@@ -213,24 +233,32 @@ const atualizarEstadoReserva = async (req, res) => {
             return res.status(400).json({ erro: "O ID da Reserva tem que ser um número válido." });
         }
 
+        const idFuncionario = req.user.id;
+
         if(!dadosBody || !dadosBody.id_estado){
 
                 return res.status(400).json({ erro: "Pedido inválido. O Pedido tem de conter um novo estado. "});
             }
 
 
-        if(req.user.perfil !== 'FUNCIONARIO'){
+        if(req.user.perfil !== 'FUNCIONARIO' && req.user.perfil !== 'ADMIN'){
 
             return res.status(403).json({ erro: "Acesso negado. Sem permissões para editar esta Reserva." });
         }
 
-        const reserva = await reservaService.atualizarEstadoReserva(idReserva, dadosBody.id_estado);
+        const reserva = await reservaService.atualizarEstadoReserva(idReserva, dadosBody.id_estado, idFuncionario);
 
         return res.status(200).json(reserva);
 
     } catch(erro){
 
         console.log("Erro ao editar a reserva", erro);
+
+        if (erro.status) {
+
+            return res.status(erro.status).json({ erro: erro.message });
+        }
+
         return res.status(500).json({ erro: "Erro interno ao processar a atualização do estado da reserva." });
     }
 };
@@ -240,7 +268,7 @@ const cancelarReserva = async (req, res) => {
 
     try {
 
-        const idAluno = req.user.id;
+        const idUtilizador = req.user.id;
         const idReserva = parseInt(req.params.id);
 
         if(isNaN(idReserva)) {
@@ -248,7 +276,7 @@ const cancelarReserva = async (req, res) => {
             return res.status(400).json({ erro: "O ID da reserva inválido." });
         }
 
-        const reservaCancelada = await reservaService.cancelarReserva(idReserva, idAluno);
+        const reservaCancelada = await reservaService.cancelarReserva(idReserva, idUtilizador);
 
         return res.status(200).json({ mensagem: "Reserva cancelada com sucesso.", reserva: reservaCancelada});
 

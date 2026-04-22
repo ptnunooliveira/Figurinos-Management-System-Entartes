@@ -13,7 +13,7 @@ export interface FigurinoAPI {
   descricao: string | null;
   tamanho: string | null;
   localizacao: string | null;
-  categoria: { id: number; nome: string } | null;
+  categoria: { id: number; nomecategoria: string } | null;
   tipo_figurino: { id: number; nome: string } | null;
   sexo: { id: number; nome: string } | null;
   estado_condicao: { id: number; nome: string } | null;
@@ -37,7 +37,7 @@ export function mapFigurino(f: FigurinoAPI): Figurino {
     descricao: f.descricao ?? '',
     tamanho: f.tamanho ?? '',
     localizacao: f.localizacao ?? '',
-    categoria: f.categoria?.nome ?? '',
+    categoria: f.categoria?.nomecategoria ?? '',
     tipo: f.tipo_figurino?.nome ?? '',
     sexo: f.sexo?.nome ?? '',
     estado: f.estado_condicao?.nome ?? '',
@@ -100,7 +100,17 @@ async function getAuxiliar(path: string): Promise<AuxiliarItem[]> {
   }
 }
 
-export const getCategorias = () => getAuxiliar('/pesquisa/categorias');
+export async function getCategorias(): Promise<AuxiliarItem[]> {
+  try {
+    const res = await apiFetch('/pesquisa/categorias');
+    if (!res.ok) return [];
+    const data = await res.json();
+    if (!Array.isArray(data)) return [];
+    return data.map((c: { id: number; nomecategoria: string }) => ({ id: c.id, nome: c.nomecategoria }));
+  } catch {
+    return [];
+  }
+}
 export const getTiposFigurino = () => getAuxiliar('/pesquisa/tipos-figurino');
 export const getSexos = () => getAuxiliar('/pesquisa/sexos');
 export const getEstadosCondicao = () => getAuxiliar('/pesquisa/estados-condicao');

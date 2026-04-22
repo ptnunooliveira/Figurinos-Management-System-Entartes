@@ -26,7 +26,7 @@ export function AnunciosEscola() {
   const anunciosFiltrados = anunciosEscola.filter((anuncio) => {
     const fig = anuncio.figurino;
     const descricao = fig?.descricao ?? '';
-    const categoria = fig?.categoria?.nome ?? '';
+    const categoria = fig?.categoria?.nomecategoria ?? '';
     const tipo = fig?.tipo_figurino?.nome ?? '';
     const tamanho = fig?.tamanho ?? '';
     const sexo = fig?.sexo?.nome ?? '';
@@ -50,7 +50,7 @@ export function AnunciosEscola() {
     );
   });
 
-  const categoriasUnicas = [...new Set(anunciosEscola.map((a) => a.figurino?.categoria?.nome ?? '').filter(Boolean))].sort();
+  const categoriasUnicas = [...new Set(anunciosEscola.map((a) => a.figurino?.categoria?.nomecategoria ?? '').filter(Boolean))].sort();
   const tiposUnicos = [...new Set(anunciosEscola.map((a) => a.figurino?.tipo_figurino?.nome ?? '').filter(Boolean))].sort();
   const tamanhosUnicos = [...new Set(anunciosEscola.map((a) => a.figurino?.tamanho ?? '').filter(Boolean))].sort();
   const generosUnicos = [...new Set(anunciosEscola.map((a) => a.figurino?.sexo?.nome ?? '').filter(Boolean))].sort();
@@ -212,7 +212,7 @@ export function AnunciosEscola() {
                   <div className="flex items-center gap-2 flex-wrap mb-3">
                     {anuncio.figurino?.categoria && (
                       <span className="inline-flex items-center gap-1 px-3 py-1 bg-fig-purple/10 text-fig-purple text-xs rounded-full font-medium">
-                        {anuncio.figurino.categoria.nome}
+                        {anuncio.figurino.categoria.nomecategoria}
                       </span>
                     )}
                     {anuncio.figurino?.tamanho && (
@@ -315,7 +315,7 @@ export function AnunciosEscola() {
                   <option value="">Selecione um figurino</option>
                   {figurinos.map((fig) => (
                     <option key={fig.id} value={fig.id}>
-                      {fig.descricao ?? `Figurino #${fig.id}`} — {fig.categoria?.nome ?? ''} (Tamanho: {fig.tamanho ?? '—'})
+                      {fig.descricao ?? `Figurino #${fig.id}`} — {fig.categoria?.nomecategoria ?? ''} (Tamanho: {fig.tamanho ?? '—'})
                     </option>
                   ))}
                 </select>

@@ -5,6 +5,7 @@ import {
   getCategorias, getTiposFigurino, getSexos, getEstadosCondicao, getAcessorios,
   type AuxiliarItem,
 } from "../lib/services";
+import { apiFetch } from "../lib/api";
 import { toast } from "sonner";
 
 export function CriarFigurino() {
@@ -78,23 +79,39 @@ export function CriarFigurino() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Validação básica
-    if (!formulario.nome || !formulario.descricao || !formulario.categoria) {
+
+    if (!formulario.nome || !formulario.categoria) {
       toast.error("Por favor, preencha todos os campos obrigatórios");
       return;
     }
 
-    if (imagens.length === 0) {
-      toast.error("Por favor, adicione pelo menos uma imagem do figurino");
-      return;
-    }
+    try {
+      const res = await apiFetch('/figurinos', {
+        method: 'POST',
+        body: JSON.stringify({
+          descricao: formulario.nome,
+          tamanho: formulario.tamanho || null,
+          localizacao: formulario.localizacao || null,
+          id_categoria: formulario.categoria ? parseInt(formulario.categoria) : null,
+          id_tipo: formulario.tipo ? parseInt(formulario.tipo) : null,
+          id_sexo: formulario.sexo ? parseInt(formulario.sexo) : null,
+          id_estado_figurino: formulario.estado ? parseInt(formulario.estado) : null,
+        }),
+      });
 
-    // Em produção, isto guardaria o figurino na base de dados
-    toast.success("Figurino criado com sucesso!");
-    setTimeout(() => navigate("/figurinos"), 1500);
+      if (!res.ok) {
+        const err = await res.json();
+        toast.error(err.erro ?? 'Erro ao criar figurino');
+        return;
+      }
+
+      toast.success("Figurino criado com sucesso!");
+      setTimeout(() => navigate("/figurinos"), 1000);
+    } catch {
+      toast.error("Erro de ligação ao servidor");
+    }
   };
 
   return (

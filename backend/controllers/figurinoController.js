@@ -70,7 +70,6 @@ const criarFigurino = async (req, res) => {
     try {
 
         const {
-            id,
             descricao,
             tamanho,
             localizacao,
@@ -80,14 +79,7 @@ const criarFigurino = async (req, res) => {
             id_estado_figurino
         } = req.body;
 
-        // Como o schema NÃO tem autoincrement no figurino.id,
-        // o id tem de ser enviado manualmente.
-        if (id === undefined || id === null || isNaN(parseInt(id))) {
-            return res.status(400).json({ erro: "O campo 'id' é obrigatório e tem que ser numérico." });
-        }
-
         const dadosFigurino = {
-            id: parseInt(id),
             descricao: descricao ?? null,
             tamanho: tamanho ?? null,
             localizacao: localizacao ?? null,

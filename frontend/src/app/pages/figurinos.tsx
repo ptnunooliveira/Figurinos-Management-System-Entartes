@@ -70,7 +70,7 @@ export function Figurinos() {
   };
 
   const figurinosFiltrados = figurinos.filter((figurino) => {
-    const categoria = figurino.categoria?.nome ?? '';
+    const categoria = figurino.categoria?.nomecategoria ?? '';
     const tipo = figurino.tipo_figurino?.nome ?? '';
     const tamanho = figurino.tamanho ?? '';
     const sexo = figurino.sexo?.nome ?? '';
@@ -98,7 +98,7 @@ export function Figurinos() {
     );
   });
 
-  const categoriasUnicas = [...new Set(figurinos.map((f) => f.categoria?.nome ?? '').filter(Boolean))].sort();
+  const categoriasUnicas = [...new Set(figurinos.map((f) => f.categoria?.nomecategoria ?? '').filter(Boolean))].sort();
   const tiposUnicos = [...new Set(figurinos.map((f) => f.tipo_figurino?.nome ?? '').filter(Boolean))].sort();
   const tamanhosUnicos = [...new Set(figurinos.map((f) => f.tamanho ?? '').filter(Boolean))].sort();
   const generosUnicos = [...new Set(figurinos.map((f) => f.sexo?.nome ?? '').filter(Boolean))].sort();
@@ -238,7 +238,7 @@ export function Figurinos() {
                   <div className="flex items-center gap-2 flex-wrap mb-3">
                     {figurino.categoria && (
                       <span className="inline-flex items-center gap-1 px-3 py-1 bg-fig-purple/10 text-fig-purple text-xs rounded-full font-medium">
-                        {figurino.categoria.nome}
+                        {figurino.categoria.nomecategoria}
                       </span>
                     )}
                     {figurino.tamanho && (
@@ -340,7 +340,7 @@ export function Figurinos() {
                 <div className="flex-1">
                   <h3 className="font-semibold text-gray-900 text-lg mb-1">{figurinoSelecionado.descricao ?? '—'}</h3>
                   {figurinoSelecionado.categoria && (
-                    <p className="text-sm text-gray-600 mb-1">{figurinoSelecionado.categoria.nome}</p>
+                    <p className="text-sm text-gray-600 mb-1">{figurinoSelecionado.categoria.nomecategoria}</p>
                   )}
                 </div>
               </div>

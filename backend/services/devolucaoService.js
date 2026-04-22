@@ -46,28 +46,42 @@ const obterDevolucaoPorId = async (id) => {
   });
 };
 
-// Helper: verificar se a checklist tem pelo menos um item danificado.
-// Considera "com dano" qualquer item cujo estado de condição não seja "novo" ou "bom".
-const checklistTemDanos = async (id_checklist) => {
-  const itens = await prisma.checklist_item.findMany({
-    where: { id_checklist },
-    include: { estado_condicao: true },
+// Compara o estado do figurino da linha_reserva entre a checklist de levantamento e a de devolução.
+// Retorna true se o id_estado da devolução for superior (condição pior) ao do levantamento.
+const figurinoTemDanoPorComparacao = async (id_linha_reserva, id_checklist_devolucao) => {
+  const linhaReserva = await prisma.linha_reserva.findUnique({
+    where: { id: id_linha_reserva },
+    include: { anuncio_escola: true },
+  });
+  if (!linhaReserva) return false;
+
+  const idfigurino = linhaReserva.anuncio_escola?.id_figurino;
+  if (!idfigurino) return false;
+
+  const checklistLevantamento = await prisma.checklist.findFirst({
+    where: { id_reserva: linhaReserva.id_reserva, id_tipo_checklist: 1 },
+    include: { checklist_item: { where: { idfigurino } } },
   });
 
-  const estadosBons = ["novo", "bom", "boas condicoes", "boas condições"];
-  return itens.some(
-    (item) =>
-      item.estado_condicao &&
-      !estadosBons.includes(item.estado_condicao.nome?.toLowerCase().trim() ?? "")
-  );
+  const itemLevantamento = checklistLevantamento?.checklist_item[0];
+  if (!itemLevantamento) return false;
+
+  const itemDevolucao = await prisma.checklist_item.findFirst({
+    where: { id_checklist: id_checklist_devolucao, idfigurino },
+  });
+  if (!itemDevolucao) return false;
+
+  return (itemDevolucao.id_estado ?? 0) > (itemLevantamento.id_estado ?? 0);
 };
 
 // Criar nova devolução
-// Oficializa a entrega de uma linha_reserva e liga-a à checklist de entrada
+// Oficializa a entrega de uma linha_reserva e liga-a à checklist de entrada.
+// Se o estado do figurino piorou face ao levantamento, cria automaticamente uma ocorrência.
 const criarDevolucao = async ({ id_linha_reserva, id_checklist, datadevolucao }) => {
-  // Verificar se a linha_reserva existe
+  // Verificar se a linha_reserva existe (inclui anuncio para obter o figurino)
   const linhaReserva = await prisma.linha_reserva.findUnique({
     where: { id: id_linha_reserva },
+    include: { anuncio_escola: true },
   });
   if (!linhaReserva) {
     const err = new Error("Linha de reserva nao encontrada.");
@@ -116,7 +130,7 @@ const criarDevolucao = async ({ id_linha_reserva, id_checklist, datadevolucao })
 
   const novoId = await proximoId("devolucao");
 
-  return prisma.devolucao.create({
+  const devolucao = await prisma.devolucao.create({
     data: {
       id: novoId,
       datadevolucao: datadevolucao ? new Date(datadevolucao) : new Date(),
@@ -128,6 +142,29 @@ const criarDevolucao = async ({ id_linha_reserva, id_checklist, datadevolucao })
       checklist: true,
     },
   });
+
+  // Comparar estado do figurino: se piorou face ao levantamento, cria ocorrência automaticamente
+  let ocorrencia = null;
+  const temDano = await figurinoTemDanoPorComparacao(id_linha_reserva, id_checklist);
+  if (temDano) {
+    const novoIdOcorrencia = await proximoId("ocorrencia");
+    ocorrencia = await prisma.ocorrencia.create({
+      data: {
+        id: novoIdOcorrencia,
+        descricao: "Figurino devolvido com estado de condicao inferior ao registado no levantamento.",
+        valor: null,
+        dataregisto: new Date(),
+        id_estado: 1,
+        id_linha_reserva,
+      },
+      include: {
+        estado_ocorrencia: true,
+        linha_reserva: true,
+      },
+    });
+  }
+
+  return { ...devolucao, ocorrencia };
 };
 
 //#endregion devolucoes
@@ -181,11 +218,11 @@ const criarOcorrencia = async ({ descricao, valor, id_linha_reserva, id_estado }
     throw err;
   }
 
-  // Verificar que a checklist da devolução tem pelo menos um item danificado
-  const temDanos = await checklistTemDanos(devolucao.id_checklist);
-  if (!temDanos) {
+  // Verificar que o estado do figurino piorou face ao levantamento
+  const temDano = await figurinoTemDanoPorComparacao(id_linha_reserva, devolucao.id_checklist);
+  if (!temDano) {
     const err = new Error(
-      "A checklist da devolucao nao regista danos. So e possivel criar uma ocorrencia se houver itens danificados."
+      "O estado do figurino na devolucao nao e inferior ao registado no levantamento. Nao e possivel criar uma ocorrencia."
     );
     err.code = "NO_DAMAGE";
     throw err;
@@ -211,7 +248,7 @@ const criarOcorrencia = async ({ descricao, valor, id_linha_reserva, id_estado }
       descricao,
       valor: valor ?? null,
       dataregisto: new Date(),
-      id_estado: id_estado ?? null,
+      id_estado: id_estado ?? 1,
       id_linha_reserva,
     },
     include: {

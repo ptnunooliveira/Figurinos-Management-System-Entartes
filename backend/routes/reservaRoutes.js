@@ -3,7 +3,7 @@
  * File: reservasRoutes.js
  * Author: Nuno Oliveira
  * Date: 2026-03-29
- * Version: 2.0
+ * Version: 3.0
  * 
  * Description:
  * Definição das rotas HTTP relacionadas com Reservas.
@@ -20,26 +20,39 @@ const express = require('express');
 // Cria um objeto router do Express para definir as rotas
 const router = express.Router();
 
-// Importa o controlador das reservas
+
+/////////////////////////////////////////////////////////////////////////////////
+//////////////////// IMPORTAR CONTROLLERS & MIDDLEWARES /////////////////////////
+/////////////////////////////////////////////////////////////////////////////////
+
 const reservaController = require('../controllers/reservaController.js');
 const checklistController = require('../controllers/checklistController.js');
 const authMiddleware = require('../middleware/authMiddleware.js');
 const perfilMiddleware = require('../middleware/perfilMiddleware.js');
 
-// Definição das rotas GET
-router.get('/teste-db', reservaController.obterTodasReservas);
+
+/////////////////////////////////////////////////////////////////////////////////
+////////////////////////////// ROTAS DA RESERVA /////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////
+
 router.get('/', authMiddleware, perfilMiddleware('FUNCIONARIO'), reservaController.obterTodasReservas);
 router.get('/mine', authMiddleware, perfilMiddleware('ALUNO'), reservaController.obterReservasDoUtilizador);
 router.get('/aluno/:id', authMiddleware, perfilMiddleware('FUNCIONARIO'), reservaController.obterReservasDoAluno);
 router.get('/:id', authMiddleware, reservaController.obterDetalhesReserva);
-router.get('/:id/checklists', authMiddleware, perfilMiddleware(["FUNCIONARIO", "ADMIN"]), checklistController.obterChecklistReserva);
 
-// Definição das rotas POST
 router.post('/', authMiddleware, perfilMiddleware(["FUNCIONARIO", "ALUNO"]), reservaController.criarReserva);
 
-// Definição das rotas PATCH
 router.patch('/:id/estado', authMiddleware, perfilMiddleware('FUNCIONARIO'), reservaController.atualizarEstadoReserva);
 router.patch('/mine/:id/cancelar', authMiddleware, perfilMiddleware('ALUNO'), reservaController.cancelarReserva);
+
+
+/////////////////////////////////////////////////////////////////////////////////
+////////////////////////////// ROTAS DA CHECKLIST /////////////////////&/////////
+/////////////////////////////////////////////////////////////////////////////////
+
+router.get('/:id/checklists', authMiddleware, perfilMiddleware(["FUNCIONARIO", "ADMIN"]), checklistController.obterChecklistReserva);
+router.post('/:id/checklists', authMiddleware, perfilMiddleware(["FUNCIONARIO", "ADMIN"]), checklistController.criarChecklist);
+
 
 
 module.exports = router;

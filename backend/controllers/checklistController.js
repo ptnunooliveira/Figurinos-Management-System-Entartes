@@ -79,20 +79,20 @@ const criarChecklist = async (req, res) => {
 
     try {
 
-        const idFuncionario = req.user.id;
+        const idFuncionario = parseInt(req.user.id);
+        const idReserva = parseInt(req.params.id);
 
         const {
 
-            id_reserva,
             id_tipo_checklist,
             assinaturaFuncionario,
             assinaturaEncarregado,
             itens
         } = req.body;
 
-        if (!id_tipo_checklist || !id_reserva) {
+        if (!id_tipo_checklist) {
 
-            return res.status(400).json({ erro: "Os campos id_tipo_checklist e id_reserva são obrigatórios." });
+            return res.status(400).json({ erro: "Os campos id_tipo_checklist são obrigatórios." });
         }
 
         if(!itens || !Array.isArray(itens) || itens.length === 0){
@@ -102,14 +102,13 @@ const criarChecklist = async (req, res) => {
 
         const dadosChecklist = {
 
-            id_reserva: parseInt(id_reserva),
             id_tipo_checklist: parseInt(id_tipo_checklist),
             assinaturafuncionario: assinaturaFuncionario,
             assinaturaencarregado: assinaturaEncarregado,
             itens
         };
 
-        const checklist = await checklistService.criarChecklist(idFuncionario, dadosChecklist);
+        const checklist = await checklistService.criarChecklist(idFuncionario, dadosChecklist, idReserva);
 
         return res.status(201).json(checklist);
 

@@ -81,10 +81,10 @@ const obterChecklistReserva = async (idReserva) => {
  * @param {Information necessary for a new Checklist} dadosChecklist 
  * @returns New Checklist
  */
-const criarChecklist = async (idFuncionario, dadosChecklist) => {
+const criarChecklist = async (idFuncionario, dadosChecklist, idReserva) => {
 
     const reservaExiste = await prisma.reserva.findUnique({
-        where: { id: dadosChecklist.id_reserva}
+        where: { id: idReserva}
     });
 
     if(!reservaExiste){
@@ -106,7 +106,7 @@ const criarChecklist = async (idFuncionario, dadosChecklist) => {
         const linhaPertence = await prisma.linha_reserva.findFirst({
             where: {
                 id: parseInt(item.id_linha_reserva),
-                id_reserva: dadosChecklist.id_reserva
+                id_reserva: idReserva
             },
             include: {
                 anuncio_escola: true
@@ -132,7 +132,7 @@ const criarChecklist = async (idFuncionario, dadosChecklist) => {
 
         data: {
             dataassinatura: new Date(),
-            id_reserva: dadosChecklist.id_reserva,
+            id_reserva: idReserva,
             id_funcionario: idFuncionario,
             id_tipo_checklist: dadosChecklist.id_tipo_checklist,
             assinaturaencarregado: dadosChecklist.assinaturaencarregado,
@@ -161,12 +161,12 @@ const criarChecklist = async (idFuncionario, dadosChecklist) => {
         const ID_ESTADO_LINHA_EM_CURSO = 3;
 
         await prisma.linha_reserva.updateMany({
-            where: { id_reserva: dadosChecklist.id_reserva },
+            where: { id_reserva: idReserva },
             data: { id_estado_linha_reserva: ID_ESTADO_LINHA_EM_CURSO }
         });
 
         await prisma.reserva.update({
-            where: {id: dadosChecklist.id_reserva },
+            where: {id: idReserva },
             data: {
                 id_estado: ID_ESTADO_RESERVA_EM_CURSO,
                 id_funcionario: idFuncionario
@@ -187,7 +187,7 @@ const criarChecklist = async (idFuncionario, dadosChecklist) => {
             const linhaPendente = await prisma.linha_reserva.findFirst({
                 where: {
                     id: parseInt(item.id_linha_reserva),
-                    id_reserva: dadosChecklist.id_reserva,
+                    id_reserva: idReserva,
                     id_estado_linha_reserva: { not: ID_ESTADO_LINHA_CONCLUIDA }
                 }
             });
@@ -202,7 +202,7 @@ const criarChecklist = async (idFuncionario, dadosChecklist) => {
         }
 
         const todasAsLinhas = await prisma.linha_reserva.findMany({
-            where: { id_reserva: dadosChecklist.id_reserva },
+            where: { id_reserva: idReserva },
             select: { id_estado_linha_reserva: true }
         });
 
@@ -212,18 +212,18 @@ const criarChecklist = async (idFuncionario, dadosChecklist) => {
 
         if(tudoDevolvido){
             await prisma.reserva.update({
-                where: { id: dadosChecklist.id_reserva },
+                where: { id: idReserva },
                 data: {
                     id_estado: ID_ESTADO_RESERVA_CONCLUIDA,
                     id_funcionario: idFuncionario
                 }
             });
 
-            console.log(`Reserva ${dadosChecklist.id_reserva} concluída com sucesso!`);
+            console.log(`Reserva ${idReserva} concluída com sucesso!`);
         }
         else{
 
-            console.log(`Reserva ${dadosChecklist.id_reserva} continua em curso (Devolução Parcial).`);
+            console.log(`Reserva ${idReserva} continua em curso (Devolução Parcial).`);
         }
 
     }

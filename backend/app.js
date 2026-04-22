@@ -20,7 +20,6 @@ const userRoutes = require('./routes/userRoutes');
 const reservasRoutes = require('./routes/reservaRoutes');
 const figurinosRoutes = require('./routes/figurinoRoute.js');
 const auxiliaresRoutes = require("./routes/auxiliaresRoutes");
-const checklistsRoutes = require('./routes/checklistRoutes.js');
 
 // Inicializar variáveis de ambiente (.env)
 dotenv.config();

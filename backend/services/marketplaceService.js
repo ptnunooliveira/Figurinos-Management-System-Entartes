@@ -24,8 +24,22 @@ const formatarData = (valor) => {
   return valor.toISOString().slice(0, 10);
 };
 
-const mapearAnuncioMarketplace = (anuncio) => {
-  return {
+const obterResumoAprovacao = (estadoNome) => {
+  const normalizado = typeof estadoNome === "string" ? estadoNome.toLowerCase() : "";
+
+  if (normalizado === "publicado") {
+    return { aprovado: true, situacao: "Aprovado" };
+  }
+
+  if (normalizado === "rejeitado") {
+    return { aprovado: false, situacao: "Reprovado" };
+  }
+
+  return { aprovado: null, situacao: "Pendente" };
+};
+
+const mapearAnuncioMarketplace = (anuncio, opcoes = {}) => {
+  const resposta = {
     id: anuncio.id,
     titulo: anuncio.titulo,
     dataanuncio: formatarData(anuncio.dataanuncio),
@@ -37,6 +51,18 @@ const mapearAnuncioMarketplace = (anuncio) => {
     sexo: anuncio.sexo?.nome ?? null,
     utilizador: anuncio.utilizador?.nome ?? null,
   };
+
+  if (opcoes.incluirAprovacao) {
+    const resumoAprovacao = obterResumoAprovacao(anuncio.estado_anuncio?.nome);
+    resposta.situacao = resumoAprovacao.situacao;
+
+    if (resumoAprovacao.aprovado === false) {
+      delete resposta.dataaprovacao;
+      resposta.motivorejeicao = anuncio.motivorejeicao ?? null;
+    }
+  }
+
+  return resposta;
 };
 
 const obterEstadoAnuncioPorNome = async (nomeEstado) => {
@@ -247,6 +273,12 @@ const obterAnunciosMarketplacePorUtilizador = async (idUtilizador) => {
           nome: true,
         },
       },
+      estado_anuncio: {
+        select: {
+          nome: true,
+        },
+      },
+      motivorejeicao: true,
       utilizador: {
         select: {
           nome: true,
@@ -255,7 +287,7 @@ const obterAnunciosMarketplacePorUtilizador = async (idUtilizador) => {
     },
   });
 
-  return anuncios.map(mapearAnuncioMarketplace);
+  return anuncios.map((anuncio) => mapearAnuncioMarketplace(anuncio, { incluirAprovacao: true }));
 };
 
 const atualizarAnuncioMarketplace = async (id, idUtilizador, dados) => {

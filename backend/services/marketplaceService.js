@@ -299,7 +299,10 @@ const atualizarAnuncioMarketplace = async (id, idUtilizador, dados) => {
     throw err;
   }
 
-  if (anuncio.id_utilizador !== idUtilizador) {
+  const donoAnuncioId = Number(anuncio.id_utilizador);
+  const utilizadorTokenId = Number(idUtilizador);
+
+  if (!donoAnuncioId || !utilizadorTokenId || donoAnuncioId !== utilizadorTokenId) {
     const err = new Error("Nao tens permissao para editar este anuncio.");
     err.code = "FORBIDDEN_OWNER";
     throw err;
@@ -312,7 +315,7 @@ const atualizarAnuncioMarketplace = async (id, idUtilizador, dados) => {
     throw err;
   }
 
-  return prisma.anuncio_marketplace.update({
+  await prisma.anuncio_marketplace.update({
     where: { id },
     data: {
       ...dados,
@@ -320,6 +323,8 @@ const atualizarAnuncioMarketplace = async (id, idUtilizador, dados) => {
       motivorejeicao: null,
     },
   });
+
+  return obterAnuncioMarketplacePorId(id);
 };
 
 const atualizarEstadoAnuncioMarketplace = async (id, aprovado, motivorejeicao) => {
@@ -346,7 +351,7 @@ const atualizarEstadoAnuncioMarketplace = async (id, aprovado, motivorejeicao) =
       throw err;
     }
 
-    return prisma.anuncio_marketplace.update({
+    await prisma.anuncio_marketplace.update({
       where: { id },
       data: {
         id_estado: estadoPublicado.id,
@@ -354,6 +359,8 @@ const atualizarEstadoAnuncioMarketplace = async (id, aprovado, motivorejeicao) =
         motivorejeicao: null,
       },
     });
+
+    return obterAnuncioMarketplacePorId(id);
   }
 
   const estadoRejeitado = await obterEstadoAnuncioPorNome("Rejeitado");
@@ -363,7 +370,7 @@ const atualizarEstadoAnuncioMarketplace = async (id, aprovado, motivorejeicao) =
     throw err;
   }
 
-  return prisma.anuncio_marketplace.update({
+  await prisma.anuncio_marketplace.update({
     where: { id },
     data: {
       id_estado: estadoRejeitado.id,
@@ -371,6 +378,8 @@ const atualizarEstadoAnuncioMarketplace = async (id, aprovado, motivorejeicao) =
       motivorejeicao,
     },
   });
+
+  return obterAnuncioMarketplacePorId(id);
 };
 
 const eliminarAnuncioMarketplace = async (id, idUtilizador) => {
@@ -382,7 +391,10 @@ const eliminarAnuncioMarketplace = async (id, idUtilizador) => {
     throw err;
   }
 
-  if (anuncio.id_utilizador !== idUtilizador) {
+  const donoAnuncioId = Number(anuncio.id_utilizador);
+  const utilizadorTokenId = Number(idUtilizador);
+
+  if (!donoAnuncioId || !utilizadorTokenId || donoAnuncioId !== utilizadorTokenId) {
     const err = new Error("Nao tens permissao para eliminar este anuncio.");
     err.code = "FORBIDDEN_OWNER";
     throw err;
@@ -401,12 +413,14 @@ const eliminarAnuncioMarketplace = async (id, idUtilizador) => {
     throw err;
   }
 
-  return prisma.anuncio_marketplace.update({
+  await prisma.anuncio_marketplace.update({
     where: { id },
     data: {
       id_estado: estadoArquivado.id,
     },
   });
+
+  return obterAnuncioMarketplacePorId(id);
 };
 
 // EXPORTAR FUNCOES

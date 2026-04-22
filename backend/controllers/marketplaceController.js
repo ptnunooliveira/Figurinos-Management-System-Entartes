@@ -129,6 +129,10 @@ exports.getMarketplaceById = async (req, res) => {
       return res.status(400).json({ error: "Parametro 'userid' invalido." });
     }
 
+    if (req.user.perfil === "ALUNO" && req.user.id !== userId) {
+      return res.status(403).json({ error: "Nao tens permissao para consultar anuncios de outro utilizador." });
+    }
+
     const data = await service.obterAnunciosMarketplacePorUtilizador(userId);
     return res.status(200).json(data);
   } catch (error) {
@@ -140,9 +144,14 @@ exports.getMarketplaceById = async (req, res) => {
 exports.editMarketplace = async (req, res) => {
   try {
     const id = parseId(req.params.id);
+    const userIdToken = parseId(req.user?.id);
 
     if (!id) {
       return res.status(400).json({ error: "Parametro 'id' invalido." });
+    }
+
+    if (!userIdToken) {
+      return res.status(401).json({ error: "Token invalido: utilizador nao identificado." });
     }
 
     const dados = {};
@@ -192,7 +201,7 @@ exports.editMarketplace = async (req, res) => {
       return res.status(400).json({ error: "Nenhum campo valido para atualizar." });
     }
 
-    const atualizado = await service.atualizarAnuncioMarketplace(id, req.user.id, dados);
+    const atualizado = await service.atualizarAnuncioMarketplace(id, userIdToken, dados);
     return res.status(200).json(atualizado);
   } catch (error) {
     return mapearErro(res, error, "Erro ao atualizar anuncio de marketplace.");
@@ -235,12 +244,17 @@ exports.updateMarketplaceStatus = async (req, res) => {
 exports.deleteMarketplace = async (req, res) => {
   try {
     const id = parseId(req.params.id);
+    const userIdToken = parseId(req.user?.id);
 
     if (!id) {
       return res.status(400).json({ error: "Parametro 'id' invalido." });
     }
 
-    await service.eliminarAnuncioMarketplace(id, req.user.id);
+    if (!userIdToken) {
+      return res.status(401).json({ error: "Token invalido: utilizador nao identificado." });
+    }
+
+    await service.eliminarAnuncioMarketplace(id, userIdToken);
     return res.status(204).send();
   } catch (error) {
     return mapearErro(res, error, "Erro ao eliminar anuncio de marketplace.");

@@ -14,12 +14,6 @@
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 
-// Utilitário: calcular próximo ID manualmente (tabelas sem autoincrement)
-const proximoId = async (model) => {
-  const max = await prisma[model].aggregate({ _max: { id: true } });
-  return (max._max.id || 0) + 1;
-};
-
 //#region devolucoes
 
 // Listar todas as devoluções
@@ -128,11 +122,8 @@ const criarDevolucao = async ({ id_linha_reserva, id_checklist, datadevolucao })
     throw err;
   }
 
-  const novoId = await proximoId("devolucao");
-
   const devolucao = await prisma.devolucao.create({
     data: {
-      id: novoId,
       datadevolucao: datadevolucao ? new Date(datadevolucao) : new Date(),
       id_linha_reserva,
       id_checklist,
@@ -147,10 +138,8 @@ const criarDevolucao = async ({ id_linha_reserva, id_checklist, datadevolucao })
   let ocorrencia = null;
   const temDano = await figurinoTemDanoPorComparacao(id_linha_reserva, id_checklist);
   if (temDano) {
-    const novoIdOcorrencia = await proximoId("ocorrencia");
     ocorrencia = await prisma.ocorrencia.create({
       data: {
-        id: novoIdOcorrencia,
         descricao: "Figurino devolvido com estado de condicao inferior ao registado no levantamento.",
         valor: null,
         dataregisto: new Date(),
@@ -240,11 +229,8 @@ const criarOcorrencia = async ({ descricao, valor, id_linha_reserva, id_estado }
     }
   }
 
-  const novoId = await proximoId("ocorrencia");
-
   return prisma.ocorrencia.create({
     data: {
-      id: novoId,
       descricao,
       valor: valor ?? null,
       dataregisto: new Date(),
@@ -303,11 +289,8 @@ const criarOrcamento = async ({ id_ocorrencia, fornecedor, descricao, valor, dat
     throw err;
   }
 
-  const novoId = await proximoId("orcamento");
-
   return prisma.orcamento.create({
     data: {
-      id: novoId,
       id_ocorrencia,
       fornecedor: fornecedor ?? null,
       descricao: descricao ?? null,

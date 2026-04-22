@@ -13,7 +13,6 @@
  */
 
 const prisma = require('../prisma/client');
-<<<<<<< HEAD
 
 const figurinoInclude = {
     categoria: true,
@@ -22,8 +21,6 @@ const figurinoInclude = {
     estado_condicao: true,
     figurino_acessorio: { include: { acessorio: true } },
 };
-=======
->>>>>>> f546b91ccedebaea86982be877643f689b8a5237
 
 const criarAnuncioEscola = async (dados) => {
     return await prisma.anuncio_escola.create({

@@ -82,3 +82,26 @@ export async function getAnunciosEscola(): Promise<AnuncioEscolaAPI[]> {
     return [];
   }
 }
+
+export interface AuxiliarItem {
+  id: number;
+  nome: string;
+}
+
+async function getAuxiliar(path: string): Promise<AuxiliarItem[]> {
+  try {
+    const res = await apiFetch(path);
+    if (!res.ok) return [];
+    const data = await res.json();
+    if (!Array.isArray(data)) return [];
+    return data;
+  } catch {
+    return [];
+  }
+}
+
+export const getCategorias = () => getAuxiliar('/pesquisa/categorias');
+export const getTiposFigurino = () => getAuxiliar('/pesquisa/tipos-figurino');
+export const getSexos = () => getAuxiliar('/pesquisa/sexos');
+export const getEstadosCondicao = () => getAuxiliar('/pesquisa/estados-condicao');
+export const getAcessorios = () => getAuxiliar('/pesquisa/acessorios');

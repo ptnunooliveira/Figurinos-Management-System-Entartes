@@ -1,7 +1,10 @@
-import { useState } from "react";
-import { Upload, X, Plus, Trash2, Save, ArrowLeft } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Upload, X, Plus, Save, ArrowLeft } from "lucide-react";
 import { Link, useNavigate } from "react-router";
-import { categorias, acessorios } from "../lib/dados-mock";
+import {
+  getCategorias, getTiposFigurino, getSexos, getEstadosCondicao, getAcessorios,
+  type AuxiliarItem,
+} from "../lib/services";
 import { toast } from "sonner";
 
 export function CriarFigurino() {
@@ -11,6 +14,20 @@ export function CriarFigurino() {
   const [novoAcessorio, setNovoAcessorio] = useState("");
   const [mostrarNovoAcessorio, setMostrarNovoAcessorio] = useState(false);
 
+  const [categorias, setCategorias] = useState<AuxiliarItem[]>([]);
+  const [tipos, setTipos] = useState<AuxiliarItem[]>([]);
+  const [sexos, setSexos] = useState<AuxiliarItem[]>([]);
+  const [estadosCondicao, setEstadosCondicao] = useState<AuxiliarItem[]>([]);
+  const [acessorios, setAcessorios] = useState<AuxiliarItem[]>([]);
+
+  useEffect(() => {
+    getCategorias().then(setCategorias);
+    getTiposFigurino().then(setTipos);
+    getSexos().then(setSexos);
+    getEstadosCondicao().then(setEstadosCondicao);
+    getAcessorios().then(setAcessorios);
+  }, []);
+
   const [formulario, setFormulario] = useState({
     nome: "",
     descricao: "",
@@ -19,7 +36,7 @@ export function CriarFigurino() {
     categoria: "",
     tipo: "",
     sexo: "",
-    estado: "Muito Bom",
+    estado: "",
     valor_diario: "",
   });
 
@@ -178,7 +195,7 @@ export function CriarFigurino() {
               >
                 <option value="">Selecione...</option>
                 {categorias.map(cat => (
-                  <option key={cat} value={cat}>{cat}</option>
+                  <option key={cat.id} value={cat.id}>{cat.nome}</option>
                 ))}
               </select>
             </div>
@@ -194,11 +211,9 @@ export function CriarFigurino() {
                 required
               >
                 <option value="">Selecione...</option>
-                <option value="Vestido">Vestido</option>
-                <option value="Fato Completo">Fato Completo</option>
-                <option value="Casaco">Casaco</option>
-                <option value="Calças">Calças</option>
-                <option value="Acessório">Acessório</option>
+                {tipos.map(tipo => (
+                  <option key={tipo.id} value={tipo.id}>{tipo.nome}</option>
+                ))}
               </select>
             </div>
 
@@ -233,9 +248,9 @@ export function CriarFigurino() {
                 required
               >
                 <option value="">Selecione...</option>
-                <option value="Masculino">Masculino</option>
-                <option value="Feminino">Feminino</option>
-                <option value="Unissexo">Unissexo</option>
+                {sexos.map(s => (
+                  <option key={s.id} value={s.id}>{s.nome}</option>
+                ))}
               </select>
             </div>
 
@@ -249,10 +264,10 @@ export function CriarFigurino() {
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 required
               >
-                <option value="Muito Bom">Muito Bom</option>
-                <option value="Bom">Bom</option>
-                <option value="Razoável">Razoável</option>
-                <option value="Precisa Reparação">Precisa Reparação</option>
+                <option value="">Selecione...</option>
+                {estadosCondicao.map(e => (
+                  <option key={e.id} value={e.id}>{e.nome}</option>
+                ))}
               </select>
             </div>
 
@@ -320,26 +335,30 @@ export function CriarFigurino() {
             </div>
           )}
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-            {acessorios.map(acessorio => (
-              <label
-                key={acessorio.id}
-                className={`flex items-center gap-2 p-3 border-2 rounded-lg cursor-pointer transition-colors ${
-                  acessoriosSelecionados.includes(acessorio.id)
-                    ? 'border-purple-500 bg-purple-50'
-                    : 'border-gray-200 hover:border-purple-300'
-                }`}
-              >
-                <input
-                  type="checkbox"
-                  checked={acessoriosSelecionados.includes(acessorio.id)}
-                  onChange={() => toggleAcessorio(acessorio.id)}
-                  className="w-4 h-4 text-purple-600 rounded focus:ring-purple-500"
-                />
-                <span className="text-sm text-gray-900">{acessorio.nome}</span>
-              </label>
-            ))}
-          </div>
+          {acessorios.length === 0 ? (
+            <p className="text-sm text-gray-400 italic">Nenhum acessório disponível</p>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+              {acessorios.map(acessorio => (
+                <label
+                  key={acessorio.id}
+                  className={`flex items-center gap-2 p-3 border-2 rounded-lg cursor-pointer transition-colors ${
+                    acessoriosSelecionados.includes(acessorio.id)
+                      ? 'border-purple-500 bg-purple-50'
+                      : 'border-gray-200 hover:border-purple-300'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={acessoriosSelecionados.includes(acessorio.id)}
+                    onChange={() => toggleAcessorio(acessorio.id)}
+                    className="w-4 h-4 text-purple-600 rounded focus:ring-purple-500"
+                  />
+                  <span className="text-sm text-gray-900">{acessorio.nome}</span>
+                </label>
+              ))}
+            </div>
+          )}
 
           {acessoriosSelecionados.length > 0 && (
             <p className="text-sm text-gray-600 mt-3">

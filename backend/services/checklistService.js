@@ -3,7 +3,7 @@
  * File: checklistService.js
  * Author: Nuno Oliveira
  * Date: 2026-04-20
- * Version: 1.0
+ * Version: 3.0
  * 
  * Description:
  * Service responsável pela lógica de negócio das checklists.
@@ -22,6 +22,11 @@ const prisma = new PrismaClient();
 //                                  READ                                       //
 /////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * 
+ * @param {Checklist's ID that we want to fetch} idChecklist 
+ * @returns Checklist - if the ID matches with any Checklist in our Database
+ */
 const obterChecklistPorID = async (idChecklist) => {
 
     const checklist = await prisma.checklist.findUnique({
@@ -40,6 +45,11 @@ const obterChecklistPorID = async (idChecklist) => {
     return checklist;
 }
 
+/**
+ * 
+ * @param {Checklists's Reserva's ID that we want to fetch} idReserva 
+ * @returns Checklists - if the ID matches any Reserva in our Database
+ */
 const obterChecklistReserva = async (idReserva) => {
 
     const checklists = await prisma.checklist.findMany({
@@ -65,6 +75,12 @@ const obterChecklistReserva = async (idReserva) => {
 //                                  CREATE                                     //
 /////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * 
+ * @param {Employee's ID} idFuncionario 
+ * @param {Information necessary for a new Checklist} dadosChecklist 
+ * @returns New Checklist
+ */
 const criarChecklist = async (idFuncionario, dadosChecklist) => {
 
     const reservaExiste = await prisma.reserva.findUnique({
@@ -76,6 +92,40 @@ const criarChecklist = async (idFuncionario, dadosChecklist) => {
         const erro = new Error("A reserva indicada não existe.");
         erro.status = 404;
         throw erro;
+    }
+
+    for(const item of dadosChecklist.itens){
+
+        if(!item.id_linha_reserva){
+
+            const erro = new Error("É obrigatório enviar o id_linha_reserva em cada item da checklist.");
+            erro.status = 400;
+            throw erro;
+        }
+
+        const linhaPertence = await prisma.linha_reserva.findFirst({
+            where: {
+                id: parseInt(item.id_linha_reserva),
+                id_reserva: dadosChecklist.id_reserva
+            },
+            include: {
+                anuncio_escola: true
+            }
+        });
+
+        if (!linhaPertence) {
+
+            const erro = new Error(`Acesso negado: A linha de reserva ${item.id_linha_reserva} não pertence à reserva ${dadosChecklist.id_reserva}.`);
+            erro.status = 403; 
+            throw erro;
+        }
+
+        if(linhaPertence.anuncio_escola.id_figurino !== parseInt(item.id_figurino)){
+
+            const erro = new Error(`Incoerência: O figurino ${item.idfigurino} não é o que foi alugado na linha de reserva ${item.id_linha_reserva}.`);
+            erro.status = 400; // Bad Request
+            throw erro;
+        }
     }
 
     const novaChecklist = await prisma.checklist.create({
@@ -136,8 +186,9 @@ const criarChecklist = async (idFuncionario, dadosChecklist) => {
 
             const linhaPendente = await prisma.linha_reserva.findFirst({
                 where: {
+                    id: parseInt(item.id_linha_reserva),
                     id_reserva: dadosChecklist.id_reserva,
-                    id_estado_linha_reserva: { not: ID_ESTADO_LINHA_CONCLUIDA}
+                    id_estado_linha_reserva: { not: ID_ESTADO_LINHA_CONCLUIDA }
                 }
             });
 

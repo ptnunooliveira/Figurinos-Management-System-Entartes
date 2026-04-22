@@ -3,7 +3,7 @@
  * File: reservaService.js
  * Author: Nuno Oliveira
  * Date: 2026-03-29
- * Version: 1.0
+ * Version: 3.0
  * 
  * Description:
  * Service responsável pela lógica de negócio das reservas.
@@ -249,6 +249,14 @@ const atualizarEstadoReserva = async (idReserva, idNovoEstado, idFuncionario) =>
         }
     });
 
+    if (idNovoEstado === 5 || idNovoEstado === 6) {
+
+        await prisma.linha_reserva.updateMany({
+            where: { id_reserva: idReserva },
+            data: { id_estado_linha_reserva: novoEstado } 
+        });
+    }
+
     return reservaAtualizada;
 };
 
@@ -287,7 +295,18 @@ const cancelarReserva = async(idReserva, idAluno) => {
     const reservaAtualizada = await prisma.reserva.update({
 
         where: { id: idReserva },
-        data: {id_estado: ID_ESTADO_CANCELADA }
+        data: {
+            id_estado: ID_ESTADO_CANCELADA,
+            linha_reserva: {
+                updateMany: {
+                    where: { },
+                    data: { id_estado_linha_reserva: ID_ESTADO_CANCELADA }
+                }
+            }
+        },
+        include: {
+            linha_reserva: true
+        }
     });
 
     return reservaAtualizada;

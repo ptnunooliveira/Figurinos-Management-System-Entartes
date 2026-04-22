@@ -55,7 +55,5 @@ app.use('/figurinos', figurinosRoutes);
 // Rotas de tabelas auxiliares
 app.use('/pesquisa', auxiliaresRoutes);
 
-app.use('/checklists', checklistsRoutes);
-
 // EXPORTAR APP, sempre no final do ficheiro
 module.exports = app;

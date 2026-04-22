@@ -1,0 +1,392 @@
+import { useState } from "react";
+import { PlusCircle, Search, Filter, Shirt, Euro, Eye, Edit, Trash2 } from "lucide-react";
+import { anunciosEscola, figurinos, utilizadorAtual } from "../lib/dados-mock";
+import { toast } from "sonner";
+
+export function AnunciosEscola() {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [categoriaSelecionada, setCategoriaSelecionada] = useState<string>("todas");
+  const [tipoSelecionado, setTipoSelecionado] = useState<string>("todos");
+  const [tamanhoSelecionado, setTamanhoSelecionado] = useState<string>("todos");
+  const [generoSelecionado, setGeneroSelecionado] = useState<string>("todos");
+  const [estadoSelecionado, setEstadoSelecionado] = useState<string>("todos");
+  const [mostrarDialogo, setMostrarDialogo] = useState(false);
+  const [figurinoSelecionado, setFigurinoSelecionado] = useState("");
+  const [valorDiario, setValorDiario] = useState("");
+
+  const anunciosFiltrados = anunciosEscola.filter(anuncio => {
+    const correspondePesquisa = 
+      anuncio.figurino.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      anuncio.figurino.categoria.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      anuncio.figurino.descricao.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      anuncio.figurino.tamanho.tamanho.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      anuncio.estado.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      anuncio.figurino.acessorios?.some(acc => acc.nome.toLowerCase().includes(searchTerm.toLowerCase()));
+    
+    const correspondeCategoria = categoriaSelecionada === "todas" || anuncio.figurino.categoria.nome === categoriaSelecionada;
+    const correspondeTipo = tipoSelecionado === "todos" || anuncio.figurino.tipo === tipoSelecionado;
+    const correspondeTamanho = tamanhoSelecionado === "todos" || anuncio.figurino.tamanho.tamanho === tamanhoSelecionado;
+    const correspondeGenero = generoSelecionado === "todos" || anuncio.figurino.sexo === generoSelecionado;
+    const correspondeEstado = estadoSelecionado === "todos" || anuncio.estado === estadoSelecionado;
+
+    return correspondePesquisa && correspondeCategoria && correspondeTipo && correspondeTamanho && correspondeGenero && correspondeEstado;
+  });
+
+  // Extrair valores únicos dos anúncios
+  const categoriasUnicas = [...new Set(anunciosEscola.map(a => a.figurino.categoria.nome))].sort();
+  const tiposUnicos = [...new Set(anunciosEscola.map(a => a.figurino.tipo))].sort();
+  const tamanhosUnicos = [...new Set(anunciosEscola.map(a => a.figurino.tamanho.tamanho))].sort();
+  const generosUnicos = [...new Set(anunciosEscola.map(a => a.figurino.sexo))].sort();
+  const estadosUnicos = [...new Set(anunciosEscola.map(a => a.estado))].sort();
+
+  const handleCriarAnuncio = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!figurinoSelecionado || !valorDiario) {
+      toast.error("Por favor, preencha todos os campos");
+      return;
+    }
+
+    const valorNumerico = parseFloat(valorDiario);
+    if (isNaN(valorNumerico) || valorNumerico <= 0) {
+      toast.error("Por favor, insira um valor válido");
+      return;
+    }
+
+    // Aqui seria a lógica para criar o anúncio
+    toast.success("Anúncio criado com sucesso!");
+    setMostrarDialogo(false);
+    setFigurinoSelecionado("");
+    setValorDiario("");
+  };
+
+  const handleRemoverAnuncio = (id: number, nome: string) => {
+    if (window.confirm(`Tem a certeza que deseja remover o anúncio "${nome}"?`)) {
+      toast.success(`Anúncio "${nome}" removido com sucesso!`);
+      // Aqui seria feita a lógica de remoção real
+    }
+  };
+
+  const figurinoObj = figurinos.find(f => f.id === parseInt(figurinoSelecionado));
+
+  return (
+    <div className="space-y-6">
+      {/* Cabeçalho */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Anúncios da Escola</h1>
+          <p className="text-gray-600 mt-1">Gerir anúncios de aluguer de figurinos da escola</p>
+        </div>
+        {utilizadorAtual.tipo === 'funcionario' && (
+          <button
+            onClick={() => setMostrarDialogo(true)}
+            className="flex items-center gap-2 bg-gradient-to-r from-fig-purple to-fig-magenta text-white px-6 py-3 rounded-lg hover:shadow-lg transition-all"
+          >
+            <PlusCircle className="w-5 h-5" />
+            Criar Anúncio
+          </button>
+        )}
+      </div>
+
+      {/* Barra de Pesquisa */}
+      <div className="bg-white rounded-xl shadow-sm p-6 space-y-4">
+        {/* Barra de Pesquisa */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Pesquisar anúncios..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+          />
+        </div>
+
+        {/* Filtros */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              <Filter className="w-4 h-4 inline mr-1" />
+              Categoria
+            </label>
+            <select
+              value={categoriaSelecionada}
+              onChange={(e) => setCategoriaSelecionada(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            >
+              <option value="todas">Todas as categorias</option>
+              {categoriasUnicas.map(cat => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Tipo</label>
+            <select
+              value={tipoSelecionado}
+              onChange={(e) => setTipoSelecionado(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            >
+              <option value="todos">Todos os tipos</option>
+              {tiposUnicos.map(tipo => (
+                <option key={tipo} value={tipo}>{tipo}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Tamanho</label>
+            <select
+              value={tamanhoSelecionado}
+              onChange={(e) => setTamanhoSelecionado(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            >
+              <option value="todos">Todos os tamanhos</option>
+              {tamanhosUnicos.map(tamanho => (
+                <option key={tamanho} value={tamanho}>{tamanho}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Género</label>
+            <select
+              value={generoSelecionado}
+              onChange={(e) => setGeneroSelecionado(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            >
+              <option value="todos">Todos</option>
+              {generosUnicos.map(genero => (
+                <option key={genero} value={genero}>{genero}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Estado</label>
+            <select
+              value={estadoSelecionado}
+              onChange={(e) => setEstadoSelecionado(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            >
+              <option value="todos">Todos os estados</option>
+              {estadosUnicos.map(estado => (
+                <option key={estado} value={estado}>{estado}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* Lista de Anúncios */}
+      <div className="space-y-4">
+        {anunciosFiltrados.map((anuncio) => (
+          <div key={anuncio.id} className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+            <div className="flex flex-col sm:flex-row gap-0 sm:gap-6">
+              {/* Imagem/Ícone */}
+              <div className="w-full sm:w-32 h-32 bg-gradient-to-br from-fig-purple/10 via-fig-magenta/10 to-fig-green/10 flex items-center justify-center flex-shrink-0 relative">
+                {anuncio.imagens && anuncio.imagens.length > 0 ? (
+                  <img 
+                    src={anuncio.imagens[0].url} 
+                    alt={anuncio.figurino.nome}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <Shirt className="w-16 h-16 text-fig-purple/30" />
+                )}
+              </div>
+
+              {/* Conteúdo */}
+              <div className="flex-1 p-5 sm:py-5 sm:pr-5 sm:pl-0">
+                <div className="flex flex-col h-full">
+                  {/* Cabeçalho */}
+                  <div className="mb-3">
+                    <h3 className="font-semibold text-gray-900 text-lg mb-1">{anuncio.figurino.nome}</h3>
+                    <p className="text-sm text-gray-600 line-clamp-1">{anuncio.figurino.descricao}</p>
+                  </div>
+
+                  {/* Tags */}
+                  <div className="flex items-center gap-2 flex-wrap mb-3">
+                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-fig-purple/10 text-fig-purple text-xs rounded-full font-medium">
+                      {anuncio.figurino.categoria.nome}
+                    </span>
+                    <span className="inline-flex items-center px-3 py-1 bg-gray-100 text-gray-700 text-xs rounded-full font-medium">
+                      {anuncio.figurino.tamanho.tamanho}
+                    </span>
+                    <span className={`inline-flex items-center px-3 py-1 text-xs rounded-full font-medium ${
+                      anuncio.estado === "Disponível" 
+                        ? "bg-fig-green/10 text-fig-green" 
+                        : "bg-fig-magenta/10 text-fig-magenta"
+                    }`}>
+                      {anuncio.estado}
+                    </span>
+                  </div>
+
+                  {/* Preço */}
+                  <div className="flex items-center gap-2 text-fig-purple mb-3">
+                    <Euro className="w-4 h-4" />
+                    <span className="font-bold text-lg">€{anuncio.valor_diario}</span>
+                    <span className="text-sm text-gray-500">/dia</span>
+                  </div>
+
+                  {/* Acessórios (se existirem) */}
+                  {anuncio.figurino.acessorios && anuncio.figurino.acessorios.length > 0 && (
+                    <div className="mb-3">
+                      <p className="text-xs text-gray-500 mb-1">Acessórios incluídos:</p>
+                      <div className="flex flex-wrap gap-1">
+                        {anuncio.figurino.acessorios.slice(0, 3).map((acessorio, idx) => (
+                          <span key={idx} className="px-2 py-1 bg-fig-green/10 text-fig-green text-xs rounded">
+                            {acessorio.nome}
+                          </span>
+                        ))}
+                        {anuncio.figurino.acessorios.length > 3 && (
+                          <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded">
+                            +{anuncio.figurino.acessorios.length - 3}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Ações */}
+                  <div className="mt-auto pt-3 border-t">
+                    {utilizadorAtual.tipo === 'funcionario' ? (
+                      <div className="flex items-center justify-end gap-4 text-sm">
+                        <button className="flex items-center gap-1.5 text-gray-600 hover:text-gray-900 transition-colors">
+                          <Eye className="w-4 h-4" />
+                          Ver
+                        </button>
+                        <button className="flex items-center gap-1.5 text-yellow-600 hover:text-yellow-700 transition-colors">
+                          <Edit className="w-4 h-4" />
+                          Editar
+                        </button>
+                        <button
+                          className="flex items-center gap-1.5 text-red-600 hover:text-red-700 transition-colors"
+                          onClick={() => handleRemoverAnuncio(anuncio.id, anuncio.figurino.nome)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          Remover
+                        </button>
+                      </div>
+                    ) : (
+                      <button className="w-full sm:w-auto bg-gradient-to-r from-fig-purple to-fig-magenta hover:shadow-lg text-white py-2 px-6 rounded-lg transition-all">
+                        Reservar
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {anunciosFiltrados.length === 0 && (
+        <div className="text-center py-12 bg-white rounded-xl">
+          <Shirt className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+          <p className="text-gray-500">Nenhum anúncio encontrado</p>
+        </div>
+      )}
+
+      {/* Diálogo Criar Anúncio */}
+      {mostrarDialogo && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b sticky top-0 bg-white z-10">
+              <h2 className="text-xl font-bold text-gray-900">Criar Novo Anúncio</h2>
+              <p className="text-sm text-gray-600 mt-1">Selecione o figurino e defina o valor de aluguer</p>
+            </div>
+
+            <form onSubmit={handleCriarAnuncio} className="p-6 space-y-6">
+              {/* Selecionar Figurino */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Figurino *
+                </label>
+                <select
+                  value={figurinoSelecionado}
+                  onChange={(e) => setFigurinoSelecionado(e.target.value)}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-fig-purple focus:border-transparent"
+                  required
+                >
+                  <option value="">Selecione um figurino</option>
+                  {figurinos.map((fig) => (
+                    <option key={fig.id} value={fig.id}>
+                      {fig.nome} - {fig.categoria.nome} (Tamanho: {fig.tamanho.tamanho})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Preview do Figurino Selecionado */}
+              {figurinoObj && (
+                <div className="bg-fig-purple/5 rounded-lg p-4 border-2 border-fig-purple/20">
+                  <p className="font-medium text-gray-900 mb-2">{figurinoObj.nome}</p>
+                  <p className="text-sm text-gray-600 mb-3">{figurinoObj.descricao}</p>
+                  
+                  {figurinoObj.acessorios && figurinoObj.acessorios.length > 0 && (
+                    <div>
+                      <p className="text-xs font-medium text-gray-700 mb-2">
+                        Acessórios incluídos ({figurinoObj.acessorios.length}):
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {figurinoObj.acessorios.map((acessorio, idx) => (
+                          <span key={idx} className="px-3 py-1 bg-fig-green text-white text-xs rounded-full">
+                            {acessorio.nome}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Valor Diário */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Valor Diário de Aluguer (€) *
+                </label>
+                <div className="relative">
+                  <Euro className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={valorDiario}
+                    onChange={(e) => setValorDiario(e.target.value)}
+                    className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-fig-purple focus:border-transparent"
+                    placeholder="0.00"
+                    required
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mt-1">Valor cobrado por cada dia de aluguer</p>
+              </div>
+
+              {/* Botões */}
+              <div className="flex gap-3 pt-4 border-t">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMostrarDialogo(false);
+                    setFigurinoSelecionado("");
+                    setValorDiario("");
+                  }}
+                  className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 px-6 py-3 bg-gradient-to-r from-fig-purple to-fig-magenta text-white rounded-lg hover:shadow-lg transition-all"
+                >
+                  Criar Anúncio
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

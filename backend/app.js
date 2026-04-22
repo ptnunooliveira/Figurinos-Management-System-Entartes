@@ -12,6 +12,7 @@
 
 // Importar dependências
 const express = require("express");
+const cors = require("cors");
 const dotenv = require("dotenv");
 
 // Importar rotas
@@ -30,7 +31,7 @@ const app = express();
 
 
 // MIDDLEWARES GLOBAIS
-// Permite receber JSON no body das requests
+app.use(cors({ origin: ["http://localhost:5173", "http://localhost:5174"] }));
 app.use(express.json());
 
 

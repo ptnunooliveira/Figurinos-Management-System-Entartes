@@ -22,6 +22,7 @@ const reservasRoutes = require('./routes/reservaRoutes');
 const figurinosRoutes = require('./routes/figurinoRoute.js');
 const auxiliaresRoutes = require("./routes/auxiliaresRoutes");
 const devolucaoRoutes = require("./routes/devolucaoRoutes");
+const anunciosEscolaRoutes = require('./routes/anunciosEscolaRoutes');
 
 // Inicializar variáveis de ambiente (.env)
 dotenv.config();
@@ -53,6 +54,9 @@ app.use('/reservas', reservasRoutes);
 
 // Rotas de figurinos
 app.use('/figurinos', figurinosRoutes);
+
+// Rotas de anúncios da escola
+app.use('/anuncios-escola', anunciosEscolaRoutes);
 
 // Rotas de tabelas auxiliares
 app.use('/pesquisa', auxiliaresRoutes);

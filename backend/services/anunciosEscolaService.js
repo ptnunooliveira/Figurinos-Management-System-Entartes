@@ -12,8 +12,7 @@
  * ------------------------------------------------------------
  */
 
-const { PrismaClient } = require('../../generated/prisma');
-const prisma = new PrismaClient();
+const prisma = require('../prisma/client');
 
 const criarAnuncioEscola = async (dados) => {
     return await prisma.anuncio_escola.create({

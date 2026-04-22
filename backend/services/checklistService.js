@@ -22,11 +22,6 @@ const prisma = new PrismaClient();
 //                                  READ                                       //
 /////////////////////////////////////////////////////////////////////////////////
 
-/**
- * 
- * @param {Checklist's ID that we want to fetch} idChecklist 
- * @returns Checklist - if the ID matches with any Checklist in our Database
- */
 const obterChecklistPorID = async (idChecklist) => {
 
     const checklist = await prisma.checklist.findUnique({
@@ -45,11 +40,7 @@ const obterChecklistPorID = async (idChecklist) => {
     return checklist;
 }
 
-/**
- * 
- * @param {Checklists's Reserva's ID that we want to fetch} idReserva 
- * @returns Checklists - if the ID matches any Reserva in our Database
- */
+
 const obterChecklistReserva = async (idReserva) => {
 
     const checklists = await prisma.checklist.findMany({
@@ -71,16 +62,11 @@ const obterChecklistReserva = async (idReserva) => {
     return checklists;
 }
 
+
 /////////////////////////////////////////////////////////////////////////////////
 //                                  CREATE                                     //
 /////////////////////////////////////////////////////////////////////////////////
 
-/**
- * 
- * @param {Employee's ID} idFuncionario 
- * @param {Information necessary for a new Checklist} dadosChecklist 
- * @returns New Checklist
- */
 const criarChecklist = async (idFuncionario, dadosChecklist, idReserva) => {
 
     const reservaExiste = await prisma.reserva.findUnique({

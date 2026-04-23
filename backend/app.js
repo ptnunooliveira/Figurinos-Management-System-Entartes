@@ -20,6 +20,7 @@ const userRoutes = require('./routes/userRoutes');
 const reservasRoutes = require('./routes/reservaRoutes');
 const figurinosRoutes = require('./routes/figurinoRoute.js');
 const auxiliaresRoutes = require("./routes/auxiliaresRoutes");
+const devolucaoRoutes = require("./routes/devolucaoRoutes");
 
 // Adicionado Nelson em 19-04-2026: Rota para gerir dados especificos dos perfis
 const perfilRoutes = require("./routes/perfilRoutes");
@@ -61,6 +62,8 @@ app.use('/pesquisa', auxiliaresRoutes);
 
 // Rotas de perfis
 app.use('/perfis', perfilRoutes);
+// Rotas de devoluções, ocorrências e orçamentos
+app.use('/', devolucaoRoutes);
 
 // EXPORTAR APP, sempre no final do ficheiro
 module.exports = app;

@@ -20,7 +20,7 @@ model aluno {
 }
 
 model anuncio_escola {
-  id                 Int             @id
+  id                 Int             @id @default(autoincrement())
   id_figurino        Int?
   valordiarioaluguer Float?
   id_estado          Int?
@@ -30,7 +30,7 @@ model anuncio_escola {
 }
 
 model anuncio_marketplace {
-  id             Int             @id
+  id             Int             @id @default(autoincrement())
   titulo         String?         @db.VarChar(255)
   dataanuncio    DateTime?       @db.Date
   dataaprovacao  DateTime?       @db.Date
@@ -50,14 +50,14 @@ model anuncio_marketplace {
 }
 
 model categoria {
-  id                  Int                   @id @default(autoincrement())
+  id                  Int                   @id
   nomecategoria       String?               @db.VarChar(255)
   anuncio_marketplace anuncio_marketplace[]
   figurino            figurino[]
 }
 
 model checklist {
-  id                    Int              @id
+  id                    Int              @id @default(autoincrement())
   dataassinatura        DateTime?        @db.Date
   id_reserva            Int?
   id_funcionario        Int?
@@ -72,7 +72,7 @@ model checklist {
 }
 
 model checklist_item {
-  id              Int              @id
+  id              Int              @id @default(autoincrement())
   id_checklist    Int?
   idfigurino      Int?
   id_estado       Int?
@@ -83,7 +83,7 @@ model checklist_item {
 }
 
 model conta_corrente {
-  id                           Int                           @id
+  id                           Int                           @id @default(autoincrement())
   valor                        Float?
   exportadofaturacao           Boolean?
   dataexportacao               DateTime?                     @db.Date
@@ -98,7 +98,7 @@ model conta_corrente {
 }
 
 model contestacao {
-  id                   Int               @id
+  id                   Int               @id @default(autoincrement())
   id_proposta_cobranca Int?
   descricao            String?
   valorcontraproposta  Float?
@@ -109,7 +109,7 @@ model contestacao {
 }
 
 model devolucao {
-  id               Int            @id
+  id               Int            @id @default(autoincrement())
   datadevolucao    DateTime?      @db.Date
   id_linha_reserva Int?
   id_checklist     Int?
@@ -118,7 +118,7 @@ model devolucao {
 }
 
 model estado_anuncio {
-  id                  Int                   @id
+  id                  Int                   @id @default(autoincrement())
   nome                String?               @db.VarChar(100)
   descricao           String?
   anuncio_escola      anuncio_escola[]
@@ -133,13 +133,13 @@ model estado_condicao {
 }
 
 model estado_linha_reserva {
-  id            Int             @id
+  id            Int             @id @default(autoincrement())
   nome          String?         @db.VarChar(100)
   linha_reserva linha_reserva[]
 }
 
 model estado_ocorrencia {
-  id         Int          @id
+  id         Int          @id @default(autoincrement())
   nome       String?      @db.VarChar(100)
   ocorrencia ocorrencia[]
 }
@@ -151,13 +151,13 @@ model estado_reserva {
 }
 
 model estadopropostacobranca {
-  id               Int                @id
+  id               Int                @id @default(autoincrement())
   nome             String?            @db.VarChar(100)
   propostacobranca propostacobranca[]
 }
 
 model figurino {
-  id                 Int                  @id
+  id                 Int                  @id @default(autoincrement())
   descricao          String?
   tamanho            String?              @db.VarChar(50)
   localizacao        String?              @db.VarChar(255)
@@ -193,7 +193,7 @@ model funcionario {
 }
 
 model linha_reserva {
-  id                      Int                   @id
+  id                      Int                   @id @default(autoincrement())
   id_reserva              Int?
   id_anuncio              Int?
   datainicio              DateTime?             @db.Date
@@ -209,7 +209,7 @@ model linha_reserva {
 }
 
 model ocorrencia {
-  id                Int                @id
+  id                Int                @id @default(autoincrement())
   descricao         String?
   valor             Float?
   dataregisto       DateTime?          @db.Date
@@ -223,7 +223,7 @@ model ocorrencia {
 }
 
 model orcamento {
-  id            Int         @id
+  id            Int         @id @default(autoincrement())
   id_ocorrencia Int?
   fornecedor    String?     @db.VarChar(255)
   descricao     String?
@@ -234,7 +234,7 @@ model orcamento {
 }
 
 model propostacobranca {
-  id                        Int                     @id
+  id                        Int                     @id @default(autoincrement())
   id_ocorrencia             Int?
   valor                     Float?
   dataproposta              DateTime?               @db.Date
@@ -245,7 +245,7 @@ model propostacobranca {
 }
 
 model reserva {
-  id             Int             @id
+  id             Int             @id @default(autoincrement())
   datareserva    DateTime?       @db.Date
   id_estado      Int?
   id_utilizador  Int?
@@ -265,7 +265,7 @@ model sexo {
 }
 
 model tipo_checklist {
-  id        Int         @id
+  id        Int         @id @default(autoincrement())
   nome      String?     @db.VarChar(100)
   checklist checklist[]
 }
@@ -278,15 +278,9 @@ model tipo_figurino {
 }
 
 model tipo_movimento_contacorrente {
-  id             Int              @id
+  id             Int              @id @default(autoincrement())
   nome           String?          @db.VarChar(100)
   conta_corrente conta_corrente[]
-}
-
-enum TipoPerfil {
-  ALUNO
-  FUNCIONARIO
-  ADMIN
 }
 
 model utilizador {
@@ -304,4 +298,10 @@ model utilizador {
   contestacao         contestacao[]
   funcionario         funcionario?
   reserva             reserva[]
+}
+
+enum TipoPerfil {
+  ALUNO
+  FUNCIONARIO
+  ADMIN
 }

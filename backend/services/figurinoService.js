@@ -80,7 +80,7 @@ const datasSobrepoem = (inicioA, fimA, inicioB, fimB) => {
 // ------------------------------------------------------------
 // Obter todos os figurinos com filtros
 // ------------------------------------------------------------
-const obterTodosFigurinos = async (filtros = {}) => {
+const obterTodosFigurinosFiltros = async (filtros = {}) => {
     const {
         descricao,
         tamanho,
@@ -465,6 +465,7 @@ const obterDisponibilidadeFigurino = async (idFigurino, dataInicio, dataFim) => 
 
 module.exports = {
     obterTodosFigurinos,
+    obterTodosFigurinosFiltros,
     obterFigurino,
     criarFigurino,
     atualizarFigurino,

@@ -18,7 +18,7 @@ const dotenv = require("dotenv");
 // Importar rotas
 const authRoutes = require("./routes/authRoutes");
 const userRoutes = require('./routes/userRoutes');
-const reservasRoutes = require('./routes/reservaRoute');
+const reservasRoutes = require('./routes/reservaRoutes');
 const figurinosRoutes = require('./routes/figurinoRoute.js');
 const auxiliaresRoutes = require("./routes/auxiliaresRoutes");
 const marketplaceRoutes = require("./routes/marketplaceRoutes");

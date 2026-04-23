@@ -54,16 +54,9 @@ const criarCategoria = async (nomecategoria) => {
     err.code = "P2002";
     throw err;
   }
-  // Calcular proximo ID manualmente
-  const max = await prisma.categoria.aggregate({
-    _max: { id: true },
-  });
-
-  const novoId = (max._max.id || 0) + 1;
 
   return prisma.categoria.create({
     data: {
-      id: novoId,
       nomecategoria,
     },
   });
@@ -127,16 +120,8 @@ const criarTipoFigurino = async (nome) => {
     throw err;
   }
 
-  // Calcular proximo ID manualmente
-  const max = await prisma.tipo_figurino.aggregate({
-    _max: { id: true },
-  });
-
-  const novoId = (max._max.id || 0) + 1;
-
   return prisma.tipo_figurino.create({
     data: {
-      id: novoId,
       nome,
     },
   });
@@ -200,16 +185,8 @@ const criarSexo = async (nome) => {
     throw err;
   }
 
-  // Calcular proximo ID manualmente
-  const max = await prisma.sexo.aggregate({
-    _max: { id: true },
-  });
-
-  const novoId = (max._max.id || 0) + 1;
-
   return prisma.sexo.create({
     data: {
-      id: novoId,
       nome,
     },
   });
@@ -273,16 +250,8 @@ const criarAcessorio = async (nome) => {
     throw err;
   }
 
-  // Calcular proximo ID manualmente
-  const max = await prisma.acessorio.aggregate({
-    _max: { id: true },
-  });
-
-  const novoId = (max._max.id || 0) + 1;
-
   return prisma.acessorio.create({
     data: {
-      id: novoId,
       nome,
     },
   });
@@ -346,16 +315,8 @@ const criarEstadoCondicao = async (nome) => {
     throw err;
   }
 
-  // Calcular proximo ID manualmente
-  const max = await prisma.estado_condicao.aggregate({
-    _max: { id: true },
-  });
-
-  const novoId = (max._max.id || 0) + 1;
-
   return prisma.estado_condicao.create({
     data: {
-      id: novoId,
       nome,
     },
   });
@@ -419,16 +380,8 @@ const criarEstadoReserva = async (nome) => {
     throw err;
   }
 
-  // Calcular proximo ID manualmente
-  const max = await prisma.estado_reserva.aggregate({
-    _max: { id: true },
-  });
-
-  const novoId = (max._max.id || 0) + 1;
-
   return prisma.estado_reserva.create({
     data: {
-      id: novoId,
       nome,
     },
   });

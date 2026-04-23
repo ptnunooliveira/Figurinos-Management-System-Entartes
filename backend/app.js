@@ -17,9 +17,10 @@ const dotenv = require("dotenv");
 // Importar rotas
 const authRoutes = require("./routes/authRoutes");
 const userRoutes = require('./routes/userRoutes');
-const reservasRoutes = require('./routes/reservaRoutes');
+const reservasRoutes = require('./routes/reservaRoute');
 const figurinosRoutes = require('./routes/figurinoRoute.js');
 const auxiliaresRoutes = require("./routes/auxiliaresRoutes");
+const marketplaceRoutes = require("./routes/marketplaceRoutes");
 const devolucaoRoutes = require("./routes/devolucaoRoutes");
 
 // Adicionado Nelson em 19-04-2026: Rota para gerir dados especificos dos perfis
@@ -60,8 +61,12 @@ app.use('/figurinos', figurinosRoutes);
 // Rotas de tabelas auxiliares
 app.use('/pesquisa', auxiliaresRoutes);
 
+// Rotas do marketplace
+app.use('/marketplace', marketplaceRoutes);
+
 // Rotas de perfis
 app.use('/perfis', perfilRoutes);
+
 // Rotas de devoluções, ocorrências e orçamentos
 app.use('/', devolucaoRoutes);
 

@@ -1,5 +1,11 @@
-node_modules
-# Keep environment variables out of version control
+# Dependências
+node_modules/
+
+# Variáveis de ambiente
 .env
 
-/generated/prisma
+# Configs do VS Code
+.vscode/
+
+# Prisma generated
+/generated/prisma/

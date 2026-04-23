@@ -29,7 +29,7 @@ const perfilMiddleware = require("../middleware/perfilMiddleware");
 router.post(
     "/register",
     authMiddleware,
-    perfilMiddleware("ADMIN"),
+    perfilMiddleware(["FUNCIONARIO", "ADMIN"]),
     authController.register
 );
 

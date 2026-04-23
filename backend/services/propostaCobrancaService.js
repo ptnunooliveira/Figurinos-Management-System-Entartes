@@ -1,0 +1,221 @@
+/**
+ * ------------------------------------------------------------
+ * File: propostaCobrancaService.js
+ * Author: Ricardo
+ * Date: 2026-04-22
+ * Version: 1.0
+ * 
+ * Description:
+ * Service responsável pela lógica de negócio das propostas de
+ * cobrança. Comunica diretamente com a base de dados através
+ * do Prisma ORM.
+ * Arquitetura: Route -> Middleware -> Controller -> Service -> Database
+ * ------------------------------------------------------------
+ */
+
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
+
+
+// Obter todas as propostas de cobrança
+const obterTodasPropostasCobranca = async () => {
+    const propostas = await prisma.propostacobranca.findMany({
+        include: {
+            ocorrencia: {
+                include: {
+                    estado_ocorrencia: true,
+                    linha_reserva: {
+                        include: {
+                            reserva: {
+                                include: {
+                                    utilizador: true
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            estadopropostacobranca: true,
+            contestacao: {
+                include: {
+                    utilizador: true
+                }
+            }
+        },
+        orderBy: {
+            id: 'desc'
+        }
+    });
+
+    return propostas;
+};
+
+
+// Obter proposta por ID
+const obterPropostaCobranca = async (idProposta) => {
+    const proposta = await prisma.propostacobranca.findUnique({
+        where: {
+            id: idProposta
+        },
+        include: {
+            ocorrencia: {
+                include: {
+                    estado_ocorrencia: true,
+                    linha_reserva: {
+                        include: {
+                            reserva: {
+                                include: {
+                                    utilizador: true
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            estadopropostacobranca: true,
+            contestacao: {
+                include: {
+                    utilizador: true
+                }
+            }
+        }
+    });
+
+    return proposta;
+};
+
+
+// Criar proposta de cobrança
+const criarPropostaCobranca = async (dadosProposta) => {
+    const proposta = await prisma.propostacobranca.create({
+        data: dadosProposta,
+        include: {
+            ocorrencia: true,
+            estadopropostacobranca: true
+        }
+    });
+
+    return proposta;
+};
+
+
+// Atualizar estado da proposta de cobrança
+const atualizarEstadoPropostaCobranca = async (idProposta, idEstadoProposta) => {
+    const propostaAtualizada = await prisma.propostacobranca.update({
+        where: {
+            id: idProposta
+        },
+        data: {
+            id_estadopropostacobranca: idEstadoProposta
+        },
+        include: {
+            ocorrencia: true,
+            estadopropostacobranca: true
+        }
+    });
+
+    return propostaAtualizada;
+};
+
+
+// Finalizar processo com lançamento em conta corrente
+const finalizarPropostaEmContaCorrente = async (idProposta, dadosMovimento) => {
+    const proposta = await prisma.propostacobranca.findUnique({
+        where: {
+            id: idProposta
+        },
+        include: {
+            ocorrencia: {
+                include: {
+                    linha_reserva: {
+                        include: {
+                            reserva: true
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    if (!proposta) {
+        return null;
+    }
+
+    if (!proposta.ocorrencia) {
+        const erro = new Error('A proposta não está associada a nenhuma ocorrência.');
+        erro.statusCode = 400;
+        throw erro;
+    }
+
+    if (!proposta.ocorrencia.linha_reserva) {
+        const erro = new Error('A ocorrência não está associada a nenhuma linha de reserva.');
+        erro.statusCode = 400;
+        throw erro;
+    }
+
+    if (!proposta.ocorrencia.linha_reserva.reserva) {
+        const erro = new Error('A linha de reserva não está associada a nenhuma reserva.');
+        erro.statusCode = 400;
+        throw erro;
+    }
+
+    const idUtilizador = proposta.ocorrencia.linha_reserva.reserva.id_utilizador;
+
+    if (!idUtilizador) {
+        const erro = new Error('Não foi possível identificar o utilizador da dívida.');
+        erro.statusCode = 400;
+        throw erro;
+    }
+
+    const movimento = await prisma.$transaction(async (tx) => {
+        const novoMovimento = await tx.conta_corrente.create({
+            data: {
+                valor: proposta.valor,
+                exportadofaturacao: false,
+                dataexportacao: null,
+                id_utilizador: idUtilizador,
+                id_tipo_movimento: dadosMovimento.id_tipo_movimento,
+                id_ocorrencia: proposta.id_ocorrencia,
+                id_linha_reserva: proposta.ocorrencia.id_linha_reserva
+            },
+            include: {
+                utilizador: true,
+                ocorrencia: true,
+                linha_reserva: true,
+                tipo_movimento_contacorrente: true
+            }
+        });
+
+        let propostaAtualizada = null;
+
+        if (dadosMovimento.id_estadopropostacobranca !== undefined && dadosMovimento.id_estadopropostacobranca !== null) {
+            propostaAtualizada = await tx.propostacobranca.update({
+                where: {
+                    id: idProposta
+                },
+                data: {
+                    id_estadopropostacobranca: dadosMovimento.id_estadopropostacobranca
+                },
+                include: {
+                    estadopropostacobranca: true
+                }
+            });
+        }
+
+        return {
+            movimento: novoMovimento,
+            proposta_atualizada: propostaAtualizada
+        };
+    });
+
+    return movimento;
+};
+
+
+module.exports = {
+    obterTodasPropostasCobranca,
+    obterPropostaCobranca,
+    criarPropostaCobranca,
+    atualizarEstadoPropostaCobranca,
+    finalizarPropostaEmContaCorrente
+};

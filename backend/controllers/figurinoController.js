@@ -78,10 +78,62 @@ const associarAcessorio = async (req, res) => {
 
 // Obter todos os figurinos
 const obterTodosFigurinos = async (req, res) => {
-
     try {
+        const filtros = {};
 
-        const figurinos = await figurinoService.obterTodosFigurinos();
+        if (req.query.descricao !== undefined) {
+            filtros.descricao = req.query.descricao;
+        }
+
+        if (req.query.tamanho !== undefined) {
+            filtros.tamanho = req.query.tamanho;
+        }
+
+        if (req.query.localizacao !== undefined) {
+            filtros.localizacao = req.query.localizacao;
+        }
+
+        if (req.query.id_categoria !== undefined) {
+            const idCategoria = parseInt(req.query.id_categoria);
+
+            if (isNaN(idCategoria)) {
+                return res.status(400).json({ erro: "O parâmetro 'id_categoria' tem que ser numérico." });
+            }
+
+            filtros.id_categoria = idCategoria;
+        }
+
+        if (req.query.id_tipo !== undefined) {
+            const idTipo = parseInt(req.query.id_tipo);
+
+            if (isNaN(idTipo)) {
+                return res.status(400).json({ erro: "O parâmetro 'id_tipo' tem que ser numérico." });
+            }
+
+            filtros.id_tipo = idTipo;
+        }
+
+        if (req.query.id_sexo !== undefined) {
+            const idSexo = parseInt(req.query.id_sexo);
+
+            if (isNaN(idSexo)) {
+                return res.status(400).json({ erro: "O parâmetro 'id_sexo' tem que ser numérico." });
+            }
+
+            filtros.id_sexo = idSexo;
+        }
+
+        if (req.query.id_estado_figurino !== undefined) {
+            const idEstadoFigurino = parseInt(req.query.id_estado_figurino);
+
+            if (isNaN(idEstadoFigurino)) {
+                return res.status(400).json({ erro: "O parâmetro 'id_estado_figurino' tem que ser numérico." });
+            }
+
+            filtros.id_estado_figurino = idEstadoFigurino;
+        }
+
+        const figurinos = await figurinoService.obterTodosFigurinos(filtros);
 
         if (figurinos.length === 0) {
             return res.status(200).json({ mensagem: "Sem figurinos." });
@@ -90,7 +142,6 @@ const obterTodosFigurinos = async (req, res) => {
         return res.status(200).json(figurinos);
 
     } catch (erro) {
-
         console.error("Erro ao obter figurinos:", erro);
         return res.status(500).json({ erro: "Erro interno do servidor." });
     }
@@ -99,9 +150,7 @@ const obterTodosFigurinos = async (req, res) => {
 
 // Obter figurino por ID
 const obterFigurino = async (req, res) => {
-
     try {
-
         const idFigurino = parseInt(req.params.id);
 
         if (isNaN(idFigurino)) {
@@ -117,8 +166,31 @@ const obterFigurino = async (req, res) => {
         return res.status(200).json(figurino);
 
     } catch (erro) {
-
         console.error("Erro ao obter figurino:", erro);
+        return res.status(500).json({ erro: "Erro interno do servidor." });
+    }
+};
+
+
+// Obter histórico do figurino
+const obterHistoricoFigurino = async (req, res) => {
+    try {
+        const idFigurino = parseInt(req.params.id);
+
+        if (isNaN(idFigurino)) {
+            return res.status(400).json({ erro: "O ID do figurino tem que ser um número válido." });
+        }
+
+        const historico = await figurinoService.obterHistoricoFigurino(idFigurino);
+
+        if (!historico) {
+            return res.status(404).json({ erro: "Figurino não encontrado." });
+        }
+
+        return res.status(200).json(historico);
+
+    } catch (erro) {
+        console.error("Erro ao obter histórico do figurino:", erro);
         return res.status(500).json({ erro: "Erro interno do servidor." });
     }
 };
@@ -126,9 +198,7 @@ const obterFigurino = async (req, res) => {
 
 // Criar figurino
 const criarFigurino = async (req, res) => {
-
     try {
-
         const {
             id,
             descricao,
@@ -140,8 +210,6 @@ const criarFigurino = async (req, res) => {
             id_estado_figurino
         } = req.body;
 
-        // Como o schema NÃO tem autoincrement no figurino.id,
-        // o id tem de ser enviado manualmente.
         if (id === undefined || id === null || isNaN(parseInt(id))) {
             return res.status(400).json({ erro: "O campo 'id' é obrigatório e tem que ser numérico." });
         }
@@ -157,12 +225,27 @@ const criarFigurino = async (req, res) => {
             id_estado_figurino: id_estado_figurino !== undefined && id_estado_figurino !== null ? parseInt(id_estado_figurino) : null
         };
 
+        if (dadosFigurino.id_categoria !== null && isNaN(dadosFigurino.id_categoria)) {
+            return res.status(400).json({ erro: "O campo 'id_categoria' tem que ser numérico." });
+        }
+
+        if (dadosFigurino.id_tipo !== null && isNaN(dadosFigurino.id_tipo)) {
+            return res.status(400).json({ erro: "O campo 'id_tipo' tem que ser numérico." });
+        }
+
+        if (dadosFigurino.id_sexo !== null && isNaN(dadosFigurino.id_sexo)) {
+            return res.status(400).json({ erro: "O campo 'id_sexo' tem que ser numérico." });
+        }
+
+        if (dadosFigurino.id_estado_figurino !== null && isNaN(dadosFigurino.id_estado_figurino)) {
+            return res.status(400).json({ erro: "O campo 'id_estado_figurino' tem que ser numérico." });
+        }
+
         const novoFigurino = await figurinoService.criarFigurino(dadosFigurino);
 
         return res.status(201).json(novoFigurino);
 
     } catch (erro) {
-
         console.error("Erro ao criar figurino:", erro);
 
         if (erro.code === 'P2002') {
@@ -176,9 +259,7 @@ const criarFigurino = async (req, res) => {
 
 // Atualizar figurino
 const atualizarFigurino = async (req, res) => {
-
     try {
-
         const idFigurino = parseInt(req.params.id);
 
         if (isNaN(idFigurino)) {
@@ -211,6 +292,22 @@ const atualizarFigurino = async (req, res) => {
         if (id_sexo !== undefined) dadosFigurino.id_sexo = id_sexo === null ? null : parseInt(id_sexo);
         if (id_estado_figurino !== undefined) dadosFigurino.id_estado_figurino = id_estado_figurino === null ? null : parseInt(id_estado_figurino);
 
+        if (dadosFigurino.id_categoria !== undefined && dadosFigurino.id_categoria !== null && isNaN(dadosFigurino.id_categoria)) {
+            return res.status(400).json({ erro: "O campo 'id_categoria' tem que ser numérico." });
+        }
+
+        if (dadosFigurino.id_tipo !== undefined && dadosFigurino.id_tipo !== null && isNaN(dadosFigurino.id_tipo)) {
+            return res.status(400).json({ erro: "O campo 'id_tipo' tem que ser numérico." });
+        }
+
+        if (dadosFigurino.id_sexo !== undefined && dadosFigurino.id_sexo !== null && isNaN(dadosFigurino.id_sexo)) {
+            return res.status(400).json({ erro: "O campo 'id_sexo' tem que ser numérico." });
+        }
+
+        if (dadosFigurino.id_estado_figurino !== undefined && dadosFigurino.id_estado_figurino !== null && isNaN(dadosFigurino.id_estado_figurino)) {
+            return res.status(400).json({ erro: "O campo 'id_estado_figurino' tem que ser numérico." });
+        }
+
         if (Object.keys(dadosFigurino).length === 0) {
             return res.status(400).json({ erro: "Não foram enviados dados para atualizar." });
         }
@@ -220,7 +317,6 @@ const atualizarFigurino = async (req, res) => {
         return res.status(200).json(figurinoAtualizado);
 
     } catch (erro) {
-
         console.error("Erro ao atualizar figurino:", erro);
         return res.status(500).json({ erro: "Erro interno do servidor." });
     }
@@ -229,16 +325,25 @@ const atualizarFigurino = async (req, res) => {
 
 // Obter disponibilidade do figurino
 const obterDisponibilidadeFigurino = async (req, res) => {
-
     try {
-
         const idFigurino = parseInt(req.params.id);
+        const { dataInicio, dataFim } = req.query;
 
         if (isNaN(idFigurino)) {
             return res.status(400).json({ erro: "O ID do figurino tem que ser um número válido." });
         }
 
-        const disponibilidade = await figurinoService.obterDisponibilidadeFigurino(idFigurino);
+        if (!dataInicio || !dataFim) {
+            return res.status(400).json({
+                erro: "Os parâmetros 'dataInicio' e 'dataFim' são obrigatórios."
+            });
+        }
+
+        const disponibilidade = await figurinoService.obterDisponibilidadeFigurino(
+            idFigurino,
+            dataInicio,
+            dataFim
+        );
 
         if (!disponibilidade) {
             return res.status(404).json({ erro: "Figurino não encontrado." });
@@ -247,8 +352,12 @@ const obterDisponibilidadeFigurino = async (req, res) => {
         return res.status(200).json(disponibilidade);
 
     } catch (erro) {
-
         console.error("Erro ao obter disponibilidade do figurino:", erro);
+
+        if (erro.statusCode) {
+            return res.status(erro.statusCode).json({ erro: erro.message });
+        }
+
         return res.status(500).json({ erro: "Erro interno do servidor." });
     }
 };
@@ -258,6 +367,7 @@ module.exports = {
     associarAcessorio,
     obterTodosFigurinos,
     obterFigurino,
+    obterHistoricoFigurino,
     criarFigurino,
     atualizarFigurino,
     obterDisponibilidadeFigurino

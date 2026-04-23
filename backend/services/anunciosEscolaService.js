@@ -26,13 +26,39 @@ const criarAnuncioEscola = async (dados) => {
     });
 };
 
-const obterTodosAnunciosEscola = async () => {
-    return await prisma.anuncio_escola.findMany({
+const obterTodosAnunciosEscola = async (filtros) => {
+
+    const { categoria, tamanho, sexo} = filtros;
+
+    const prismaOptions = {
         include: {
             figurino: true,
-            estado_anuncio: true,
-        },
-    });
+            estado_anuncio: true
+        }
+    };
+
+    if(categoria || tamanho || sexo){
+
+        prismaOptions.where = { figurino: {} };
+
+        if(categoria){
+
+            prismaOptions.where.figurino.id_categoria = parseInt(categoria);
+        }
+
+        if(tamanho){
+
+            prismaOptions.where.figurino.tamanho = tamanho;
+        }
+
+        if(sexo){
+
+            prismaOptions.where.figurino.id_sexo = parseInt(sexo); 
+        }
+
+    }
+
+    return await prisma.anuncio_escola.findMany(prismaOptions);
 };
 
 const obterAnuncioEscolaPorId = async (id) => {

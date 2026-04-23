@@ -30,12 +30,36 @@ const register = async (req, res) => {
         }
 
         // Chamar o service para registar utilizador
-        const result = await authService.register({ nome, email, password, perfil });
+        const result = await authService.register({
+            nome,
+            email,
+            password,
+            perfil,
+            perfilCriador: req.user.perfil
+        });
 
         // Devolver resposta de sucesso
         return res.status(201).json(result);
 
         } catch (error) {
+        if (error.code === "INVALID_PROFILE") {
+            return res.status(400).json({
+                message: error.message
+            });
+        }
+
+        if (error.code === "FORBIDDEN_PROFILE_CREATION") {
+            return res.status(403).json({
+                message: error.message
+            });
+        }
+
+        if (error.code === "EMAIL_ALREADY_EXISTS") {
+            return res.status(409).json({
+                message: error.message
+            });
+        }
+
         return res.status(500).json({
             message: error.message || "Erro ao registar utilizador."
         });

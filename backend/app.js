@@ -3,7 +3,7 @@
  * File: app.js
  * Authors: Nelson Cruz, Tiago Goncalves, Nuno Oliveira
  * Date: 2026-04-10
- * Version: 3.0
+ * Version: 4.0
  * Description:
  * Configuracao principal da aplicacao Express.
  * Aqui definimos middlewares globais e registamos as rotas.
@@ -22,6 +22,10 @@ const figurinosRoutes = require('./routes/figurinoRoute.js');
 const auxiliaresRoutes = require("./routes/auxiliaresRoutes");
 const marketplaceRoutes = require("./routes/marketplaceRoutes");
 const devolucaoRoutes = require("./routes/devolucaoRoutes");
+
+// Adicionado Nelson em 19-04-2026: Rota para gerir dados especificos dos perfis
+const perfilRoutes = require("./routes/perfilRoutes");
+
 
 // Inicializar variáveis de ambiente (.env)
 dotenv.config();
@@ -59,6 +63,9 @@ app.use('/pesquisa', auxiliaresRoutes);
 
 // Rotas do marketplace
 app.use('/marketplace', marketplaceRoutes);
+
+// Rotas de perfis
+app.use('/perfis', perfilRoutes);
 
 // Rotas de devoluções, ocorrências e orçamentos
 app.use('/', devolucaoRoutes);

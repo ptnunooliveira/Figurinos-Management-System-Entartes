@@ -12,6 +12,7 @@
 
 // Importar dependências
 const express = require("express");
+const cors = require("cors");
 const dotenv = require("dotenv");
 
 // Importar rotas
@@ -22,6 +23,7 @@ const figurinosRoutes = require('./routes/figurinoRoute.js');
 const auxiliaresRoutes = require("./routes/auxiliaresRoutes");
 const marketplaceRoutes = require("./routes/marketplaceRoutes");
 const devolucaoRoutes = require("./routes/devolucaoRoutes");
+const anunciosEscolaRoutes = require('./routes/anunciosEscolaRoutes');
 
 // Adicionado Nelson em 19-04-2026: Rota para gerir dados especificos dos perfis
 const perfilRoutes = require("./routes/perfilRoutes");
@@ -35,7 +37,7 @@ const app = express();
 
 
 // MIDDLEWARES GLOBAIS
-// Permite receber JSON no body das requests
+app.use(cors({ origin: ["http://localhost:5173", "http://localhost:5174"] }));
 app.use(express.json());
 
 
@@ -57,6 +59,9 @@ app.use('/reservas', reservasRoutes);
 
 // Rotas de figurinos
 app.use('/figurinos', figurinosRoutes);
+
+// Rotas de anúncios da escola
+app.use('/anuncios-escola', anunciosEscolaRoutes);
 
 // Rotas de tabelas auxiliares
 app.use('/pesquisa', auxiliaresRoutes);

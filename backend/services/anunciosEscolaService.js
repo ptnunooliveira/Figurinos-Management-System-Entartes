@@ -12,8 +12,15 @@
  * ------------------------------------------------------------
  */
 
-const { PrismaClient } = require('../../generated/prisma');
-const prisma = new PrismaClient();
+const prisma = require('../prisma/client');
+
+const figurinoInclude = {
+    categoria: true,
+    tipo_figurino: true,
+    sexo: true,
+    estado_condicao: true,
+    figurino_acessorio: { include: { acessorio: true } },
+};
 
 const criarAnuncioEscola = async (dados) => {
     return await prisma.anuncio_escola.create({
@@ -32,8 +39,8 @@ const obterTodosAnunciosEscola = async (filtros) => {
 
     const prismaOptions = {
         include: {
-            figurino: true,
-            estado_anuncio: true
+            figurino: { include: figurinoInclude },
+            estado_anuncio: true,
         }
     };
 
@@ -65,7 +72,7 @@ const obterAnuncioEscolaPorId = async (id) => {
     return await prisma.anuncio_escola.findUnique({
         where: { id },
         include: {
-            figurino: true,
+            figurino: { include: figurinoInclude },
             estado_anuncio: true,
         },
     });

@@ -122,6 +122,202 @@ exports.getCategoriaByNome = async (req, res) => {
 
 //#endregion
 
+//#region pesquisa/auxiliares-em-falta AB#89
+
+// Adicionado Nelson em 21-04-2026: cria controllers padronizados para tabelas auxiliares com campo nome.
+const criarControllerAuxiliar = ({
+  obterTodos,
+  obterPorNome,
+  criar,
+  atualizar,
+  mensagens,
+}) => ({
+  listar: async (req, res) => {
+    try {
+      const data = await service[obterTodos]();
+      return res.status(200).json(data);
+    } catch (error) {
+      return res.status(500).json({ error: mensagens.erroListar });
+    }
+  },
+
+  criar: async (req, res) => {
+    try {
+      const nome = normalizarNome(req.body.nome);
+
+      if (!nome) {
+        return res.status(400).json({ error: "Campo 'nome' e obrigatorio." });
+      }
+
+      const novo = await service[criar](nome);
+      return res.status(201).json(novo);
+    } catch (error) {
+      return responderErroEscrita(res, error, {
+        duplicado: mensagens.duplicado,
+        naoEncontrado: mensagens.naoEncontrado,
+        generico: mensagens.erroCriar,
+      });
+    }
+  },
+
+  atualizar: async (req, res) => {
+    try {
+      const id = parseId(req.params.id);
+
+      if (!id) {
+        return res.status(400).json({ error: "Parametro 'id' invalido." });
+      }
+
+      const nome = normalizarNome(req.body.nome);
+
+      if (!nome) {
+        return res.status(400).json({ error: "Campo 'nome' e obrigatorio." });
+      }
+
+      const atualizado = await service[atualizar](id, nome);
+      return res.status(200).json(atualizado);
+    } catch (error) {
+      return responderErroEscrita(res, error, {
+        duplicado: mensagens.duplicado,
+        naoEncontrado: mensagens.naoEncontrado,
+        generico: mensagens.erroAtualizar,
+      });
+    }
+  },
+
+  procurarPorNome: async (req, res) => {
+    try {
+      const nome = normalizarNome(req.params.nome);
+
+      if (!nome) {
+        return res.status(400).json({ error: mensagens.naoSelecionado });
+      }
+
+      const data = await service[obterPorNome](nome);
+
+      if (!data) {
+        return res.status(404).json({ error: mensagens.naoEncontrado });
+      }
+
+      return res.status(200).json(data);
+    } catch (error) {
+      return res.status(500).json({ error: mensagens.erroProcurar });
+    }
+  },
+});
+
+// Adicionado Nelson em 21-04-2026: controllers para estado_anuncio.
+const estadosAnuncioController = criarControllerAuxiliar({
+  obterTodos: "obterEstadosAnuncio",
+  obterPorNome: "obterEstadoAnuncioPorNome",
+  criar: "criarEstadoAnuncio",
+  atualizar: "atualizarEstadoAnuncio",
+  mensagens: {
+    duplicado: "Estado de anuncio ja existe.",
+    naoEncontrado: "Estado de anuncio nao encontrado.",
+    naoSelecionado: "Estado de anuncio nao selecionado.",
+    erroListar: "Erro ao procurar estados de anuncio.",
+    erroCriar: "Erro ao criar estado de anuncio.",
+    erroAtualizar: "Erro ao atualizar estado de anuncio.",
+    erroProcurar: "Erro ao procurar estado de anuncio.",
+  },
+});
+
+exports.getEstadosAnuncio = estadosAnuncioController.listar;
+exports.createEstadoAnuncio = estadosAnuncioController.criar;
+exports.updateEstadoAnuncio = estadosAnuncioController.atualizar;
+exports.getEstadoAnuncioByNome = estadosAnuncioController.procurarPorNome;
+
+// Adicionado Nelson em 21-04-2026: controllers para tipo_checklist.
+const tiposChecklistController = criarControllerAuxiliar({
+  obterTodos: "obterTiposChecklist",
+  obterPorNome: "obterTipoChecklistPorNome",
+  criar: "criarTipoChecklist",
+  atualizar: "atualizarTipoChecklist",
+  mensagens: {
+    duplicado: "Tipo de checklist ja existe.",
+    naoEncontrado: "Tipo de checklist nao encontrado.",
+    naoSelecionado: "Tipo de checklist nao selecionado.",
+    erroListar: "Erro ao procurar tipos de checklist.",
+    erroCriar: "Erro ao criar tipo de checklist.",
+    erroAtualizar: "Erro ao atualizar tipo de checklist.",
+    erroProcurar: "Erro ao procurar tipo de checklist.",
+  },
+});
+
+exports.getTiposChecklist = tiposChecklistController.listar;
+exports.createTipoChecklist = tiposChecklistController.criar;
+exports.updateTipoChecklist = tiposChecklistController.atualizar;
+exports.getTipoChecklistByNome = tiposChecklistController.procurarPorNome;
+
+// Adicionado Nelson em 21-04-2026: controllers para estado_ocorrencia.
+const estadosOcorrenciaController = criarControllerAuxiliar({
+  obterTodos: "obterEstadosOcorrencia",
+  obterPorNome: "obterEstadoOcorrenciaPorNome",
+  criar: "criarEstadoOcorrencia",
+  atualizar: "atualizarEstadoOcorrencia",
+  mensagens: {
+    duplicado: "Estado de ocorrencia ja existe.",
+    naoEncontrado: "Estado de ocorrencia nao encontrado.",
+    naoSelecionado: "Estado de ocorrencia nao selecionado.",
+    erroListar: "Erro ao procurar estados de ocorrencia.",
+    erroCriar: "Erro ao criar estado de ocorrencia.",
+    erroAtualizar: "Erro ao atualizar estado de ocorrencia.",
+    erroProcurar: "Erro ao procurar estado de ocorrencia.",
+  },
+});
+
+exports.getEstadosOcorrencia = estadosOcorrenciaController.listar;
+exports.createEstadoOcorrencia = estadosOcorrenciaController.criar;
+exports.updateEstadoOcorrencia = estadosOcorrenciaController.atualizar;
+exports.getEstadoOcorrenciaByNome = estadosOcorrenciaController.procurarPorNome;
+
+// Adicionado Nelson em 21-04-2026: controllers para estadopropostacobranca.
+const estadosPropostaCobrancaController = criarControllerAuxiliar({
+  obterTodos: "obterEstadosPropostaCobranca",
+  obterPorNome: "obterEstadoPropostaCobrancaPorNome",
+  criar: "criarEstadoPropostaCobranca",
+  atualizar: "atualizarEstadoPropostaCobranca",
+  mensagens: {
+    duplicado: "Estado de proposta de cobranca ja existe.",
+    naoEncontrado: "Estado de proposta de cobranca nao encontrado.",
+    naoSelecionado: "Estado de proposta de cobranca nao selecionado.",
+    erroListar: "Erro ao procurar estados de proposta de cobranca.",
+    erroCriar: "Erro ao criar estado de proposta de cobranca.",
+    erroAtualizar: "Erro ao atualizar estado de proposta de cobranca.",
+    erroProcurar: "Erro ao procurar estado de proposta de cobranca.",
+  },
+});
+
+exports.getEstadosPropostaCobranca = estadosPropostaCobrancaController.listar;
+exports.createEstadoPropostaCobranca = estadosPropostaCobrancaController.criar;
+exports.updateEstadoPropostaCobranca = estadosPropostaCobrancaController.atualizar;
+exports.getEstadoPropostaCobrancaByNome = estadosPropostaCobrancaController.procurarPorNome;
+
+// Adicionado Nelson em 21-04-2026: controllers para tipo_movimento_contacorrente.
+const tiposMovimentoContaCorrenteController = criarControllerAuxiliar({
+  obterTodos: "obterTiposMovimentoContaCorrente",
+  obterPorNome: "obterTipoMovimentoContaCorrentePorNome",
+  criar: "criarTipoMovimentoContaCorrente",
+  atualizar: "atualizarTipoMovimentoContaCorrente",
+  mensagens: {
+    duplicado: "Tipo de movimento da conta corrente ja existe.",
+    naoEncontrado: "Tipo de movimento da conta corrente nao encontrado.",
+    naoSelecionado: "Tipo de movimento da conta corrente nao selecionado.",
+    erroListar: "Erro ao procurar tipos de movimento da conta corrente.",
+    erroCriar: "Erro ao criar tipo de movimento da conta corrente.",
+    erroAtualizar: "Erro ao atualizar tipo de movimento da conta corrente.",
+    erroProcurar: "Erro ao procurar tipo de movimento da conta corrente.",
+  },
+});
+
+exports.getTiposMovimentoContaCorrente = tiposMovimentoContaCorrenteController.listar;
+exports.createTipoMovimentoContaCorrente = tiposMovimentoContaCorrenteController.criar;
+exports.updateTipoMovimentoContaCorrente = tiposMovimentoContaCorrenteController.atualizar;
+exports.getTipoMovimentoContaCorrenteByNome = tiposMovimentoContaCorrenteController.procurarPorNome;
+
+//#endregion
+
 //#region pesquisa/tipos-figurino
 
 // GET /pesquisa/tipos-figurino

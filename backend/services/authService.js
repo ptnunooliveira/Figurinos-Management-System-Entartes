@@ -19,31 +19,47 @@ const { generateToken } = require("../utils/token");
 const prisma = require("../prisma/client");
 
 // REGISTAR UTILIZADOR
-const register = async ({ nome, email, password, perfil }) => {
+const register = async ({ nome, email, password, perfil, perfilCriador }) => {
+    const perfilNormalizado = typeof perfil === "string" ? perfil.trim().toUpperCase() : "";
+    const perfisValidos = ["ALUNO", "FUNCIONARIO", "ADMIN"];
+
+    if (!perfilNormalizado || !perfisValidos.includes(perfilNormalizado)) {
+        const error = new Error("Perfil invalido.");
+        error.code = "INVALID_PROFILE";
+        throw error;
+    }
+
+    if (perfilCriador === "FUNCIONARIO" && perfilNormalizado !== "ALUNO") {
+        const error = new Error("Funcionarios apenas podem criar utilizadores com perfil ALUNO.");
+        error.code = "FORBIDDEN_PROFILE_CREATION";
+        throw error;
+    }
+
+    if (perfilCriador !== "ADMIN" && perfilNormalizado !== "ALUNO") {
+        const error = new Error("Apenas administradores podem criar utilizadores com perfis privilegiados.");
+        error.code = "FORBIDDEN_PROFILE_CREATION";
+        throw error;
+    }
+
     const existingUser = await prisma.utilizador.findUnique({
         where: { email }
     });
 
     if (existingUser) {
-        throw new Error("Já existe um utilizador com este email.");
-    }
-
-    // Criar hash da password
-    const perfisValidos = ["ALUNO", "FUNCIONARIO", "ADMIN"];
-
-    if (!perfil || !perfisValidos.includes(perfil)) {
-        throw new Error("Perfil inválido.");
+        const error = new Error("Ja existe um utilizador com este email.");
+        error.code = "EMAIL_ALREADY_EXISTS";
+        throw error;
     }
 
     const hashedPassword = await hashPassword(password);
-    
+
     // Criar utilizador na base de dados
     const newUser = await prisma.utilizador.create({
         data: {
             nome,
             email,
             pw_hashed: hashedPassword,
-            perfil,
+            perfil: perfilNormalizado,
             ativo: true
         }
     });

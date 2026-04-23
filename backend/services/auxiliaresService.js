@@ -54,16 +54,9 @@ const criarCategoria = async (nomecategoria) => {
     err.code = "P2002";
     throw err;
   }
-  // Calcular proximo ID manualmente
-  const max = await prisma.categoria.aggregate({
-    _max: { id: true },
-  });
-
-  const novoId = (max._max.id || 0) + 1;
 
   return prisma.categoria.create({
     data: {
-      id: novoId,
       nomecategoria,
     },
   });
@@ -127,16 +120,8 @@ const criarTipoFigurino = async (nome) => {
     throw err;
   }
 
-  // Calcular proximo ID manualmente
-  const max = await prisma.tipo_figurino.aggregate({
-    _max: { id: true },
-  });
-
-  const novoId = (max._max.id || 0) + 1;
-
   return prisma.tipo_figurino.create({
     data: {
-      id: novoId,
       nome,
     },
   });
@@ -200,16 +185,8 @@ const criarSexo = async (nome) => {
     throw err;
   }
 
-  // Calcular proximo ID manualmente
-  const max = await prisma.sexo.aggregate({
-    _max: { id: true },
-  });
-
-  const novoId = (max._max.id || 0) + 1;
-
   return prisma.sexo.create({
     data: {
-      id: novoId,
       nome,
     },
   });
@@ -273,16 +250,8 @@ const criarAcessorio = async (nome) => {
     throw err;
   }
 
-  // Calcular proximo ID manualmente
-  const max = await prisma.acessorio.aggregate({
-    _max: { id: true },
-  });
-
-  const novoId = (max._max.id || 0) + 1;
-
   return prisma.acessorio.create({
     data: {
-      id: novoId,
       nome,
     },
   });
@@ -346,16 +315,8 @@ const criarEstadoCondicao = async (nome) => {
     throw err;
   }
 
-  // Calcular proximo ID manualmente
-  const max = await prisma.estado_condicao.aggregate({
-    _max: { id: true },
-  });
-
-  const novoId = (max._max.id || 0) + 1;
-
   return prisma.estado_condicao.create({
     data: {
-      id: novoId,
       nome,
     },
   });
@@ -419,16 +380,8 @@ const criarEstadoReserva = async (nome) => {
     throw err;
   }
 
-  // Calcular proximo ID manualmente
-  const max = await prisma.estado_reserva.aggregate({
-    _max: { id: true },
-  });
-
-  const novoId = (max._max.id || 0) + 1;
-
   return prisma.estado_reserva.create({
     data: {
-      id: novoId,
       nome,
     },
   });
@@ -462,6 +415,113 @@ const atualizarEstadoReserva = async (id, nome) => {
 
 //#endregion
 
+//#region auxiliares em falta AB#89
+
+// Adicionado Nelson em 21-04-2026: obter lista ordenada por nome para auxiliares em falta.
+const obterAuxiliarPorModelo = async (modelo) => {
+  return prisma[modelo].findMany({
+    orderBy: { nome: "asc" },
+  });
+};
+
+// Adicionado Nelson em 21-04-2026: procurar auxiliar por nome ignorando maiusculas/minusculas.
+const obterAuxiliarPorNome = async (modelo, nome) => {
+  return prisma[modelo].findFirst({
+    where: {
+      nome: {
+        equals: nome,
+        mode: "insensitive",
+      },
+    },
+  });
+};
+
+// Adicionado Nelson em 21-04-2026: validar duplicados para auxiliares em falta.
+const validarAuxiliarDuplicado = async (modelo, nome, idIgnorado) => {
+  const where = {
+    nome: {
+      equals: nome,
+      mode: "insensitive",
+    },
+  };
+
+  if (idIgnorado) {
+    where.NOT = { id: idIgnorado };
+  }
+
+  const existente = await prisma[modelo].findFirst({ where });
+
+  if (existente) {
+    const err = new Error("Registo ja existe");
+    err.code = "P2002";
+    throw err;
+  }
+};
+
+// Adicionado Nelson em 21-04-2026: calcular proximo ID para tabelas sem autoincrement.
+const obterProximoIdAuxiliar = async (modelo) => {
+  const max = await prisma[modelo].aggregate({
+    _max: { id: true },
+  });
+
+  return (max._max.id || 0) + 1;
+};
+
+// Adicionado Nelson em 21-04-2026: criar registo auxiliar com campo nome.
+const criarAuxiliarPorModelo = async (modelo, nome) => {
+  await validarAuxiliarDuplicado(modelo, nome);
+  const novoId = await obterProximoIdAuxiliar(modelo);
+
+  return prisma[modelo].create({
+    data: {
+      id: novoId,
+      nome,
+    },
+  });
+};
+
+// Adicionado Nelson em 21-04-2026: atualizar registo auxiliar com campo nome.
+const atualizarAuxiliarPorModelo = async (modelo, id, nome) => {
+  await validarAuxiliarDuplicado(modelo, nome, id);
+
+  return prisma[modelo].update({
+    where: { id },
+    data: { nome },
+  });
+};
+
+// Adicionado Nelson em 21-04-2026: funcoes para estado_anuncio.
+const obterEstadosAnuncio = async () => obterAuxiliarPorModelo("estado_anuncio");
+const obterEstadoAnuncioPorNome = async (nome) => obterAuxiliarPorNome("estado_anuncio", nome);
+const criarEstadoAnuncio = async (nome) => criarAuxiliarPorModelo("estado_anuncio", nome);
+const atualizarEstadoAnuncio = async (id, nome) => atualizarAuxiliarPorModelo("estado_anuncio", id, nome);
+
+// Adicionado Nelson em 21-04-2026: funcoes para tipo_checklist.
+const obterTiposChecklist = async () => obterAuxiliarPorModelo("tipo_checklist");
+const obterTipoChecklistPorNome = async (nome) => obterAuxiliarPorNome("tipo_checklist", nome);
+const criarTipoChecklist = async (nome) => criarAuxiliarPorModelo("tipo_checklist", nome);
+const atualizarTipoChecklist = async (id, nome) => atualizarAuxiliarPorModelo("tipo_checklist", id, nome);
+
+// Adicionado Nelson em 21-04-2026: funcoes para estado_ocorrencia.
+const obterEstadosOcorrencia = async () => obterAuxiliarPorModelo("estado_ocorrencia");
+const obterEstadoOcorrenciaPorNome = async (nome) => obterAuxiliarPorNome("estado_ocorrencia", nome);
+const criarEstadoOcorrencia = async (nome) => criarAuxiliarPorModelo("estado_ocorrencia", nome);
+const atualizarEstadoOcorrencia = async (id, nome) => atualizarAuxiliarPorModelo("estado_ocorrencia", id, nome);
+
+// Adicionado Nelson em 21-04-2026: funcoes para estadopropostacobranca.
+const obterEstadosPropostaCobranca = async () => obterAuxiliarPorModelo("estadopropostacobranca");
+const obterEstadoPropostaCobrancaPorNome = async (nome) => obterAuxiliarPorNome("estadopropostacobranca", nome);
+const criarEstadoPropostaCobranca = async (nome) => criarAuxiliarPorModelo("estadopropostacobranca", nome);
+const atualizarEstadoPropostaCobranca = async (id, nome) => atualizarAuxiliarPorModelo("estadopropostacobranca", id, nome);
+
+// Adicionado Nelson em 21-04-2026: funcoes para tipo_movimento_contacorrente.
+const obterTiposMovimentoContaCorrente = async () => obterAuxiliarPorModelo("tipo_movimento_contacorrente");
+const obterTipoMovimentoContaCorrentePorNome = async (nome) => obterAuxiliarPorNome("tipo_movimento_contacorrente", nome);
+const criarTipoMovimentoContaCorrente = async (nome) => criarAuxiliarPorModelo("tipo_movimento_contacorrente", nome);
+const atualizarTipoMovimentoContaCorrente = async (id, nome) => atualizarAuxiliarPorModelo("tipo_movimento_contacorrente", id, nome);
+
+//#endregion
+
 // EXPORTAR FUNCOES
 module.exports = {
   obterCategorias,
@@ -488,4 +548,24 @@ module.exports = {
   obterEstadoReservaPorNome,
   criarEstadoReserva,
   atualizarEstadoReserva,
+  obterEstadosAnuncio,
+  obterEstadoAnuncioPorNome,
+  criarEstadoAnuncio,
+  atualizarEstadoAnuncio,
+  obterTiposChecklist,
+  obterTipoChecklistPorNome,
+  criarTipoChecklist,
+  atualizarTipoChecklist,
+  obterEstadosOcorrencia,
+  obterEstadoOcorrenciaPorNome,
+  criarEstadoOcorrencia,
+  atualizarEstadoOcorrencia,
+  obterEstadosPropostaCobranca,
+  obterEstadoPropostaCobrancaPorNome,
+  criarEstadoPropostaCobranca,
+  atualizarEstadoPropostaCobranca,
+  obterTiposMovimentoContaCorrente,
+  obterTipoMovimentoContaCorrentePorNome,
+  criarTipoMovimentoContaCorrente,
+  atualizarTipoMovimentoContaCorrente,
 };

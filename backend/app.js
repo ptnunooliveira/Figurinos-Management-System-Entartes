@@ -21,6 +21,7 @@ const reservasRoutes = require('./routes/reservaRoute');
 const figurinosRoutes = require('./routes/figurinoRoute.js');
 const auxiliaresRoutes = require("./routes/auxiliaresRoutes");
 const marketplaceRoutes = require("./routes/marketplaceRoutes");
+const devolucaoRoutes = require("./routes/devolucaoRoutes");
 
 // Inicializar variáveis de ambiente (.env)
 dotenv.config();
@@ -58,6 +59,9 @@ app.use('/pesquisa', auxiliaresRoutes);
 
 // Rotas do marketplace
 app.use('/marketplace', marketplaceRoutes);
+
+// Rotas de devoluções, ocorrências e orçamentos
+app.use('/', devolucaoRoutes);
 
 // EXPORTAR APP, sempre no final do ficheiro
 module.exports = app;

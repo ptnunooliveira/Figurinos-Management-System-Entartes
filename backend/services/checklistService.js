@@ -106,7 +106,7 @@ const criarChecklist = async (idFuncionario, dadosChecklist, idReserva) => {
             throw erro;
         }
 
-        if(linhaPertence.anuncio_escola.id_figurino !== parseInt(item.id_figurino)){
+        if(linhaPertence.anuncio_escola.id_figurino !== parseInt(item.idfigurino)){
 
             const erro = new Error(`Incoerência: O figurino ${item.idfigurino} não é o que foi alugado na linha de reserva ${item.id_linha_reserva}.`);
             erro.status = 400; // Bad Request

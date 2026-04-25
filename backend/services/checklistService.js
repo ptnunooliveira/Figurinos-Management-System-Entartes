@@ -17,6 +17,7 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
+const devolucaoService = require('./devolucaoService.js');
 
 /////////////////////////////////////////////////////////////////////////////////
 //                                  READ                                       //
@@ -184,6 +185,26 @@ const criarChecklist = async (idFuncionario, dadosChecklist, idReserva) => {
                     where: { id: linhaPendente.id },
                     data: { id_estado_linha_reserva: ID_ESTADO_LINHA_CONCLUIDA }
                 });
+            }
+
+            // INTEGRAÇÃO DO SERVICE DE DEVOLUÇÃO
+            const resultadoDevolucao = await devolucaoService.criarDevolucao({
+                id_linha_reserva: linhaPendente.id,
+                id_checklist: novaChecklist.id,
+                datadevolucao: new Date()
+            });
+
+            if(resultadoDevolucao){
+
+                console.log(`Devolução registada na tabela para a linha ${linhaPendente.id}.`);
+            } else {
+                
+                console.log(`Falha ao criar registo da devolução para a linha ${linhaPendente.id}.`);
+            }
+
+            if(resultadoDevolucao.ocorrencia){
+
+                console.log(`Ocorrência gerada automaticamente para a linha ${linhaPendente.id} devido a danos no figurino!`);
             }
         }
 

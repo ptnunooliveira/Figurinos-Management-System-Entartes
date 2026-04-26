@@ -80,7 +80,7 @@ const datasSobrepoem = (inicioA, fimA, inicioB, fimB) => {
 // ------------------------------------------------------------
 // Obter todos os figurinos com filtros
 // ------------------------------------------------------------
-const obterTodosFigurinosFiltros = async (filtros = {}) => {
+const construirWhereFigurinos = (filtros = {}) => {
     const {
         descricao,
         tamanho,
@@ -129,6 +129,8 @@ const obterTodosFigurinosFiltros = async (filtros = {}) => {
     if (id_estado_figurino !== undefined && id_estado_figurino !== null) {
         where.id_estado_figurino = id_estado_figurino;
     }
+
+    return where;
 }
 
 
@@ -196,7 +198,8 @@ const associarAcessorio = async (idFigurino, idAcessorio) => {
 };
 
 // Obter todos os figurinos
-const obterTodosFigurinos = async () => {
+const obterTodosFigurinos = async (filtros = {}) => {
+    const where = construirWhereFigurinos(filtros);
 
     const figurinos = await prisma.figurino.findMany({
         where,
@@ -465,7 +468,6 @@ const obterDisponibilidadeFigurino = async (idFigurino, dataInicio, dataFim) => 
 
 module.exports = {
     obterTodosFigurinos,
-    obterTodosFigurinosFiltros,
     obterFigurino,
     criarFigurino,
     atualizarFigurino,

@@ -2,7 +2,7 @@
 
 Este projeto é desenvolvido no âmbito da iniciativa Projeto 50+10 do 2.º ano da Licenciatura em Engenharia de Sistemas Informáticos do IPCA, ano letivo 2025/2026.
 
-O trabalho visa a articulação prática entre as Unidades Curriculares de:
+O trabalho visa a articulação prática entre as Unidades Curriculares:
 
 Projeto de Desenvolvimento de Software (PDS): Foco na gestão do ciclo de vida, arquitetura e desenvolvimento Back-end.
 Programação Web (PW): Foco no desenvolvimento do Front-end e experiência de utilizador.

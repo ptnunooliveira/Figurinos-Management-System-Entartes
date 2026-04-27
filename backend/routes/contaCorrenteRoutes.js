@@ -23,7 +23,7 @@ const perfilMiddleware = require('../middleware/perfilMiddleware.js');
 router.get('/', authMiddleware, perfilMiddleware('FUNCIONARIO'), contaCorrenteController.obterTodosMovimentosContaCorrente);
 
 // GET /api/conta-corrente/me
-router.get('/me', authMiddleware, contaCorrenteController.obterMinhaContaCorrente);
+router.get('/me', authMiddleware, perfilMiddleware('ALUNO'), contaCorrenteController.obterMinhaContaCorrente);
 
 // GET /api/conta-corrente/:id
 router.get('/:id', authMiddleware, perfilMiddleware('FUNCIONARIO'), contaCorrenteController.obterMovimentoContaCorrente);

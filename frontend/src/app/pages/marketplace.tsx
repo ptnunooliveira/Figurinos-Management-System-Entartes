@@ -1,16 +1,24 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus, ShoppingBag, Clock, CheckCircle, XCircle, Shirt, Upload, X, Search, Filter } from "lucide-react";
-import { anunciosMarketplace, utilizadorAtual, categorias } from "../lib/dados-mock";
+import { getUtilizadorAtual } from "../lib/auth";
+import { getMarketplace, getMarketplaceGestao, getMarketplaceDoUtilizador, criarAnuncioMarketplace, getCategorias } from "../lib/services";
+import type { AuxiliarItem } from "../lib/services";
+import type { AnuncioMarketplace } from "../lib/dados-mock";
 import { toast } from "sonner";
 
 export function Marketplace() {
+  const utilizadorAtual = getUtilizadorAtual();
   const [abaAtiva, setAbaAtiva] = useState<"explorar" | "meusAnuncios">("explorar");
   const [mostrarCriarModal, setMostrarCriarModal] = useState(false);
   const [imagens, setImagens] = useState<string[]>([]);
   const [termoPesquisa, setTermoPesquisa] = useState("");
   const [categoriaSelecionada, setCategoriaSelecionada] = useState<string>("todas");
   const [estadoSelecionado, setEstadoSelecionado] = useState<string>("todos");
-  
+
+  const [todosAnuncios, setTodosAnuncios] = useState<AnuncioMarketplace[]>([]);
+  const [meusAnunciosLista, setMeusAnunciosLista] = useState<AnuncioMarketplace[]>([]);
+  const [categoriasLista, setCategoriasLista] = useState<AuxiliarItem[]>([]);
+
   const [formulario, setFormulario] = useState({
     titulo: "",
     descricao: "",
@@ -20,15 +28,25 @@ export function Marketplace() {
     sexo: "",
   });
 
-  const meusAnuncios = anunciosMarketplace.filter(a => a.id_utilizador === utilizadorAtual.id);
-  const outrosAnuncios = anunciosMarketplace.filter(a => a.id_utilizador !== utilizadorAtual.id);
+  useEffect(() => {
+    getCategorias().then(setCategoriasLista);
+    if (utilizadorAtual?.tipo === 'funcionario') {
+      getMarketplaceGestao().then(setTodosAnuncios);
+    } else {
+      getMarketplace().then(setTodosAnuncios);
+      if (utilizadorAtual?.id) {
+        getMarketplaceDoUtilizador(utilizadorAtual.id).then(setMeusAnunciosLista);
+      }
+    }
+  }, [utilizadorAtual?.tipo, utilizadorAtual?.id]);
 
-  // Lógica de anúncios a mostrar
-  const anunciosAMostrar = utilizadorAtual.tipo === 'funcionario' 
-    ? anunciosMarketplace // Funcionário vê todos os anúncios
-    : (abaAtiva === "explorar" ? outrosAnuncios : meusAnuncios); // Aluno vê por aba
+  const meusAnuncios = meusAnunciosLista;
+  const outrosAnuncios = todosAnuncios.filter(a => a.id_utilizador !== utilizadorAtual?.id);
 
-  // Aplicar filtros
+  const anunciosAMostrar = utilizadorAtual?.tipo === 'funcionario'
+    ? todosAnuncios
+    : (abaAtiva === "explorar" ? outrosAnuncios : meusAnuncios);
+
   const anunciosFiltrados = anunciosAMostrar.filter(anuncio => {
     const matchTermo = anuncio.titulo.toLowerCase().includes(termoPesquisa.toLowerCase()) ||
                        anuncio.descricao.toLowerCase().includes(termoPesquisa.toLowerCase());
@@ -89,9 +107,9 @@ export function Marketplace() {
     setImagens(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formulario.titulo || !formulario.descricao || !formulario.categoria) {
       toast.error("Por favor, preencha todos os campos obrigatórios");
       return;
@@ -102,10 +120,26 @@ export function Marketplace() {
       return;
     }
 
-    toast.success("Anúncio submetido para aprovação!");
-    setMostrarCriarModal(false);
-    setFormulario({ titulo: "", descricao: "", tamanho: "", categoria: "", tipo: "", sexo: "" });
-    setImagens([]);
+    try {
+      const categoriaObj = categoriasLista.find(c => c.nome === formulario.categoria);
+      await criarAnuncioMarketplace({
+        titulo: formulario.titulo,
+        descricao: formulario.descricao,
+        tamanho: formulario.tamanho,
+        id_categoria: categoriaObj?.id ?? null,
+        id_tipo: null,
+        id_sexo: null,
+      });
+      toast.success("Anúncio submetido para aprovação!");
+      setMostrarCriarModal(false);
+      setFormulario({ titulo: "", descricao: "", tamanho: "", categoria: "", tipo: "", sexo: "" });
+      setImagens([]);
+      if (utilizadorAtual?.id) {
+        getMarketplaceDoUtilizador(utilizadorAtual.id).then(setMeusAnunciosLista);
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao criar anúncio");
+    }
   };
 
   return (
@@ -115,12 +149,12 @@ export function Marketplace() {
         <div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Marketplace</h1>
           <p className="text-gray-600">
-            {utilizadorAtual.tipo === 'funcionario' 
-              ? 'Gerir anúncios submetidos pelos alunos' 
+            {utilizadorAtual?.tipo === 'funcionario'
+              ? 'Gerir anúncios submetidos pelos alunos'
               : 'Partilhe ou encontre figurinos na comunidade'}
           </p>
         </div>
-        {utilizadorAtual.tipo === 'aluno' && (
+        {utilizadorAtual?.tipo === 'aluno' && (
           <button
             onClick={() => setMostrarCriarModal(true)}
             className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg transition-colors"
@@ -132,7 +166,7 @@ export function Marketplace() {
       </div>
 
       {/* Abas */}
-      {utilizadorAtual.tipo === 'aluno' && (
+      {utilizadorAtual?.tipo === 'aluno' && (
         <div className="bg-white rounded-xl shadow-sm p-1 inline-flex gap-1">
           <button
             onClick={() => setAbaAtiva("explorar")}
@@ -185,13 +219,13 @@ export function Marketplace() {
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             >
               <option value="todas">Todas as Categorias</option>
-              {categorias.map(cat => (
-                <option key={cat} value={cat}>{cat}</option>
+              {categoriasLista.map(cat => (
+                <option key={cat.id} value={cat.nome}>{cat.nome}</option>
               ))}
             </select>
           </div>
 
-          {(utilizadorAtual.tipo === 'funcionario' || abaAtiva === 'meusAnuncios') && (
+          {(utilizadorAtual?.tipo === 'funcionario' || abaAtiva === 'meusAnuncios') && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Estado</label>
               <select
@@ -245,7 +279,7 @@ export function Marketplace() {
                       <span className="inline-flex items-center px-3 py-1 bg-gray-100 text-gray-700 text-xs rounded-full font-medium">
                         {anuncio.tamanho}
                       </span>
-                      {(utilizadorAtual.tipo === 'funcionario' || abaAtiva === "meusAnuncios") && (
+                      {(utilizadorAtual?.tipo === 'funcionario' || abaAtiva === "meusAnuncios") && (
                         <span className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${getCorEstado(anuncio.estado)}`}>
                           <IconeEstado className="w-3 h-3" />
                           {anuncio.estado}
@@ -300,8 +334,8 @@ export function Marketplace() {
             {abaAtiva === "explorar" ? "Nenhum anúncio disponível" : "Ainda não tem anúncios"}
           </h3>
           <p className="text-gray-600 mb-6">
-            {abaAtiva === "explorar" 
-              ? "Não há anúncios disponíveis no momento." 
+            {abaAtiva === "explorar"
+              ? "Não há anúncios disponíveis no momento."
               : "Crie o seu primeiro anúncio e comece a partilhar!"}
           </p>
           {abaAtiva === "meusAnuncios" && (
@@ -324,19 +358,19 @@ export function Marketplace() {
               <h2 className="text-xl font-semibold text-gray-900">Criar Novo Anúncio</h2>
               <p className="text-sm text-gray-600 mt-1">Partilhe o seu figurino com a comunidade</p>
             </div>
-            
+
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               {/* Upload de Imagens */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Fotografias do Figurino * (máximo 5)
                 </label>
-                
+
                 <div className="grid grid-cols-3 gap-4 mb-4">
                   {imagens.map((imagem, index) => (
                     <div key={index} className="relative group aspect-square">
-                      <img 
-                        src={imagem} 
+                      <img
+                        src={imagem}
                         alt={`Figurino ${index + 1}`}
                         className="w-full h-full object-cover rounded-lg"
                       />
@@ -349,7 +383,7 @@ export function Marketplace() {
                       </button>
                     </div>
                   ))}
-                  
+
                   {imagens.length < 5 && (
                     <label className="aspect-square border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-purple-400 hover:bg-purple-50 transition-colors">
                       <Upload className="w-6 h-6 text-gray-400 mb-1" />
@@ -394,22 +428,22 @@ export function Marketplace() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Categoria *</label>
-                  <select 
+                  <select
                     value={formulario.categoria}
                     onChange={(e) => setFormulario({...formulario, categoria: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     required
                   >
                     <option value="">Selecione...</option>
-                    {categorias.map(cat => (
-                      <option key={cat} value={cat}>{cat}</option>
+                    {categoriasLista.map(cat => (
+                      <option key={cat.id} value={cat.nome}>{cat.nome}</option>
                     ))}
                   </select>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Tamanho *</label>
-                  <select 
+                  <select
                     value={formulario.tamanho}
                     onChange={(e) => setFormulario({...formulario, tamanho: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
@@ -428,7 +462,7 @@ export function Marketplace() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Tipo *</label>
-                  <select 
+                  <select
                     value={formulario.tipo}
                     onChange={(e) => setFormulario({...formulario, tipo: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
@@ -443,7 +477,7 @@ export function Marketplace() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Género *</label>
-                  <select 
+                  <select
                     value={formulario.sexo}
                     onChange={(e) => setFormulario({...formulario, sexo: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"

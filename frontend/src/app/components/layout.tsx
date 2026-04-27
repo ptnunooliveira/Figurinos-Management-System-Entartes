@@ -1,10 +1,10 @@
 import { Link, Outlet, useLocation, useNavigate } from "react-router";
-import { 
-  Home, 
-  Shirt, 
-  Calendar, 
-  ShoppingBag, 
-  User, 
+import {
+  Home,
+  Shirt,
+  Calendar,
+  ShoppingBag,
+  User,
   Settings,
   Menu,
   X,
@@ -13,14 +13,15 @@ import {
   Megaphone
 } from "lucide-react";
 import { useState } from "react";
-import { utilizadorAtual } from "../lib/dados-mock";
-import { logout } from "../lib/auth";
+import { getUtilizadorAtual, logout } from "../lib/auth";
 import figLogo from "../../assets/fig-logo.png";
 
 export function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const utilizadorAtual = getUtilizadorAtual();
 
   const handleLogout = () => {
     logout();
@@ -46,7 +47,7 @@ export function Layout() {
     { nome: "Perfil", href: "/perfil", icon: User },
   ];
 
-  const navegacao = utilizadorAtual.tipo === "funcionario" 
+  const navegacao = utilizadorAtual?.tipo === "funcionario"
     ? navegacaoFuncionario
     : navegacaoAluno;
 
@@ -56,6 +57,9 @@ export function Layout() {
     }
     return location.pathname.startsWith(href);
   };
+
+  const nomeUtilizador = utilizadorAtual?.nome ?? '';
+  const iniciaisUtilizador = nomeUtilizador.split(' ').map(n => n[0]).join('').slice(0, 2);
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
@@ -115,12 +119,12 @@ export function Layout() {
           <div className="flex items-center gap-3 mb-3">
             <div className="w-10 h-10 bg-gradient-to-br from-fig-purple to-fig-magenta rounded-full flex items-center justify-center flex-shrink-0">
               <span className="text-white font-medium text-sm">
-                {utilizadorAtual.nome.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                {iniciaisUtilizador}
               </span>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 truncate">{utilizadorAtual.nome}</p>
-              <p className="text-xs text-gray-500 capitalize">{utilizadorAtual.tipo}</p>
+              <p className="text-sm font-medium text-gray-900 truncate">{nomeUtilizador}</p>
+              <p className="text-xs text-gray-500 capitalize">{utilizadorAtual?.tipo}</p>
             </div>
           </div>
           <button
@@ -187,17 +191,17 @@ export function Layout() {
                     </Link>
                   );
                 })}
-                
+
                 <div className="pt-4 border-t">
                   <div className="flex items-center gap-3 px-4 py-3">
                     <div className="w-10 h-10 bg-gradient-to-br from-fig-purple to-fig-magenta rounded-full flex items-center justify-center">
                       <span className="text-white font-medium">
-                        {utilizadorAtual.nome.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                        {iniciaisUtilizador}
                       </span>
                     </div>
                     <div>
-                      <p className="font-medium text-gray-900">{utilizadorAtual.nome}</p>
-                      <p className="text-sm text-gray-500 capitalize">{utilizadorAtual.tipo}</p>
+                      <p className="font-medium text-gray-900">{nomeUtilizador}</p>
+                      <p className="text-sm text-gray-500 capitalize">{utilizadorAtual?.tipo}</p>
                     </div>
                   </div>
                   <button

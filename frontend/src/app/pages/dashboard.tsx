@@ -1,23 +1,61 @@
+import { useState, useEffect } from "react";
 import { Calendar, Shirt, ShoppingBag, AlertCircle, TrendingUp, FileText } from "lucide-react";
 import { Link } from "react-router";
-import { reservas, anunciosEscola, ocorrencias, utilizadorAtual, anunciosMarketplace } from "../lib/dados-mock";
+import { getUtilizadorAtual } from "../lib/auth";
+import { getReservas, getMinhasReservas, getOcorrencias, getMarketplace, getMarketplaceGestao, getAnunciosEscola } from "../lib/services";
+import type { LinhaReserva } from "../lib/dados-mock";
 
 export function Dashboard() {
-  const reservasAtivas = reservas.filter(r => 
-    r.estado === "Aprovada" || r.estado === "Em curso"
-  ).length;
+  const utilizadorAtual = getUtilizadorAtual();
 
-  const figurinosDisponiveis = anunciosEscola.filter(a => 
-    a.estado === "Disponível"
-  ).length;
+  const [reservasAtivas, setReservasAtivas] = useState(0);
+  const [figurinosDisponiveis, setFigurinosDisponiveis] = useState(0);
+  const [ocorrenciasPendentes, setOcorrenciasPendentes] = useState(0);
+  const [anunciosPendentes, setAnunciosPendentes] = useState(0);
+  const [totalMarketplace, setTotalMarketplace] = useState(0);
+  const [proximasReservas, setProximasReservas] = useState<LinhaReserva[]>([]);
 
-  const ocorrenciasPendentes = ocorrencias.filter(o => 
-    o.estado === "Em análise" || o.estado === "Pendente"
-  ).length;
+  useEffect(() => {
+    getAnunciosEscola().then(anuncios => {
+      setFigurinosDisponiveis(anuncios.filter(a => a.estado_anuncio?.nome === 'Disponível').length);
+    });
 
-  const anunciosPendentes = anunciosMarketplace.filter(a => 
-    a.estado === "Pendente"
-  ).length;
+    if (utilizadorAtual?.tipo === 'funcionario') {
+      getReservas().then(reservas => {
+        const ativas = reservas.filter(r => {
+          const e = r.estado?.toUpperCase();
+          return e === 'CONFIRMADA' || e === 'APROVADA' || e === 'EM CURSO';
+        });
+        setReservasAtivas(ativas.length);
+      });
+      getOcorrencias().then(ocs => {
+        setOcorrenciasPendentes(ocs.filter(o => {
+          const e = o.estado?.toLowerCase();
+          return e === 'em análise' || e === 'pendente';
+        }).length);
+      });
+      getMarketplaceGestao().then(anuncios => {
+        setTotalMarketplace(anuncios.length);
+        setAnunciosPendentes(anuncios.filter(a => a.estado === 'Pendente').length);
+      });
+    } else {
+      getMinhasReservas().then(reservas => {
+        const ativas = reservas.filter(r => {
+          const e = r.estado?.toUpperCase();
+          return e === 'CONFIRMADA' || e === 'APROVADA' || e === 'EM CURSO';
+        });
+        setReservasAtivas(ativas.length);
+        const proximas = reservas
+          .filter(r => r.estado?.toUpperCase() === 'CONFIRMADA' || r.estado?.toUpperCase() === 'APROVADA')
+          .flatMap(r => r.linhas)
+          .slice(0, 3);
+        setProximasReservas(proximas);
+      });
+      getMarketplace().then(anuncios => {
+        setTotalMarketplace(anuncios.length);
+      });
+    }
+  }, [utilizadorAtual?.tipo]);
 
   const estatisticas = [
     {
@@ -36,7 +74,7 @@ export function Dashboard() {
     },
     {
       nome: "Marketplace",
-      valor: anunciosMarketplace.length,
+      valor: totalMarketplace,
       icon: ShoppingBag,
       cor: "bg-purple-500",
       link: "/marketplace",
@@ -81,19 +119,14 @@ export function Dashboard() {
     },
   ];
 
-  const proximasReservas = reservas
-    .filter(r => r.estado === "Aprovada")
-    .flatMap(r => r.linhas)
-    .slice(0, 3);
-
   return (
     <div className="space-y-8">
       {/* Secção de Boas-Vindas */}
       <div className="bg-gradient-to-r from-fig-purple via-fig-dark to-fig-magenta rounded-2xl p-8 text-white">
         <h1 className="text-3xl font-bold mb-2">
-          Bem-vindo{utilizadorAtual.tipo === 'funcionario' && 'a'} ao FigHappens, {utilizadorAtual.nome.split(' ')[0]}! 👋
+          Bem-vindo{utilizadorAtual?.tipo === 'funcionario' && 'a'} ao FigHappens, {utilizadorAtual?.nome.split(' ')[0]}! 👋
         </h1>
-        {utilizadorAtual.tipo === 'aluno' && (
+        {utilizadorAtual?.tipo === 'aluno' && (
           <p className="text-fig-green-light text-lg">
             Explore o catálogo e faça as suas reservas de figurinos.
           </p>
@@ -154,16 +187,16 @@ export function Dashboard() {
         <div className="bg-white rounded-xl shadow-sm p-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-lg font-semibold text-gray-900">
-              {utilizadorAtual.tipo === 'funcionario' ? 'Alertas' : 'Próximas Reservas'}
+              {utilizadorAtual?.tipo === 'funcionario' ? 'Alertas' : 'Próximas Reservas'}
             </h2>
-            {utilizadorAtual.tipo === 'funcionario' ? (
+            {utilizadorAtual?.tipo === 'funcionario' ? (
               <AlertCircle className="w-5 h-5 text-orange-500" />
             ) : (
               <Calendar className="w-5 h-5 text-gray-400" />
             )}
           </div>
           <div className="space-y-4">
-            {utilizadorAtual.tipo === 'funcionario' ? (
+            {utilizadorAtual?.tipo === 'funcionario' ? (
               <>
                 {anunciosPendentes > 0 && (
                   <Link
@@ -241,7 +274,7 @@ export function Dashboard() {
       </div>
 
       {/* Ações Rápidas */}
-      {utilizadorAtual.tipo === 'aluno' && (
+      {utilizadorAtual?.tipo === 'aluno' && (
         <div className="bg-white rounded-xl shadow-sm p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Ações Rápidas</h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

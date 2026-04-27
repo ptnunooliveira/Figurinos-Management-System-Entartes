@@ -1,4 +1,4 @@
-import { getUtilizadorAtual } from './auth';
+// Tipos de dados da aplicação
 
 export interface Utilizador {
   id: number;
@@ -116,22 +116,3 @@ export interface ContaCorrente {
   exportado_faturacao: boolean;
   id_utilizador: number;
 }
-
-export const utilizadorAtual: Utilizador = getUtilizadorAtual() || {
-  id: 0,
-  nome: "Visitante",
-  email: "",
-  contacto: "",
-  data_registo: "",
-  ativo: false,
-  tipo: "aluno",
-};
-
-export const categorias: string[] = [];
-export const acessorios: Acessorio[] = [];
-export const figurinos: Figurino[] = [];
-export const anunciosEscola: AnuncioEscola[] = [];
-export const anunciosMarketplace: AnuncioMarketplace[] = [];
-export const reservas: Reserva[] = [];
-export const ocorrencias: Ocorrencia[] = [];
-export const contaCorrente: ContaCorrente[] = [];

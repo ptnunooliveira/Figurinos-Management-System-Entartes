@@ -2,12 +2,14 @@ import { useState, useEffect } from "react";
 import { Search, Filter, Shirt, Plus, Trash2, Eye, Edit, Calendar, X } from "lucide-react";
 import { Link } from "react-router";
 import { getUtilizadorAtual } from "../lib/auth";
-import { getFigurinosRaw, type FigurinoAPI } from "../lib/services";
+import { getFigurinosRaw, getAnunciosEscola, type FigurinoAPI, type AnuncioEscolaAPI } from "../lib/services";
+import { apiFetch } from "../lib/api";
 import { toast } from "sonner";
 
 export function Figurinos() {
   const utilizadorAtual = getUtilizadorAtual();
   const [figurinos, setFigurinos] = useState<FigurinoAPI[]>([]);
+  const [anunciosEscola, setAnunciosEscola] = useState<AnuncioEscolaAPI[]>([]);
   const [termoPesquisa, setTermoPesquisa] = useState("");
   const [categoriaSelecionada, setCategoriaSelecionada] = useState<string>("todas");
   const [tipoSelecionado, setTipoSelecionado] = useState<string>("todos");
@@ -21,6 +23,7 @@ export function Figurinos() {
 
   useEffect(() => {
     getFigurinosRaw().then(setFigurinos);
+    getAnunciosEscola().then(setAnunciosEscola);
   }, []);
 
   const handleRemoverFigurino = (_id: number, descricao: string) => {
@@ -49,7 +52,7 @@ export function Figurinos() {
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
   };
 
-  const handleConfirmarReserva = () => {
+  const handleConfirmarReserva = async () => {
     if (!figurinoSelecionado || !dataInicio || !dataFim) {
       toast.error("Por favor, preencha todas as datas");
       return;
@@ -64,9 +67,31 @@ export function Figurinos() {
       toast.error("A data de início não pode ser no passado");
       return;
     }
-    const dias = calcularDias(dataInicio, dataFim);
-    toast.success(`Reserva confirmada! ${dias} dia${dias > 1 ? 's' : ''}`);
-    handleFecharModalReserva();
+
+    const anuncio = anunciosEscola.find(a => a.id_figurino === figurinoSelecionado.id);
+    if (!anuncio) {
+      toast.error("Figurino não disponível para aluguer");
+      return;
+    }
+
+    try {
+      const res = await apiFetch('/reservas', {
+        method: 'POST',
+        body: JSON.stringify({
+          linhas: [{ id_anuncio: anuncio.id, datainicio: dataInicio, datafim: dataFim }],
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        toast.error(err.erro ?? "Erro ao criar reserva");
+        return;
+      }
+      const dias = calcularDias(dataInicio, dataFim);
+      toast.success(`Reserva criada com sucesso! ${dias} dia${dias > 1 ? 's' : ''}`);
+      handleFecharModalReserva();
+    } catch {
+      toast.error("Erro ao criar reserva");
+    }
   };
 
   const figurinosFiltrados = figurinos.filter((figurino) => {

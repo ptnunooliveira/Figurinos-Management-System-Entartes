@@ -24,6 +24,9 @@ const auxiliaresRoutes = require("./routes/auxiliaresRoutes");
 const marketplaceRoutes = require("./routes/marketplaceRoutes");
 const devolucaoRoutes = require("./routes/devolucaoRoutes");
 const anunciosEscolaRoutes = require('./routes/anunciosEscolaRoutes');
+const contaCorrenteRoutes = require('./routes/contaCorrenteRoutes');
+const contestacaoRoutes = require('./routes/contestacaoRoutes');
+const propostaCobrancaRoutes = require('./routes/propostaCobrancaRoutes');
 
 // Adicionado Nelson em 19-04-2026: Rota para gerir dados especificos dos perfis
 const perfilRoutes = require("./routes/perfilRoutes");
@@ -71,6 +74,15 @@ app.use('/marketplace', marketplaceRoutes);
 
 // Rotas de perfis
 app.use('/perfis', perfilRoutes);
+
+// Rotas de conta corrente
+app.use('/conta-corrente', contaCorrenteRoutes);
+
+// Rotas de contestações
+app.use('/contestacoes', contestacaoRoutes);
+
+// Rotas de propostas de cobrança
+app.use('/propostas-cobranca', propostaCobrancaRoutes);
 
 // Rotas de devoluções, ocorrências e orçamentos
 app.use('/', devolucaoRoutes);

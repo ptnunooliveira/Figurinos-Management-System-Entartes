@@ -38,11 +38,35 @@ const TRANSICOES_PERMITIDAS = {
 
 // Função responsável por obter todas as reservas da base de dados
 // Assíncrona porque a operação com a BD demora algum tempo
+const RESERVA_INCLUDE = {
+    estado_reserva: true,
+    utilizador: {
+        select: { id: true, nome: true, email: true }
+    },
+    linha_reserva: {
+        include: {
+            anuncio_escola: {
+                include: {
+                    figurino: {
+                        include: {
+                            categoria: true,
+                            figurino_acessorio: {
+                                include: { acessorio: true }
+                            }
+                        }
+                    }
+                }
+            },
+            estado_linha_reserva: true
+        }
+    }
+};
+
 const obterTodasReservas = async (filtros) => {
 
     const { estado, ordenarPorData } = filtros;
 
-    const prismaOptions = {};
+    const prismaOptions = { include: RESERVA_INCLUDE };
 
     if(estado){
 
@@ -60,7 +84,7 @@ const obterTodasReservas = async (filtros) => {
         };
     }
     else{
-        
+
         prismaOptions.orderBy = {
             datareserva: 'desc'
         };
@@ -77,15 +101,16 @@ const obterReservasDoUtilizador = async (idUtilizador, filtros) => {
     const { estado, ordenarPorData } = filtros;
 
     const prismaOptions = {
-        
+
         where: {
             id_utilizador: idUtilizador
-        }
+        },
+        include: RESERVA_INCLUDE
     };
 
     if(estado){
 
-        prismaOptions.where.estado_reserva = { 
+        prismaOptions.where.estado_reserva = {
 
             nome: estado.toUpperCase()
         };
@@ -127,16 +152,10 @@ const obterReservaPorID = async (idReserva) => {
 
 // Função responsável por obter os detalhes da reserva (linhas_reserva)
 const obterDetalhesReserva = async (idReserva) => {
-    
+
     const reservaDetalhada = await prisma.reserva.findUnique({
-        where: {id: idReserva},
-        include: {
-            linha_reserva: {
-                include: {
-                    figurino: true
-                }
-            }
-        }
+        where: { id: idReserva },
+        include: RESERVA_INCLUDE
     });
 
     return reservaDetalhada;
@@ -253,7 +272,7 @@ const atualizarEstadoReserva = async (idReserva, idNovoEstado, idFuncionario) =>
 
         await prisma.linha_reserva.updateMany({
             where: { id_reserva: idReserva },
-            data: { id_estado_linha_reserva: novoEstado } 
+            data: { id_estado_linha_reserva: idNovoEstado }
         });
     }
 

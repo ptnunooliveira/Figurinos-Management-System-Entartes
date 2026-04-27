@@ -1,5 +1,5 @@
 import { apiFetch } from './api';
-import type { Figurino } from './dados-mock';
+import type { Figurino, Reserva, LinhaReserva, ContaCorrente, AnuncioMarketplace, Ocorrencia } from './dados-mock';
 
 // Tipos que correspondem ao formato devolvido pelo backend
 
@@ -115,3 +115,293 @@ export const getTiposFigurino = () => getAuxiliar('/pesquisa/tipos-figurino');
 export const getSexos = () => getAuxiliar('/pesquisa/sexos');
 export const getEstadosCondicao = () => getAuxiliar('/pesquisa/estados-condicao');
 export const getAcessorios = () => getAuxiliar('/pesquisa/acessorios');
+
+// ─── Reservas ───────────────────────────────────────────────────────────────
+
+function mapLinhaReserva(lr: any): LinhaReserva {
+  const fig = lr.anuncio_escola?.figurino;
+  return {
+    id: lr.id,
+    anuncio: {
+      id: lr.anuncio_escola?.id ?? 0,
+      figurino: fig ? {
+        id: fig.id,
+        nome: fig.descricao ?? '',
+        descricao: fig.descricao ?? '',
+        tamanho: fig.tamanho ?? '',
+        localizacao: fig.localizacao ?? '',
+        categoria: fig.categoria?.nomecategoria ?? '',
+        tipo: '',
+        sexo: '',
+        estado: '',
+        imagens: [],
+        acessorios: (fig.figurino_acessorio ?? []).map((fa: any) => fa.acessorio),
+        valor_diario: lr.anuncio_escola?.valordiarioaluguer ?? 0,
+      } : { id: 0, nome: '', descricao: '', tamanho: '', localizacao: '', categoria: '', tipo: '', sexo: '', estado: '', imagens: [], acessorios: [], valor_diario: 0 },
+      valor_diario_aluguer: lr.anuncio_escola?.valordiarioaluguer ?? 0,
+      estado: lr.anuncio_escola?.estado_anuncio?.nome ?? '',
+    },
+    data_inicio: lr.datainicio ?? '',
+    data_fim: lr.datafim ?? '',
+    valor_diario: lr.valordiario ?? lr.anuncio_escola?.valordiarioaluguer ?? 0,
+    estado: lr.estado_linha_reserva?.nome ?? '',
+  };
+}
+
+export function mapReserva(r: any): Reserva {
+  return {
+    id: r.id,
+    data_reserva: r.datareserva ?? '',
+    estado: r.estado_reserva?.nome ?? '',
+    utilizador: {
+      id: r.utilizador?.id ?? 0,
+      nome: r.utilizador?.nome ?? '',
+      email: r.utilizador?.email ?? '',
+      contacto: '',
+      data_registo: '',
+      ativo: true,
+      tipo: 'aluno',
+    },
+    linhas: (r.linha_reserva ?? []).map(mapLinhaReserva),
+  };
+}
+
+export async function getReservas(): Promise<Reserva[]> {
+  try {
+    const res = await apiFetch('/reservas');
+    if (!res.ok) return [];
+    const data = await res.json();
+    if (!Array.isArray(data)) return [];
+    return data.map(mapReserva);
+  } catch {
+    return [];
+  }
+}
+
+export async function getMinhasReservas(): Promise<Reserva[]> {
+  try {
+    const res = await apiFetch('/reservas/mine');
+    if (!res.ok) return [];
+    const data = await res.json();
+    if (!Array.isArray(data)) return [];
+    return data.map(mapReserva);
+  } catch {
+    return [];
+  }
+}
+
+export async function getReservaDetalhes(id: number): Promise<Reserva | null> {
+  try {
+    const res = await apiFetch(`/reservas/${id}`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    return mapReserva(data);
+  } catch {
+    return null;
+  }
+}
+
+export async function criarChecklist(idReserva: number, dados: {
+  id_tipo_checklist: number;
+  assinaturaFuncionario: string;
+  assinaturaEncarregado: string;
+  itens: { id_linha_reserva: number; idfigurino: number; id_estado: number; observacoes?: string }[];
+}): Promise<any> {
+  const res = await apiFetch(`/reservas/${idReserva}/checklists`, {
+    method: 'POST',
+    body: JSON.stringify(dados),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.erro ?? 'Erro ao criar checklist');
+  }
+  return res.json();
+}
+
+// ─── Conta Corrente ──────────────────────────────────────────────────────────
+
+function mapContaCorrente(m: any): ContaCorrente {
+  const data = m.linha_reserva?.datainicio ?? m.dataexportacao ?? null;
+  const descricao = m.ocorrencia?.descricao
+    ?? (m.linha_reserva ? `Aluguer - Linha #${m.id_linha_reserva}` : m.tipo_movimento_contacorrente?.nome ?? '');
+  return {
+    id: m.id,
+    valor: m.valor ?? 0,
+    data: data ? new Date(data).toISOString() : '',
+    tipo_movimento: m.tipo_movimento_contacorrente?.nome ?? '',
+    descricao,
+    exportado_faturacao: m.exportadofaturacao ?? false,
+    id_utilizador: m.id_utilizador ?? 0,
+  };
+}
+
+export async function getContaCorrente(): Promise<ContaCorrente[]> {
+  try {
+    const res = await apiFetch('/conta-corrente');
+    if (!res.ok) return [];
+    const data = await res.json();
+    if (!Array.isArray(data)) return [];
+    return data.map(mapContaCorrente);
+  } catch {
+    return [];
+  }
+}
+
+export async function getMinhaContaCorrente(): Promise<ContaCorrente[]> {
+  try {
+    const res = await apiFetch('/conta-corrente/me');
+    if (!res.ok) return [];
+    const raw = await res.json();
+    const movimentos = raw.movimentos ?? raw;
+    if (!Array.isArray(movimentos)) return [];
+    return movimentos.map(mapContaCorrente);
+  } catch {
+    return [];
+  }
+}
+
+export async function marcarMovimentoExportado(id: number): Promise<void> {
+  await apiFetch(`/conta-corrente/${id}/exportar`, { method: 'PATCH' });
+}
+
+// ─── Marketplace ─────────────────────────────────────────────────────────────
+
+function mapAnuncioMarketplace(a: any): AnuncioMarketplace {
+  return {
+    id: a.id,
+    titulo: a.titulo ?? '',
+    data_anuncio: a.dataanuncio ?? '',
+    data_aprovacao: a.dataaprovacao ?? undefined,
+    motivo_rejeicao: a.motivorejeicao ?? undefined,
+    descricao: a.descricao ?? '',
+    tamanho: a.tamanho ?? '',
+    categoria: a.categoria ?? '',
+    tipo: a.tipo_figurino ?? '',
+    sexo: a.sexo ?? '',
+    estado: a.situacao ?? a.estado_anuncio?.nome ?? '',
+    id_utilizador: a.id_utilizador ?? 0,
+    imagens: [],
+  };
+}
+
+export async function getMarketplace(): Promise<AnuncioMarketplace[]> {
+  try {
+    const res = await apiFetch('/marketplace');
+    if (!res.ok) return [];
+    const data = await res.json();
+    if (!Array.isArray(data)) return [];
+    return data.map(mapAnuncioMarketplace);
+  } catch {
+    return [];
+  }
+}
+
+export async function getMarketplaceGestao(estado?: string): Promise<AnuncioMarketplace[]> {
+  try {
+    const query = estado ? `?estado=${encodeURIComponent(estado)}` : '';
+    const res = await apiFetch(`/marketplace/gestao${query}`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    if (!Array.isArray(data)) return [];
+    return data.map(mapAnuncioMarketplace);
+  } catch {
+    return [];
+  }
+}
+
+export async function criarAnuncioMarketplace(dados: {
+  titulo: string;
+  descricao: string;
+  tamanho: string;
+  id_categoria?: number | null;
+  id_tipo?: number | null;
+  id_sexo?: number | null;
+}): Promise<any> {
+  const res = await apiFetch('/marketplace', {
+    method: 'POST',
+    body: JSON.stringify(dados),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error ?? 'Erro ao criar anúncio');
+  }
+  return res.json();
+}
+
+export async function aprovarAnuncioMarketplace(id: number, aprovado: boolean, motivorejeicao?: string): Promise<any> {
+  const res = await apiFetch(`/marketplace/${id}/aprovar`, {
+    method: 'PATCH',
+    body: JSON.stringify({ aprovado, motivorejeicao: motivorejeicao ?? null }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error ?? 'Erro ao atualizar estado');
+  }
+  return res.json();
+}
+
+// ─── Ocorrências ──────────────────────────────────────────────────────────────
+
+function mapOcorrencia(o: any): Ocorrencia {
+  return {
+    id: o.id,
+    descricao: o.descricao ?? '',
+    estado: o.estado_ocorrencia?.nome ?? '',
+    linha_reserva_id: o.id_linha_reserva ?? 0,
+    data_criacao: o.dataregisto ?? '',
+    tipo: '',
+    valor_proposto: o.valor ?? undefined,
+  };
+}
+
+export async function getOcorrencias(): Promise<Ocorrencia[]> {
+  try {
+    const res = await apiFetch('/ocorrencias');
+    if (!res.ok) return [];
+    const data = await res.json();
+    if (!Array.isArray(data)) return [];
+    return data.map(mapOcorrencia);
+  } catch {
+    return [];
+  }
+}
+
+export async function getMarketplaceDoUtilizador(userId: number): Promise<AnuncioMarketplace[]> {
+  try {
+    const res = await apiFetch(`/marketplace/${userId}`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    if (!Array.isArray(data)) return [];
+    return data.map(mapAnuncioMarketplace);
+  } catch {
+    return [];
+  }
+}
+
+export async function criarOcorrencia(dados: {
+  id_linha_reserva: number;
+  descricao: string;
+  valor?: number | null;
+}): Promise<any> {
+  const res = await apiFetch('/ocorrencias', {
+    method: 'POST',
+    body: JSON.stringify(dados),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error ?? err.erro ?? 'Erro ao criar ocorrência');
+  }
+  return res.json();
+}
+
+export async function criarPropostaCobranca(idOcorrencia: number, valor: number): Promise<any> {
+  const res = await apiFetch('/propostas-cobranca', {
+    method: 'POST',
+    body: JSON.stringify({ id_ocorrencia: idOcorrencia, valor }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.erro ?? 'Erro ao criar proposta');
+  }
+  return res.json();
+}

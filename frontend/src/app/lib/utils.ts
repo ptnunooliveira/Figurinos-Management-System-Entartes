@@ -1,5 +1,5 @@
 import * as XLSX from 'xlsx';
-import { ContaCorrente } from './dados-mock';
+import type { ContaCorrente } from './dados-mock';
 
 // Exportar dados para Excel
 export function exportarParaExcel(dados: ContaCorrente[], nomeArquivo: string = 'faturacao') {

@@ -1,8 +1,11 @@
-import { useState, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router";
 import { ArrowLeft, CheckCircle, AlertTriangle, Plus, X } from "lucide-react";
 import SignatureCanvas from "react-signature-canvas";
-import { reservas, utilizadorAtual } from "../lib/dados-mock";
+import { getUtilizadorAtual } from "../lib/auth";
+import { getReservaDetalhes, getEstadosCondicao, criarChecklist, criarOcorrencia } from "../lib/services";
+import type { AuxiliarItem } from "../lib/services";
+import type { Reserva } from "../lib/dados-mock";
 import { toast } from "sonner";
 
 export function Devolucao() {
@@ -10,23 +13,15 @@ export function Devolucao() {
   const navigate = useNavigate();
   const assinaturaFuncionarioRef = useRef<SignatureCanvas>(null);
   const assinaturaClienteRef = useRef<SignatureCanvas>(null);
+  const utilizadorAtual = getUtilizadorAtual();
 
-  const reserva = reservas.find(r => r.id === Number(id));
-  const linhaReserva = reserva?.linhas[0];
-  const figurino = linhaReserva?.anuncio.figurino;
-
-  const [checklist, setChecklist] = useState(
-    figurino?.acessorios.map((acc, idx) => ({
-      id: idx + 1,
-      nome: acc.nome,
-      estadoInicial: "Bom",
-      estadoFinal: "Bom",
-      observacoes: "",
-      verificado: false,
-      temProblema: false,
-    })) || []
-  );
-
+  const [reserva, setReserva] = useState<Reserva | null>(null);
+  const [carregando, setCarregando] = useState(true);
+  const [estadosCondicao, setEstadosCondicao] = useState<AuxiliarItem[]>([]);
+  const [checklist, setChecklist] = useState<Array<{
+    id: number; nome: string; estadoInicial: string; estadoFinal: string;
+    observacoes: string; verificado: boolean; temProblema: boolean;
+  }>>([]);
   const [estadoFigurino, setEstadoFigurino] = useState("Bom");
   const [observacoesGerais, setObservacoesGerais] = useState("");
   const [ocorrencias, setOcorrencias] = useState<Array<{
@@ -41,6 +36,33 @@ export function Devolucao() {
     descricao: "",
     valorProposto: "",
   });
+
+  useEffect(() => {
+    if (!id) return;
+    Promise.all([
+      getReservaDetalhes(Number(id)),
+      getEstadosCondicao(),
+    ]).then(([r, estados]) => {
+      if (r) {
+        setReserva(r);
+        const acessorios = r.linhas[0]?.anuncio?.figurino?.acessorios ?? [];
+        setChecklist(acessorios.map((acc, idx) => ({
+          id: idx + 1,
+          nome: acc.nome,
+          estadoInicial: "Bom",
+          estadoFinal: "Bom",
+          observacoes: "",
+          verificado: false,
+          temProblema: false,
+        })));
+      }
+      setEstadosCondicao(estados);
+      setCarregando(false);
+    });
+  }, [id]);
+
+  const linhaReserva = reserva?.linhas[0];
+  const figurino = linhaReserva?.anuncio.figurino;
 
   const toggleVerificado = (id: number) => {
     setChecklist(prev =>
@@ -96,11 +118,11 @@ export function Devolucao() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     const todosVerificados = checklist.every(item => item.verificado);
-    if (!todosVerificados) {
+    if (!todosVerificados && checklist.length > 0) {
       toast.error("Por favor, verifique todos os itens da checklist");
       return;
     }
@@ -110,16 +132,54 @@ export function Devolucao() {
       return;
     }
 
-    const problemasEncontrados = checklist.filter(item => item.temProblema).length + ocorrencias.length;
-    
-    if (problemasEncontrados > 0) {
-      toast.success(`Devolução registada com ${problemasEncontrados} ocorrência${problemasEncontrados !== 1 ? 's' : ''}`);
-    } else {
-      toast.success("Devolução registada sem problemas!");
+    if (!reserva) return;
+
+    const assinaturaFuncionario = assinaturaFuncionarioRef.current?.toDataURL() ?? '';
+    const assinaturaCliente = assinaturaClienteRef.current?.toDataURL() ?? '';
+    const estadoId = estadosCondicao.find(e => e.nome.toLowerCase() === estadoFigurino.toLowerCase())?.id ?? 1;
+
+    try {
+      await criarChecklist(Number(id), {
+        id_tipo_checklist: 2,
+        assinaturaFuncionario,
+        assinaturaEncarregado: assinaturaCliente,
+        itens: reserva.linhas.map(linha => ({
+          id_linha_reserva: linha.id,
+          idfigurino: linha.anuncio.figurino.id,
+          id_estado: estadoId,
+          observacoes: observacoesGerais || undefined,
+        })),
+      });
+
+      for (const oc of ocorrencias) {
+        const linhaId = reserva.linhas[0]?.id;
+        if (!linhaId) continue;
+        await criarOcorrencia({
+          id_linha_reserva: linhaId,
+          descricao: `${oc.tipo}: ${oc.descricao}`,
+          valor: oc.valorProposto ? parseFloat(oc.valorProposto) : null,
+        }).catch(() => {});
+      }
+
+      const problemasEncontrados = checklist.filter(item => item.temProblema).length + ocorrencias.length;
+      if (problemasEncontrados > 0) {
+        toast.success(`Devolução registada com ${problemasEncontrados} ocorrência${problemasEncontrados !== 1 ? 's' : ''}`);
+      } else {
+        toast.success("Devolução registada sem problemas!");
+      }
+      setTimeout(() => navigate("/reservas"), 1500);
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao registar devolução");
     }
-    
-    setTimeout(() => navigate("/reservas"), 1500);
   };
+
+  if (carregando) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-gray-600">A carregar reserva...</p>
+      </div>
+    );
+  }
 
   if (!figurino) {
     return (
@@ -162,7 +222,7 @@ export function Devolucao() {
         {/* Informação do Figurino */}
         <div className="bg-white rounded-xl shadow-sm p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Informação do Figurino</h2>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <p className="text-sm text-gray-600">Nome</p>
@@ -182,7 +242,7 @@ export function Devolucao() {
         {/* Estado do Figurino */}
         <div className="bg-white rounded-xl shadow-sm p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Estado do Figurino na Devolução</h2>
-          
+
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -223,8 +283,8 @@ export function Devolucao() {
 
           <div className="space-y-4">
             {checklist.map(item => (
-              <div 
-                key={item.id} 
+              <div
+                key={item.id}
                 className={`border rounded-lg p-4 ${
                   item.temProblema ? 'border-orange-300 bg-orange-50' : ''
                 }`}
@@ -399,11 +459,11 @@ export function Devolucao() {
         {/* Assinaturas */}
         <div className="bg-white rounded-xl shadow-sm p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Assinaturas</h2>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Assinatura do Funcionário ({utilizadorAtual.nome})
+                Assinatura do Funcionário ({utilizadorAtual?.nome})
               </label>
               <div className="border-2 border-gray-300 rounded-lg overflow-hidden">
                 <SignatureCanvas

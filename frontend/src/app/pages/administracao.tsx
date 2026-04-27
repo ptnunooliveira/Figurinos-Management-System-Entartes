@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { CheckCircle, XCircle, Shirt, AlertCircle, Euro, FileText } from "lucide-react";
-import { anunciosMarketplace, ocorrencias } from "../lib/dados-mock";
+import { getMarketplaceGestao, aprovarAnuncioMarketplace, getOcorrencias, criarPropostaCobranca } from "../lib/services";
+import type { AnuncioMarketplace, Ocorrencia } from "../lib/dados-mock";
 import { toast } from "sonner";
 
 export function Administracao() {
@@ -8,22 +9,47 @@ export function Administracao() {
   const [ocorrenciaSelecionada, setOcorrenciaSelecionada] = useState<number | null>(null);
   const [valorCobranca, setValorCobranca] = useState("");
   const [descricaoCobranca, setDescricaoCobranca] = useState("");
-  
-  const anunciosPendentes = anunciosMarketplace.filter(a => a.estado === "Pendente");
-  const ocorrenciasPendentes = ocorrencias.filter(o => o.estado === "Em análise");
 
-  const aprovarAnuncio = (id: number) => {
-    toast.success("Anúncio aprovado com sucesso!");
+  const [anunciosPendentes, setAnunciosPendentes] = useState<AnuncioMarketplace[]>([]);
+  const [ocorrenciasPendentes, setOcorrenciasPendentes] = useState<Ocorrencia[]>([]);
+
+  const carregarDados = () => {
+    getMarketplaceGestao('Pendente').then(setAnunciosPendentes);
+    getOcorrencias().then(ocs => {
+      setOcorrenciasPendentes(ocs.filter(o => {
+        const e = o.estado?.toLowerCase();
+        return e === 'em análise' || e === 'pendente';
+      }));
+    });
   };
 
-  const rejeitarAnuncio = (id: number) => {
-    const motivo = prompt("Motivo da rejeição:");
-    if (motivo) {
-      toast.success("Anúncio rejeitado");
+  useEffect(() => {
+    carregarDados();
+  }, []);
+
+  const aprovarAnuncio = async (id: number) => {
+    try {
+      await aprovarAnuncioMarketplace(id, true);
+      toast.success("Anúncio aprovado com sucesso!");
+      carregarDados();
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao aprovar anúncio");
     }
   };
 
-  const criarPropostaCobranca = (e: React.FormEvent) => {
+  const rejeitarAnuncio = async (id: number) => {
+    const motivo = prompt("Motivo da rejeição:");
+    if (!motivo) return;
+    try {
+      await aprovarAnuncioMarketplace(id, false, motivo);
+      toast.success("Anúncio rejeitado");
+      carregarDados();
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao rejeitar anúncio");
+    }
+  };
+
+  const handleCriarPropostaCobranca = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!ocorrenciaSelecionada || !valorCobranca) {
       toast.error("Por favor, preencha todos os campos");
@@ -36,10 +62,16 @@ export function Administracao() {
       return;
     }
 
-    toast.success(`Proposta de cobrança de €${valor.toFixed(2)} criada com sucesso!`);
-    setOcorrenciaSelecionada(null);
-    setValorCobranca("");
-    setDescricaoCobranca("");
+    try {
+      await criarPropostaCobranca(ocorrenciaSelecionada, valor);
+      toast.success(`Proposta de cobrança de €${valor.toFixed(2)} criada com sucesso!`);
+      setOcorrenciaSelecionada(null);
+      setValorCobranca("");
+      setDescricaoCobranca("");
+      carregarDados();
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao criar proposta");
+    }
   };
 
   return (
@@ -53,8 +85,8 @@ export function Administracao() {
         <button
           onClick={() => setAbaAtiva("anuncios")}
           className={`px-6 py-2 rounded-lg transition-colors ${
-            abaAtiva === "anuncios" 
-              ? "text-white" 
+            abaAtiva === "anuncios"
+              ? "text-white"
               : "text-gray-600 hover:bg-gray-100"
           }`}
           style={abaAtiva === "anuncios" ? { backgroundColor: "var(--fig-purple)" } : {}}
@@ -64,8 +96,8 @@ export function Administracao() {
         <button
           onClick={() => setAbaAtiva("ocorrencias")}
           className={`px-6 py-2 rounded-lg transition-colors ${
-            abaAtiva === "ocorrencias" 
-              ? "text-white" 
+            abaAtiva === "ocorrencias"
+              ? "text-white"
               : "text-gray-600 hover:bg-gray-100"
           }`}
           style={abaAtiva === "ocorrencias" ? { backgroundColor: "var(--fig-purple)" } : {}}
@@ -103,14 +135,14 @@ export function Administracao() {
                       </p>
                     </div>
                     <div className="flex flex-col gap-2">
-                      <button 
+                      <button
                         onClick={() => aprovarAnuncio(anuncio.id)}
                         className="flex items-center gap-2 px-4 py-2 bg-fig-green hover:bg-fig-green/90 text-white rounded-lg transition-colors"
                       >
                         <CheckCircle className="w-4 h-4" />
                         Aprovar
                       </button>
-                      <button 
+                      <button
                         onClick={() => rejeitarAnuncio(anuncio.id)}
                         className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
                       >
@@ -157,7 +189,7 @@ export function Administracao() {
                       )}
                     </div>
                     <div className="flex flex-col gap-2">
-                      <button 
+                      <button
                         onClick={() => setOcorrenciaSelecionada(ocorrencia.id)}
                         className="flex items-center gap-2 px-4 py-2 bg-fig-magenta hover:bg-fig-magenta/90 text-white rounded-lg transition-colors whitespace-nowrap"
                       >
@@ -193,7 +225,7 @@ export function Administracao() {
               </p>
             </div>
 
-            <form onSubmit={criarPropostaCobranca} className="p-6 space-y-4">
+            <form onSubmit={handleCriarPropostaCobranca} className="p-6 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Valor a Cobrar (€) *

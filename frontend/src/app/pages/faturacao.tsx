@@ -1,12 +1,18 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FileDown, Calendar, DollarSign } from "lucide-react";
-import { contaCorrente } from "../lib/dados-mock";
+import { getContaCorrente } from "../lib/services";
+import type { ContaCorrente } from "../lib/dados-mock";
 import { exportarParaExcel, formatarMoeda } from "../lib/utils";
 import { toast } from "sonner";
 
 export function Faturacao() {
   const [dataInicio, setDataInicio] = useState("");
   const [dataFim, setDataFim] = useState("");
+  const [contaCorrente, setContaCorrente] = useState<ContaCorrente[]>([]);
+
+  useEffect(() => {
+    getContaCorrente().then(setContaCorrente);
+  }, []);
 
   const movimentosFiltrados = contaCorrente.filter(mov => {
     if (!dataInicio && !dataFim) return !mov.exportado_faturacao;

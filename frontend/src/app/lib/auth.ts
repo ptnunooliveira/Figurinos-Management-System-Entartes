@@ -1,4 +1,4 @@
-import { Utilizador } from './dados-mock';
+import type { Utilizador } from './dados-mock';
 import { apiFetch, setToken, removeToken } from './api';
 
 const AUTH_KEY = 'fighappens_auth';

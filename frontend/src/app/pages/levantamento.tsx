@@ -1,8 +1,11 @@
-import { useState, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router";
 import { ArrowLeft, CheckCircle, Save } from "lucide-react";
 import SignatureCanvas from "react-signature-canvas";
-import { reservas, utilizadorAtual } from "../lib/dados-mock";
+import { getUtilizadorAtual } from "../lib/auth";
+import { getReservaDetalhes, getEstadosCondicao, criarChecklist } from "../lib/services";
+import type { AuxiliarItem } from "../lib/services";
+import type { Reserva } from "../lib/dados-mock";
 import { toast } from "sonner";
 
 export function Levantamento() {
@@ -10,24 +13,41 @@ export function Levantamento() {
   const navigate = useNavigate();
   const assinaturaFuncionarioRef = useRef<SignatureCanvas>(null);
   const assinaturaClienteRef = useRef<SignatureCanvas>(null);
+  const utilizadorAtual = getUtilizadorAtual();
 
-  // Encontrar a reserva e linha de reserva
-  const reserva = reservas.find(r => r.id === Number(id));
-  const linhaReserva = reserva?.linhas[0]; // Simplificado para demo
-  const figurino = linhaReserva?.anuncio.figurino;
-
-  const [checklist, setChecklist] = useState(
-    figurino?.acessorios.map((acc, idx) => ({
-      id: idx + 1,
-      nome: acc.nome,
-      estado: "Bom",
-      observacoes: "",
-      verificado: false,
-    })) || []
-  );
-
+  const [reserva, setReserva] = useState<Reserva | null>(null);
+  const [carregando, setCarregando] = useState(true);
+  const [estadosCondicao, setEstadosCondicao] = useState<AuxiliarItem[]>([]);
+  const [checklist, setChecklist] = useState<Array<{
+    id: number; nome: string; estado: string; observacoes: string; verificado: boolean;
+  }>>([]);
   const [estadoFigurino, setEstadoFigurino] = useState("Bom");
   const [observacoesGerais, setObservacoesGerais] = useState("");
+
+  useEffect(() => {
+    if (!id) return;
+    Promise.all([
+      getReservaDetalhes(Number(id)),
+      getEstadosCondicao(),
+    ]).then(([r, estados]) => {
+      if (r) {
+        setReserva(r);
+        const acessorios = r.linhas[0]?.anuncio?.figurino?.acessorios ?? [];
+        setChecklist(acessorios.map((acc, idx) => ({
+          id: idx + 1,
+          nome: acc.nome,
+          estado: "Bom",
+          observacoes: "",
+          verificado: false,
+        })));
+      }
+      setEstadosCondicao(estados);
+      setCarregando(false);
+    });
+  }, [id]);
+
+  const linhaReserva = reserva?.linhas[0];
+  const figurino = linhaReserva?.anuncio.figurino;
 
   const toggleVerificado = (id: number) => {
     setChecklist(prev =>
@@ -61,30 +81,52 @@ export function Levantamento() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validar checklist
     const todosVerificados = checklist.every(item => item.verificado);
-    if (!todosVerificados) {
+    if (!todosVerificados && checklist.length > 0) {
       toast.error("Por favor, verifique todos os itens da checklist");
       return;
     }
 
-    // Validar assinaturas
     if (assinaturaFuncionarioRef.current?.isEmpty() || assinaturaClienteRef.current?.isEmpty()) {
       toast.error("Por favor, recolha ambas as assinaturas");
       return;
     }
 
-    // Guardar assinaturas
-    const assinaturaFuncionario = assinaturaFuncionarioRef.current?.toDataURL();
-    const assinaturaCliente = assinaturaClienteRef.current?.toDataURL();
+    if (!reserva) return;
 
-    // Em produção, isto guardaria a checklist na base de dados
-    toast.success("Levantamento registado com sucesso!");
-    setTimeout(() => navigate("/reservas"), 1500);
+    const assinaturaFuncionario = assinaturaFuncionarioRef.current?.toDataURL() ?? '';
+    const assinaturaCliente = assinaturaClienteRef.current?.toDataURL() ?? '';
+    const estadoId = estadosCondicao.find(e => e.nome.toLowerCase() === estadoFigurino.toLowerCase())?.id ?? 1;
+
+    try {
+      await criarChecklist(Number(id), {
+        id_tipo_checklist: 1,
+        assinaturaFuncionario,
+        assinaturaEncarregado: assinaturaCliente,
+        itens: reserva.linhas.map(linha => ({
+          id_linha_reserva: linha.id,
+          idfigurino: linha.anuncio.figurino.id,
+          id_estado: estadoId,
+          observacoes: observacoesGerais || undefined,
+        })),
+      });
+      toast.success("Levantamento registado com sucesso!");
+      setTimeout(() => navigate("/reservas"), 1500);
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao registar levantamento");
+    }
   };
+
+  if (carregando) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-gray-600">A carregar reserva...</p>
+      </div>
+    );
+  }
 
   if (!figurino) {
     return (
@@ -113,7 +155,7 @@ export function Levantamento() {
         {/* Informação do Figurino */}
         <div className="bg-white rounded-xl shadow-sm p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Informação do Figurino</h2>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <p className="text-sm text-gray-600">Nome</p>
@@ -143,7 +185,7 @@ export function Levantamento() {
         {/* Estado Inicial do Figurino */}
         <div className="bg-white rounded-xl shadow-sm p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Estado do Figurino</h2>
-          
+
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -230,12 +272,12 @@ export function Levantamento() {
         {/* Assinaturas */}
         <div className="bg-white rounded-xl shadow-sm p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Assinaturas</h2>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Assinatura Funcionário */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Assinatura do Funcionário ({utilizadorAtual.nome})
+                Assinatura do Funcionário ({utilizadorAtual?.nome})
               </label>
               <div className="border-2 border-gray-300 rounded-lg overflow-hidden">
                 <SignatureCanvas

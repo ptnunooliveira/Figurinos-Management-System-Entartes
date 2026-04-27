@@ -1,7 +1,13 @@
 import { User, Mail, Phone, Calendar } from "lucide-react";
-import { utilizadorAtual } from "../lib/dados-mock";
+import { getUtilizadorAtual } from "../lib/auth";
 
 export function Perfil() {
+  const utilizadorAtual = getUtilizadorAtual();
+
+  if (!utilizadorAtual) {
+    return <div className="text-gray-500">Não autenticado.</div>;
+  }
+
   return (
     <div className="space-y-6">
       <div>

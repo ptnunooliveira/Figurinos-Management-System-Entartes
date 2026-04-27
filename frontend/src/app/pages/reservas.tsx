@@ -1,32 +1,41 @@
-import { useState } from "react";
-import { Calendar, Clock, CheckCircle, XCircle, AlertCircle, Shirt, ClipboardCheck, PackageOpen, Search, Filter, Eye, Edit, Trash2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Calendar, Clock, CheckCircle, XCircle, AlertCircle, Shirt, ClipboardCheck, PackageOpen, Search, Filter } from "lucide-react";
 import { Link } from "react-router";
-import { reservas, ocorrencias, utilizadorAtual } from "../lib/dados-mock";
+import { getUtilizadorAtual } from "../lib/auth";
+import { getReservas, getMinhasReservas } from "../lib/services";
+import type { Reserva } from "../lib/dados-mock";
 import { calcularDias, formatarMoeda } from "../lib/utils";
-import { toast } from "sonner";
 
 export function Reservas() {
+  const utilizadorAtual = getUtilizadorAtual();
+  const [reservas, setReservas] = useState<Reserva[]>([]);
   const [abaAtiva, setAbaAtiva] = useState<"ativas" | "historico">("ativas");
   const [termoPesquisa, setTermoPesquisa] = useState("");
   const [estadoSelecionado, setEstadoSelecionado] = useState<string>("todos");
 
-  const reservasAtivas = reservas.filter(r => 
-    r.estado === "Aprovada" || r.estado === "Em curso"
+  useEffect(() => {
+    const fetch = utilizadorAtual?.tipo === 'funcionario' ? getReservas : getMinhasReservas;
+    fetch().then(setReservas);
+  }, [utilizadorAtual?.tipo]);
+
+  const reservasAtivas = reservas.filter(r =>
+    r.estado === "CONFIRMADA" || r.estado === "EM CURSO" ||
+    r.estado === "Aprovada" || r.estado === "Em curso" || r.estado === "PENDENTE" || r.estado === "Pendente"
   );
-  
-  const reservasHistorico = reservas.filter(r => 
-    r.estado === "Devolvida" || r.estado === "Cancelada"
+
+  const reservasHistorico = reservas.filter(r =>
+    r.estado === "CONCLUIDA" || r.estado === "CANCELADA" ||
+    r.estado === "Devolvida" || r.estado === "Cancelada" || r.estado === "ATRASADA"
   );
 
   const reservasExibir = abaAtiva === "ativas" ? reservasAtivas : reservasHistorico;
 
-  // Aplicar filtros de pesquisa
   const reservasFiltradas = reservasExibir.filter(reserva => {
-    const matchTermo = 
+    const matchTermo =
       (reserva.id?.toString() || '').includes(termoPesquisa) ||
       (reserva.utilizador?.nome || '').toLowerCase().includes(termoPesquisa.toLowerCase()) ||
       (reserva.utilizador?.email || '').toLowerCase().includes(termoPesquisa.toLowerCase()) ||
-      (reserva.linhas || []).some(linha => 
+      (reserva.linhas || []).some(linha =>
         linha.anuncio?.figurino?.nome?.toLowerCase().includes(termoPesquisa.toLowerCase()) ||
         linha.anuncio?.figurino?.categoria?.toLowerCase().includes(termoPesquisa.toLowerCase()) ||
         linha.anuncio?.figurino?.tamanho?.toLowerCase().includes(termoPesquisa.toLowerCase())
@@ -35,45 +44,23 @@ export function Reservas() {
     return matchTermo && matchEstado;
   });
 
-  const handleRemoverReserva = (id: number) => {
-    if (window.confirm("Tem a certeza que deseja remover esta reserva?")) {
-      toast.success("Reserva removida com sucesso!");
-    }
-  };
-
   const getCorEstado = (estado: string) => {
-    switch (estado) {
-      case "Aprovada":
-      case "Confirmada":
-        return "text-green-700 bg-green-100";
-      case "Em curso":
-        return "text-blue-700 bg-blue-100";
-      case "Devolvida":
-        return "text-gray-700 bg-gray-100";
-      case "Cancelada":
-        return "text-red-700 bg-red-100";
-      case "Pendente":
-        return "text-yellow-700 bg-yellow-100";
-      default:
-        return "text-gray-700 bg-gray-100";
-    }
+    const e = estado?.toUpperCase();
+    if (e === "CONFIRMADA" || e === "APROVADA") return "text-green-700 bg-green-100";
+    if (e === "EM CURSO") return "text-blue-700 bg-blue-100";
+    if (e === "CONCLUIDA" || e === "DEVOLVIDA") return "text-gray-700 bg-gray-100";
+    if (e === "CANCELADA") return "text-red-700 bg-red-100";
+    if (e === "PENDENTE") return "text-yellow-700 bg-yellow-100";
+    if (e === "ATRASADA") return "text-orange-700 bg-orange-100";
+    return "text-gray-700 bg-gray-100";
   };
 
   const getIconeEstado = (estado: string) => {
-    switch (estado) {
-      case "Aprovada":
-      case "Confirmada":
-      case "Devolvida":
-        return CheckCircle;
-      case "Em curso":
-        return Clock;
-      case "Cancelada":
-        return XCircle;
-      case "Pendente":
-        return AlertCircle;
-      default:
-        return Clock;
-    }
+    const e = estado?.toUpperCase();
+    if (e === "CONFIRMADA" || e === "APROVADA" || e === "CONCLUIDA" || e === "DEVOLVIDA") return CheckCircle;
+    if (e === "EM CURSO") return Clock;
+    if (e === "CANCELADA") return XCircle;
+    return AlertCircle;
   };
 
   return (
@@ -81,7 +68,7 @@ export function Reservas() {
       {/* Cabeçalho */}
       <div>
         <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          {utilizadorAtual.tipo === 'funcionario' ? 'Gestão de Reservas' : 'Minhas Reservas'}
+          {utilizadorAtual?.tipo === 'funcionario' ? 'Gestão de Reservas' : 'Minhas Reservas'}
         </h1>
         <p className="text-gray-600">Gerencie as reservas de figurinos</p>
       </div>
@@ -134,11 +121,12 @@ export function Reservas() {
               className="border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             >
               <option value="todos">Todos os Estados</option>
-              <option value="Aprovada">Aprovada</option>
-              <option value="Em curso">Em curso</option>
-              <option value="Devolvida">Devolvida</option>
-              <option value="Cancelada">Cancelada</option>
-              <option value="Pendente">Pendente</option>
+              <option value="CONFIRMADA">Confirmada</option>
+              <option value="PENDENTE">Pendente</option>
+              <option value="EM CURSO">Em Curso</option>
+              <option value="CONCLUIDA">Concluída</option>
+              <option value="CANCELADA">Cancelada</option>
+              <option value="ATRASADA">Atrasada</option>
             </select>
           </div>
 
@@ -165,7 +153,7 @@ export function Reservas() {
                       </h3>
                     </div>
                     <p className="text-sm text-gray-600">
-                      Data da reserva: {new Date(reserva.data_reserva).toLocaleDateString('pt-PT')}
+                      Data da reserva: {reserva.data_reserva ? new Date(reserva.data_reserva).toLocaleDateString('pt-PT') : '—'}
                     </p>
                     <p className="text-sm text-gray-600">
                       Cliente: {reserva.utilizador.nome}
@@ -186,9 +174,8 @@ export function Reservas() {
               {/* Itens da Reserva */}
               <div className="p-6 space-y-4">
                 {reserva.linhas.map((linha) => {
-                  const ocorrencia = ocorrencias.find(o => o.linha_reserva_id === linha.id);
                   const dias = calcularDias(linha.data_inicio, linha.data_fim);
-                  const valorTotal = linha.valor_diario * dias;
+                  const valorTotal = (linha.valor_diario ?? 0) * dias;
 
                   return (
                     <div key={linha.id} className="border rounded-lg p-4">
@@ -198,17 +185,17 @@ export function Reservas() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <h4 className="font-semibold text-gray-900 mb-1">
-                            {linha.anuncio.figurino.nome}
+                            {linha.anuncio?.figurino?.nome || '—'}
                           </h4>
                           <p className="text-sm text-gray-600 mb-2">
-                            {linha.anuncio.figurino.descricao}
+                            {linha.anuncio?.figurino?.descricao || ''}
                           </p>
-                          
+
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm mb-3">
                             <div className="flex items-center gap-2">
                               <Calendar className="w-4 h-4 text-gray-400" />
                               <span className="text-gray-600">
-                                {new Date(linha.data_inicio).toLocaleDateString('pt-PT')} - {new Date(linha.data_fim).toLocaleDateString('pt-PT')}
+                                {linha.data_inicio ? new Date(linha.data_inicio).toLocaleDateString('pt-PT') : '—'} - {linha.data_fim ? new Date(linha.data_fim).toLocaleDateString('pt-PT') : '—'}
                               </span>
                             </div>
                             <div className="flex items-center gap-2">
@@ -222,23 +209,10 @@ export function Reservas() {
                               {linha.estado}
                             </span>
                             <div className="text-right">
-                              <p className="text-sm text-gray-600">{formatarMoeda(linha.valor_diario)}/dia × {dias} dias</p>
+                              <p className="text-sm text-gray-600">{formatarMoeda(linha.valor_diario ?? 0)}/dia × {dias} dias</p>
                               <p className="font-semibold text-purple-600">Total: {formatarMoeda(valorTotal)}</p>
                             </div>
                           </div>
-
-                          {ocorrencia && (
-                            <div className="mt-3 p-3 bg-orange-50 border border-orange-200 rounded-lg">
-                              <div className="flex items-start gap-2">
-                                <AlertCircle className="w-4 h-4 text-orange-600 mt-0.5 flex-shrink-0" />
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-medium text-orange-900">Ocorrência</p>
-                                  <p className="text-sm text-orange-700">{ocorrencia.descricao}</p>
-                                  <p className="text-xs text-orange-600 mt-1">Estado: {ocorrencia.estado}</p>
-                                </div>
-                              </div>
-                            </div>
-                          )}
                         </div>
                       </div>
                     </div>
@@ -247,7 +221,7 @@ export function Reservas() {
               </div>
 
               {/* Ações da Reserva */}
-              {utilizadorAtual.tipo === 'funcionario' && abaAtiva === "ativas" && (
+              {utilizadorAtual?.tipo === 'funcionario' && abaAtiva === "ativas" && (
                 <div className="bg-gray-50 px-6 py-4 flex justify-end gap-3 flex-wrap">
                   <Link
                     to={`/levantamento/${reserva.id}`}
@@ -265,24 +239,6 @@ export function Reservas() {
                   </Link>
                 </div>
               )}
-              {utilizadorAtual.tipo === 'funcionario' && (
-                <div className="bg-gray-50 px-6 py-4 flex justify-end gap-3 flex-wrap">
-                  <Link
-                    to={`/reservas/editar/${reserva.id}`}
-                    className="flex items-center gap-2 px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors"
-                  >
-                    <Edit className="w-4 h-4" />
-                    Editar Reserva
-                  </Link>
-                  <button
-                    onClick={() => handleRemoverReserva(reserva.id)}
-                    className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    Remover Reserva
-                  </button>
-                </div>
-              )}
             </div>
           ))
         ) : (
@@ -292,13 +248,13 @@ export function Reservas() {
               {abaAtiva === "ativas" ? "Nenhuma reserva ativa" : "Nenhuma reserva no histórico"}
             </h3>
             <p className="text-gray-600 mb-6">
-              {abaAtiva === "ativas" 
-                ? utilizadorAtual.tipo === 'funcionario' 
+              {abaAtiva === "ativas"
+                ? utilizadorAtual?.tipo === 'funcionario'
                   ? "Não há reservas ativas no momento."
                   : "Ainda não tem reservas ativas. Explore o catálogo!"
                 : "Ainda não há histórico de reservas."}
             </p>
-            {abaAtiva === "ativas" && utilizadorAtual.tipo !== 'funcionario' && (
+            {abaAtiva === "ativas" && utilizadorAtual?.tipo !== 'funcionario' && (
               <Link
                 to="/figurinos"
                 className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg transition-colors inline-block"

@@ -23,9 +23,12 @@ const figurinoInclude = {
 };
 
 const criarAnuncioEscola = async (dados) => {
+    const maxResult = await prisma.anuncio_escola.aggregate({ _max: { id: true } });
+    const nextId = (maxResult._max.id ?? 0) + 1;
+
     return await prisma.anuncio_escola.create({
         data: {
-            id: dados.id,
+            id: nextId,
             id_figurino: dados.id_figurino ?? null,
             valordiarioaluguer: dados.valordiarioaluguer ?? null,
             id_estado: dados.id_estado ?? null,

@@ -17,18 +17,18 @@ const anunciosEscolaService = require('../services/anunciosEscolaService');
 // Função do controller responsável por criar um anúncio da escola
 const criarAnuncioEscola = async (req, res) => {
     try {
-        const { id, id_figurino, valordiarioaluguer, id_estado } = req.body;
+        const { id_figurino, valordiarioaluguer, id_estado } = req.body;
 
-        if (id === undefined || id === null) {
-            return res.status(400).json({ erro: 'O campo "id" é obrigatório.' });
-        }
-
-        const novoAnuncio = await anunciosEscolaService.criarAnuncioEscola({ id, id_figurino, valordiarioaluguer, id_estado });
+        const novoAnuncio = await anunciosEscolaService.criarAnuncioEscola({
+            id_figurino: id_figurino ? parseInt(id_figurino) : null,
+            valordiarioaluguer: valordiarioaluguer ? parseFloat(valordiarioaluguer) : null,
+            id_estado: id_estado ? parseInt(id_estado) : 1,
+        });
         return res.status(201).json(novoAnuncio);
 
     } catch (erro) {
         console.error('Erro no controller de anúncios da escola:', erro);
-        return res.status(500).json({ erro: 'Ocorreu um erro ao criar o anúncio da escola.' });
+        return res.status(500).json({ erro: erro.message ?? 'Ocorreu um erro ao criar o anúncio da escola.' });
     }
 };
 

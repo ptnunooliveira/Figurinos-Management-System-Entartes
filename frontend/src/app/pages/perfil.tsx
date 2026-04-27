@@ -1,12 +1,30 @@
-import { User, Mail, Phone, Calendar } from "lucide-react";
+import { useState } from "react";
+import { User, Mail, Phone, Calendar, X } from "lucide-react";
 import { getUtilizadorAtual } from "../lib/auth";
+import { updateUser } from "../lib/services";
+import { toast } from "sonner";
 
 export function Perfil() {
   const utilizadorAtual = getUtilizadorAtual();
+  const [editarAberto, setEditarAberto] = useState(false);
+  const [nome, setNome] = useState(utilizadorAtual?.nome ?? '');
+  const [email, setEmail] = useState(utilizadorAtual?.email ?? '');
+  const [contacto, setContacto] = useState(utilizadorAtual?.contacto ?? '');
 
   if (!utilizadorAtual) {
     return <div className="text-gray-500">Não autenticado.</div>;
   }
+
+  const handleGuardar = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await updateUser(utilizadorAtual.id, { nome, email, contacto });
+      toast.success("Perfil atualizado com sucesso!");
+      setEditarAberto(false);
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao atualizar perfil");
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -88,7 +106,10 @@ export function Perfil() {
               )}
             </div>
 
-            <button className="w-full mt-6 bg-purple-600 hover:bg-purple-700 text-white py-2 px-4 rounded-lg transition-colors">
+            <button
+              onClick={() => { setNome(utilizadorAtual.nome); setEmail(utilizadorAtual.email); setContacto(utilizadorAtual.contacto); setEditarAberto(true); }}
+              className="w-full mt-6 bg-purple-600 hover:bg-purple-700 text-white py-2 px-4 rounded-lg transition-colors"
+            >
               Editar Perfil
             </button>
           </div>
@@ -138,6 +159,65 @@ export function Perfil() {
           </div>
         </div>
       </div>
+
+      {editarAberto && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-md w-full">
+            <div className="p-6 border-b flex items-center justify-between">
+              <h2 className="text-xl font-bold text-gray-900">Editar Perfil</h2>
+              <button onClick={() => setEditarAberto(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <form onSubmit={handleGuardar} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nome</label>
+                <input
+                  type="text"
+                  value={nome}
+                  onChange={(e) => setNome(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Contacto</label>
+                <input
+                  type="text"
+                  value={contacto}
+                  onChange={(e) => setContacto(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditarAberto(false)}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+                >
+                  Guardar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

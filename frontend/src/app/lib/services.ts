@@ -405,3 +405,155 @@ export async function criarPropostaCobranca(idOcorrencia: number, valor: number)
   }
   return res.json();
 }
+
+export interface PropostaCobranca {
+  id: number;
+  valor: number;
+  estado: string;
+  id_ocorrencia: number;
+  datacriacao?: string;
+  dataestado?: string;
+}
+
+function mapProposta(p: any): PropostaCobranca {
+  return {
+    id: p.id,
+    valor: p.valor ?? 0,
+    estado: p.estado_proposta?.nome ?? p.estado ?? '',
+    id_ocorrencia: p.id_ocorrencia ?? 0,
+    datacriacao: p.datacriacao ?? undefined,
+    dataestado: p.dataestado ?? undefined,
+  };
+}
+
+export async function getPropostasCobranca(): Promise<PropostaCobranca[]> {
+  try {
+    const res = await apiFetch('/propostas-cobranca');
+    if (!res.ok) return [];
+    const data = await res.json();
+    if (!Array.isArray(data)) return [];
+    return data.map(mapProposta);
+  } catch {
+    return [];
+  }
+}
+
+export async function atualizarEstadoProposta(id: number, idEstado: number): Promise<any> {
+  const res = await apiFetch(`/propostas-cobranca/${id}/estado`, {
+    method: 'PATCH',
+    body: JSON.stringify({ id_estado: idEstado }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.erro ?? 'Erro ao atualizar proposta');
+  }
+  return res.json();
+}
+
+export async function finalizarPropostaContaCorrente(id: number): Promise<any> {
+  const res = await apiFetch(`/propostas-cobranca/${id}/finalizar-conta-corrente`, {
+    method: 'POST',
+    body: JSON.stringify({}),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.erro ?? 'Erro ao finalizar proposta');
+  }
+  return res.json();
+}
+
+// ─── Anúncios Escola ──────────────────────────────────────────────────────────
+
+export async function criarAnuncioEscola(dados: { id_figurino: number; valordiarioaluguer: number }): Promise<any> {
+  const res = await apiFetch('/anuncios-escola', {
+    method: 'POST',
+    body: JSON.stringify(dados),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.erro ?? err.error ?? 'Erro ao criar anúncio');
+  }
+  return res.json();
+}
+
+export async function atualizarAnuncioEscola(id: number, dados: { id_figurino?: number; valordiarioaluguer?: number }): Promise<any> {
+  const res = await apiFetch(`/anuncios-escola/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(dados),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.erro ?? err.error ?? 'Erro ao atualizar anúncio');
+  }
+  return res.json();
+}
+
+export async function eliminarAnuncioEscola(id: number): Promise<void> {
+  const res = await apiFetch(`/anuncios-escola/${id}`, { method: 'DELETE' });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.erro ?? err.error ?? 'Erro ao eliminar anúncio');
+  }
+}
+
+// ─── Reservas extra ───────────────────────────────────────────────────────────
+
+export async function criarReserva(linhas: { id_anuncio_escola: number; datainicio: string; datafim: string }[]): Promise<any> {
+  const res = await apiFetch('/reservas', {
+    method: 'POST',
+    body: JSON.stringify({ linhas }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.erro ?? err.error ?? 'Erro ao criar reserva');
+  }
+  return res.json();
+}
+
+export async function cancelarReserva(id: number): Promise<void> {
+  const res = await apiFetch(`/reservas/mine/${id}/cancelar`, { method: 'PATCH' });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.erro ?? err.error ?? 'Erro ao cancelar reserva');
+  }
+}
+
+export async function atualizarEstadoReserva(id: number, idEstado: number): Promise<any> {
+  const res = await apiFetch(`/reservas/${id}/estado`, {
+    method: 'PATCH',
+    body: JSON.stringify({ id_estado: idEstado }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.erro ?? 'Erro ao atualizar estado da reserva');
+  }
+  return res.json();
+}
+
+// ─── Ocorrências extra ────────────────────────────────────────────────────────
+
+export async function atualizarEstadoOcorrencia(id: number, idEstado: number): Promise<any> {
+  const res = await apiFetch(`/ocorrencias/${id}/estado`, {
+    method: 'PATCH',
+    body: JSON.stringify({ id_estado: idEstado }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.erro ?? 'Erro ao atualizar ocorrência');
+  }
+  return res.json();
+}
+
+// ─── Utilizadores ─────────────────────────────────────────────────────────────
+
+export async function updateUser(id: number, dados: { nome?: string; email?: string; contacto?: string }): Promise<any> {
+  const res = await apiFetch(`/utilizadores/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(dados),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.erro ?? err.error ?? 'Erro ao atualizar perfil');
+  }
+  return res.json();
+}

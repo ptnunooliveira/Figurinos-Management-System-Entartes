@@ -1,18 +1,26 @@
 import { useState, useEffect } from "react";
-import { FileDown, Calendar, DollarSign } from "lucide-react";
-import { getContaCorrente } from "../lib/services";
+import { FileDown, Calendar, DollarSign, CheckSquare } from "lucide-react";
+import { getContaCorrente, getMinhaContaCorrente, marcarMovimentoExportado } from "../lib/services";
+import { getUtilizadorAtual } from "../lib/auth";
 import type { ContaCorrente } from "../lib/dados-mock";
 import { exportarParaExcel, formatarMoeda } from "../lib/utils";
 import { toast } from "sonner";
 
 export function Faturacao() {
+  const utilizadorAtual = getUtilizadorAtual();
+  const isFuncionario = utilizadorAtual?.tipo === 'funcionario';
   const [dataInicio, setDataInicio] = useState("");
   const [dataFim, setDataFim] = useState("");
   const [contaCorrente, setContaCorrente] = useState<ContaCorrente[]>([]);
 
+  const carregarMovimentos = () => {
+    const fn = isFuncionario ? getContaCorrente : getMinhaContaCorrente;
+    fn().then(setContaCorrente);
+  };
+
   useEffect(() => {
-    getContaCorrente().then(setContaCorrente);
-  }, []);
+    carregarMovimentos();
+  }, [isFuncionario]);
 
   const movimentosFiltrados = contaCorrente.filter(mov => {
     if (!dataInicio && !dataFim) return !mov.exportado_faturacao;
@@ -37,6 +45,16 @@ export function Faturacao() {
     }
     exportarParaExcel(movimentosFiltrados, 'faturacao');
     toast.success(`${movimentosFiltrados.length} movimento(s) exportado(s) para Excel`);
+  };
+
+  const handleMarcarExportado = async (id: number) => {
+    try {
+      await marcarMovimentoExportado(id);
+      toast.success("Movimento marcado como exportado");
+      carregarMovimentos();
+    } catch {
+      toast.error("Erro ao marcar movimento");
+    }
   };
 
   return (
@@ -140,6 +158,11 @@ export function Faturacao() {
                 <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Exportado
                 </th>
+                {isFuncionario && (
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Ação
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -166,6 +189,19 @@ export function Faturacao() {
                       <span className="text-gray-400 text-xs">Não</span>
                     )}
                   </td>
+                  {isFuncionario && (
+                    <td className="px-6 py-4 whitespace-nowrap text-center">
+                      {!mov.exportado_faturacao && (
+                        <button
+                          onClick={() => handleMarcarExportado(mov.id)}
+                          className="inline-flex items-center gap-1 text-xs text-purple-600 hover:text-purple-800 transition-colors"
+                        >
+                          <CheckSquare className="w-4 h-4" />
+                          Marcar
+                        </button>
+                      )}
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>

@@ -1,17 +1,23 @@
 import { useState, useEffect } from "react";
-import { CheckCircle, XCircle, Shirt, AlertCircle, Euro, FileText } from "lucide-react";
-import { getMarketplaceGestao, aprovarAnuncioMarketplace, getOcorrencias, criarPropostaCobranca } from "../lib/services";
+import { CheckCircle, XCircle, Shirt, AlertCircle, Euro, FileText, ListChecks } from "lucide-react";
+import {
+  getMarketplaceGestao, aprovarAnuncioMarketplace,
+  getOcorrencias, criarPropostaCobranca, atualizarEstadoOcorrencia,
+  getPropostasCobranca, atualizarEstadoProposta, finalizarPropostaContaCorrente,
+  type PropostaCobranca,
+} from "../lib/services";
 import type { AnuncioMarketplace, Ocorrencia } from "../lib/dados-mock";
 import { toast } from "sonner";
 
 export function Administracao() {
-  const [abaAtiva, setAbaAtiva] = useState<"anuncios" | "ocorrencias">("anuncios");
+  const [abaAtiva, setAbaAtiva] = useState<"anuncios" | "ocorrencias" | "propostas">("anuncios");
   const [ocorrenciaSelecionada, setOcorrenciaSelecionada] = useState<number | null>(null);
   const [valorCobranca, setValorCobranca] = useState("");
   const [descricaoCobranca, setDescricaoCobranca] = useState("");
 
   const [anunciosPendentes, setAnunciosPendentes] = useState<AnuncioMarketplace[]>([]);
   const [ocorrenciasPendentes, setOcorrenciasPendentes] = useState<Ocorrencia[]>([]);
+  const [propostas, setPropostas] = useState<PropostaCobranca[]>([]);
 
   const carregarDados = () => {
     getMarketplaceGestao('Pendente').then(setAnunciosPendentes);
@@ -21,6 +27,7 @@ export function Administracao() {
         return e === 'em análise' || e === 'pendente';
       }));
     });
+    getPropostasCobranca().then(setPropostas);
   };
 
   useEffect(() => {
@@ -46,6 +53,37 @@ export function Administracao() {
       carregarDados();
     } catch (err: any) {
       toast.error(err.message || "Erro ao rejeitar anúncio");
+    }
+  };
+
+  const handleResolverOcorrencia = async (id: number) => {
+    try {
+      // Estado 2 = Resolvida (ajuste conforme a base de dados)
+      await atualizarEstadoOcorrencia(id, 2);
+      toast.success("Ocorrência marcada como resolvida");
+      carregarDados();
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao resolver ocorrência");
+    }
+  };
+
+  const handleAtualizarEstadoProposta = async (id: number, idEstado: number, label: string) => {
+    try {
+      await atualizarEstadoProposta(id, idEstado);
+      toast.success(`Proposta marcada como ${label}`);
+      carregarDados();
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao atualizar proposta");
+    }
+  };
+
+  const handleFinalizarProposta = async (id: number) => {
+    try {
+      await finalizarPropostaContaCorrente(id);
+      toast.success("Proposta finalizada e adicionada à conta corrente");
+      carregarDados();
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao finalizar proposta");
     }
   };
 
@@ -103,6 +141,20 @@ export function Administracao() {
           style={abaAtiva === "ocorrencias" ? { backgroundColor: "var(--fig-purple)" } : {}}
         >
           Ocorrências ({ocorrenciasPendentes.length})
+        </button>
+        <button
+          onClick={() => setAbaAtiva("propostas")}
+          className={`px-6 py-2 rounded-lg transition-colors ${
+            abaAtiva === "propostas"
+              ? "text-white"
+              : "text-gray-600 hover:bg-gray-100"
+          }`}
+          style={abaAtiva === "propostas" ? { backgroundColor: "var(--fig-purple)" } : {}}
+        >
+          <span className="flex items-center gap-1">
+            <ListChecks className="w-4 h-4" />
+            Propostas ({propostas.length})
+          </span>
         </button>
       </div>
 
@@ -196,9 +248,12 @@ export function Administracao() {
                         <Euro className="w-4 h-4" />
                         Criar Cobrança
                       </button>
-                      <button className="flex items-center gap-2 px-4 py-2 bg-fig-purple hover:bg-fig-purple/90 text-white rounded-lg transition-colors">
+                      <button
+                        onClick={() => handleResolverOcorrencia(ocorrencia.id)}
+                        className="flex items-center gap-2 px-4 py-2 bg-fig-purple hover:bg-fig-purple/90 text-white rounded-lg transition-colors"
+                      >
                         <FileText className="w-4 h-4" />
-                        Ver Detalhes
+                        Resolver
                       </button>
                     </div>
                   </div>
@@ -209,6 +264,62 @@ export function Administracao() {
             <div className="text-center py-12">
               <CheckCircle className="w-16 h-16 mx-auto text-green-300 mb-4" />
               <p className="text-gray-600">Nenhuma ocorrência pendente</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {abaAtiva === "propostas" && (
+        <div className="bg-white rounded-xl shadow-sm p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Propostas de Cobrança</h3>
+          {propostas.length > 0 ? (
+            <div className="space-y-4">
+              {propostas.map((p) => (
+                <div key={p.id} className="border rounded-lg p-4">
+                  <div className="flex items-center justify-between flex-wrap gap-4">
+                    <div>
+                      <p className="font-semibold text-gray-900">Proposta #{p.id}</p>
+                      <p className="text-sm text-gray-600">Ocorrência #{p.id_ocorrencia}</p>
+                      <p className="text-sm text-gray-600">Valor: <span className="font-medium text-red-600">€{p.valor.toFixed(2)}</span></p>
+                      <span className="inline-block mt-1 px-2 py-0.5 text-xs rounded bg-gray-100 text-gray-700">{p.estado}</span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {p.estado?.toLowerCase() !== 'finalizada' && p.estado?.toLowerCase() !== 'aceite' && (
+                        <button
+                          onClick={() => handleAtualizarEstadoProposta(p.id, 2, 'Aceite')}
+                          className="flex items-center gap-1.5 px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg transition-colors"
+                        >
+                          <CheckCircle className="w-4 h-4" />
+                          Aceitar
+                        </button>
+                      )}
+                      {p.estado?.toLowerCase() !== 'finalizada' && p.estado?.toLowerCase() !== 'rejeitada' && (
+                        <button
+                          onClick={() => handleAtualizarEstadoProposta(p.id, 3, 'Rejeitada')}
+                          className="flex items-center gap-1.5 px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg transition-colors"
+                        >
+                          <XCircle className="w-4 h-4" />
+                          Rejeitar
+                        </button>
+                      )}
+                      {(p.estado?.toLowerCase() === 'aceite') && (
+                        <button
+                          onClick={() => handleFinalizarProposta(p.id)}
+                          className="flex items-center gap-1.5 px-3 py-2 bg-fig-purple hover:bg-fig-purple/90 text-white text-sm rounded-lg transition-colors"
+                        >
+                          <Euro className="w-4 h-4" />
+                          Mover p/ Conta Corrente
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <ListChecks className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+              <p className="text-gray-600">Nenhuma proposta de cobrança</p>
             </div>
           )}
         </div>

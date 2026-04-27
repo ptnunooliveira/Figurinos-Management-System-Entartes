@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { PlusCircle, Search, Filter, Shirt, Euro, Eye, Edit, Trash2 } from "lucide-react";
 import { getUtilizadorAtual } from "../lib/auth";
-import { getAnunciosEscola, getFigurinosRaw, type AnuncioEscolaAPI, type FigurinoAPI } from "../lib/services";
+import { getAnunciosEscola, getFigurinosRaw, criarAnuncioEscola, atualizarAnuncioEscola, eliminarAnuncioEscola, type AnuncioEscolaAPI, type FigurinoAPI } from "../lib/services";
 import { toast } from "sonner";
 
 export function AnunciosEscola() {
@@ -17,6 +17,8 @@ export function AnunciosEscola() {
   const [mostrarDialogo, setMostrarDialogo] = useState(false);
   const [figurinoSelecionado, setFigurinoSelecionado] = useState("");
   const [valorDiario, setValorDiario] = useState("");
+  const [editarAnuncio, setEditarAnuncio] = useState<AnuncioEscolaAPI | null>(null);
+  const [valorDiarioEditar, setValorDiarioEditar] = useState("");
 
   useEffect(() => {
     getAnunciosEscola().then(setAnunciosEscola);
@@ -56,7 +58,7 @@ export function AnunciosEscola() {
   const generosUnicos = [...new Set(anunciosEscola.map((a) => a.figurino?.sexo?.nome ?? '').filter(Boolean))].sort();
   const estadosUnicos = [...new Set(anunciosEscola.map((a) => a.estado_anuncio?.nome ?? '').filter(Boolean))].sort();
 
-  const handleCriarAnuncio = (e: React.FormEvent) => {
+  const handleCriarAnuncio = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!figurinoSelecionado || !valorDiario) {
       toast.error("Por favor, preencha todos os campos");
@@ -67,15 +69,45 @@ export function AnunciosEscola() {
       toast.error("Por favor, insira um valor válido");
       return;
     }
-    toast.success("Anúncio criado com sucesso!");
-    setMostrarDialogo(false);
-    setFigurinoSelecionado("");
-    setValorDiario("");
+    try {
+      await criarAnuncioEscola({ id_figurino: parseInt(figurinoSelecionado), valordiarioaluguer: valorNumerico });
+      toast.success("Anúncio criado com sucesso!");
+      setMostrarDialogo(false);
+      setFigurinoSelecionado("");
+      setValorDiario("");
+      getAnunciosEscola().then(setAnunciosEscola);
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao criar anúncio");
+    }
   };
 
-  const handleRemoverAnuncio = (_id: number, descricao: string) => {
-    if (window.confirm(`Tem a certeza que deseja remover o anúncio "${descricao}"?`)) {
+  const handleRemoverAnuncio = async (id: number, descricao: string) => {
+    if (!window.confirm(`Tem a certeza que deseja remover o anúncio "${descricao}"?`)) return;
+    try {
+      await eliminarAnuncioEscola(id);
       toast.success(`Anúncio "${descricao}" removido com sucesso!`);
+      setAnunciosEscola(prev => prev.filter(a => a.id !== id));
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao remover anúncio");
+    }
+  };
+
+  const handleEditarAnuncio = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editarAnuncio) return;
+    const valor = parseFloat(valorDiarioEditar);
+    if (isNaN(valor) || valor <= 0) {
+      toast.error("Insira um valor válido");
+      return;
+    }
+    try {
+      await atualizarAnuncioEscola(editarAnuncio.id, { valordiarioaluguer: valor });
+      toast.success("Anúncio atualizado com sucesso!");
+      setEditarAnuncio(null);
+      setValorDiarioEditar("");
+      getAnunciosEscola().then(setAnunciosEscola);
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao atualizar anúncio");
     }
   };
 
@@ -262,7 +294,10 @@ export function AnunciosEscola() {
                           <Eye className="w-4 h-4" />
                           Ver
                         </button>
-                        <button className="flex items-center gap-1.5 text-yellow-600 hover:text-yellow-700 transition-colors">
+                        <button
+                          className="flex items-center gap-1.5 text-yellow-600 hover:text-yellow-700 transition-colors"
+                          onClick={() => { setEditarAnuncio(anuncio); setValorDiarioEditar(String(anuncio.valordiarioaluguer ?? '')); }}
+                        >
                           <Edit className="w-4 h-4" />
                           Editar
                         </button>
@@ -291,6 +326,51 @@ export function AnunciosEscola() {
         <div className="text-center py-12 bg-white rounded-xl">
           <Shirt className="w-16 h-16 mx-auto text-gray-300 mb-4" />
           <p className="text-gray-500">Nenhum anúncio encontrado</p>
+        </div>
+      )}
+
+      {/* Diálogo Editar Anúncio */}
+      {editarAnuncio && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-md w-full">
+            <div className="p-6 border-b">
+              <h2 className="text-xl font-bold text-gray-900">Editar Anúncio</h2>
+              <p className="text-sm text-gray-600 mt-1">{editarAnuncio.figurino?.descricao ?? `Anúncio #${editarAnuncio.id}`}</p>
+            </div>
+            <form onSubmit={handleEditarAnuncio} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Valor Diário de Aluguer (€) *</label>
+                <div className="relative">
+                  <Euro className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={valorDiarioEditar}
+                    onChange={(e) => setValorDiarioEditar(e.target.value)}
+                    className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-fig-purple focus:border-transparent"
+                    placeholder="0.00"
+                    required
+                  />
+                </div>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => { setEditarAnuncio(null); setValorDiarioEditar(""); }}
+                  className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 px-6 py-3 bg-gradient-to-r from-fig-purple to-fig-magenta text-white rounded-lg hover:shadow-lg transition-all"
+                >
+                  Guardar
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 

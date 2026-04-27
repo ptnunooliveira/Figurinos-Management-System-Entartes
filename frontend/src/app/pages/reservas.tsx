@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
-import { Calendar, Clock, CheckCircle, XCircle, AlertCircle, Shirt, ClipboardCheck, PackageOpen, Search, Filter } from "lucide-react";
+import { Calendar, Clock, CheckCircle, XCircle, AlertCircle, Shirt, ClipboardCheck, PackageOpen, Search, Filter, Ban } from "lucide-react";
 import { Link } from "react-router";
 import { getUtilizadorAtual } from "../lib/auth";
-import { getReservas, getMinhasReservas } from "../lib/services";
+import { getReservas, getMinhasReservas, cancelarReserva } from "../lib/services";
 import type { Reserva } from "../lib/dados-mock";
 import { calcularDias, formatarMoeda } from "../lib/utils";
+import { toast } from "sonner";
 
 export function Reservas() {
   const utilizadorAtual = getUtilizadorAtual();
@@ -13,10 +14,25 @@ export function Reservas() {
   const [termoPesquisa, setTermoPesquisa] = useState("");
   const [estadoSelecionado, setEstadoSelecionado] = useState<string>("todos");
 
+  const carregarReservas = () => {
+    const fn = utilizadorAtual?.tipo === 'funcionario' ? getReservas : getMinhasReservas;
+    fn().then(setReservas);
+  };
+
   useEffect(() => {
-    const fetch = utilizadorAtual?.tipo === 'funcionario' ? getReservas : getMinhasReservas;
-    fetch().then(setReservas);
+    carregarReservas();
   }, [utilizadorAtual?.tipo]);
+
+  const handleCancelarReserva = async (id: number) => {
+    if (!window.confirm("Tem a certeza que deseja cancelar esta reserva?")) return;
+    try {
+      await cancelarReserva(id);
+      toast.success("Reserva cancelada com sucesso!");
+      carregarReservas();
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao cancelar reserva");
+    }
+  };
 
   const reservasAtivas = reservas.filter(r =>
     r.estado === "CONFIRMADA" || r.estado === "EM CURSO" ||
@@ -238,6 +254,23 @@ export function Reservas() {
                     Processar Devolução
                   </Link>
                 </div>
+              )}
+              {utilizadorAtual?.tipo !== 'funcionario' && abaAtiva === "ativas" && (
+                (() => {
+                  const e = reserva.estado?.toUpperCase();
+                  const podeCanc = e === 'CONFIRMADA' || e === 'APROVADA' || e === 'PENDENTE';
+                  return podeCanc ? (
+                    <div className="bg-gray-50 px-6 py-4 flex justify-end">
+                      <button
+                        onClick={() => handleCancelarReserva(reserva.id)}
+                        className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                      >
+                        <Ban className="w-4 h-4" />
+                        Cancelar Reserva
+                      </button>
+                    </div>
+                  ) : null;
+                })()
               )}
             </div>
           ))

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Plus, ShoppingBag, Clock, CheckCircle, XCircle, Shirt, Upload, X, Search, Filter } from "lucide-react";
 import { getUtilizadorAtual } from "../lib/auth";
-import { getMarketplace, getMarketplaceGestao, getMarketplaceDoUtilizador, criarAnuncioMarketplace, getCategorias, getEstadosAnuncio } from "../lib/services";
+import { getMarketplace, getMarketplaceGestao, getMarketplaceDoUtilizador, criarAnuncioMarketplace, getCategorias, getEstadosAnuncio, getTiposFigurino, getSexos } from "../lib/services";
 import type { AuxiliarItem } from "../lib/services";
 import type { AnuncioMarketplace } from "../lib/dados-mock";
 import { toast } from "sonner";
@@ -10,6 +10,8 @@ export function Marketplace() {
   const utilizadorAtual = getUtilizadorAtual();
   const [abaAtiva, setAbaAtiva] = useState<"explorar" | "meusAnuncios">("explorar");
   const [mostrarCriarModal, setMostrarCriarModal] = useState(false);
+  const [mostrarDetalheModal, setMostrarDetalheModal] = useState(false);
+  const [anuncioDetalhe, setAnuncioDetalhe] = useState<AnuncioMarketplace | null>(null);
   const [imagensPreview, setImagensPreview] = useState<string[]>([]);
   const [imagensFicheiro, setImagensFicheiro] = useState<File[]>([]);
   const [termoPesquisa, setTermoPesquisa] = useState("");
@@ -20,6 +22,8 @@ export function Marketplace() {
   const [meusAnunciosLista, setMeusAnunciosLista] = useState<AnuncioMarketplace[]>([]);
   const [categoriasLista, setCategoriasLista] = useState<AuxiliarItem[]>([]);
   const [estadosAnuncioLista, setEstadosAnuncioLista] = useState<AuxiliarItem[]>([]);
+  const [tiposLista, setTiposLista] = useState<AuxiliarItem[]>([]);
+  const [sexosLista, setSexosLista] = useState<AuxiliarItem[]>([]);
 
   const [formulario, setFormulario] = useState({
     titulo: "",
@@ -33,6 +37,8 @@ export function Marketplace() {
   useEffect(() => {
     getCategorias().then(setCategoriasLista);
     getEstadosAnuncio().then(setEstadosAnuncioLista);
+    getTiposFigurino().then(setTiposLista);
+    getSexos().then(setSexosLista);
     if (utilizadorAtual?.tipo === 'funcionario') {
       getMarketplaceGestao().then(setTodosAnuncios);
     } else {
@@ -157,12 +163,20 @@ export function Marketplace() {
 
     try {
       const categoriaObj = categoriasLista.find(c => c.nome === formulario.categoria);
+      const tipoObj = tiposLista.find(t => t.nome === formulario.tipo);
+      const sexoObj = sexosLista.find(s => s.nome === formulario.sexo);
       const payload = new FormData();
       payload.append('titulo', formulario.titulo);
       payload.append('descricao', formulario.descricao);
       payload.append('tamanho', formulario.tamanho);
       if (categoriaObj?.id) {
         payload.append('id_categoria', String(categoriaObj.id));
+      }
+      if (tipoObj?.id) {
+        payload.append('id_tipo', String(tipoObj.id));
+      }
+      if (sexoObj?.id) {
+        payload.append('id_sexo', String(sexoObj.id));
       }
       imagensFicheiro.forEach((ficheiro) => payload.append('imagens', ficheiro));
 
@@ -178,6 +192,16 @@ export function Marketplace() {
     } catch (err: any) {
       toast.error(err.message || "Erro ao criar anúncio");
     }
+  };
+
+  const abrirDetalhes = (anuncio: AnuncioMarketplace) => {
+    setAnuncioDetalhe(anuncio);
+    setMostrarDetalheModal(true);
+  };
+
+  const fecharDetalhes = () => {
+    setMostrarDetalheModal(false);
+    setAnuncioDetalhe(null);
   };
 
   return (
@@ -347,7 +371,10 @@ export function Marketplace() {
                     {/* Ações */}
                     <div className="mt-auto pt-3 border-t">
                       {abaAtiva === "explorar" ? (
-                        <button className="w-full sm:w-auto bg-gradient-to-r from-fig-purple to-fig-magenta hover:shadow-lg text-white py-2 px-6 rounded-lg transition-all">
+                        <button
+                          onClick={() => abrirDetalhes(anuncio)}
+                          className="w-full sm:w-auto bg-gradient-to-r from-fig-purple to-fig-magenta hover:shadow-lg text-white py-2 px-6 rounded-lg transition-all"
+                        >
                           Ver Detalhes
                         </button>
                       ) : (() => {
@@ -422,6 +449,60 @@ export function Marketplace() {
       )}
 
       {/* Modal de Criar Anúncio */}
+      {mostrarDetalheModal && anuncioDetalhe && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b sticky top-0 bg-white flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900">{anuncioDetalhe.titulo}</h2>
+                <p className="text-sm text-gray-600 mt-1">Detalhes do anúncio</p>
+              </div>
+              <button
+                type="button"
+                onClick={fecharDetalhes}
+                className="text-gray-500 hover:text-gray-700"
+                aria-label="Fechar"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {anuncioDetalhe.imagens.length > 0 ? (
+                  anuncioDetalhe.imagens.map((img, idx) => (
+                    <img
+                      key={`${anuncioDetalhe.id}-${idx}`}
+                      src={img}
+                      alt={`${anuncioDetalhe.titulo} ${idx + 1}`}
+                      className="w-full h-56 object-cover rounded-lg border"
+                    />
+                  ))
+                ) : (
+                  <div className="sm:col-span-2 h-56 rounded-lg border bg-gray-50 flex items-center justify-center">
+                    <Shirt className="w-16 h-16 text-gray-300" />
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <h3 className="font-medium text-gray-900 mb-2">Descrição</h3>
+                <p className="text-gray-700">{anuncioDetalhe.descricao || "Sem descrição."}</p>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                <div className="bg-gray-50 rounded-lg p-3"><span className="text-gray-500">Categoria</span><p className="font-medium">{anuncioDetalhe.categoria || "—"}</p></div>
+                <div className="bg-gray-50 rounded-lg p-3"><span className="text-gray-500">Tamanho</span><p className="font-medium">{anuncioDetalhe.tamanho || "—"}</p></div>
+                <div className="bg-gray-50 rounded-lg p-3"><span className="text-gray-500">Tipo</span><p className="font-medium">{anuncioDetalhe.tipo || "—"}</p></div>
+                <div className="bg-gray-50 rounded-lg p-3"><span className="text-gray-500">Sexo</span><p className="font-medium">{anuncioDetalhe.sexo || "—"}</p></div>
+              </div>
+
+              <p className="text-xs text-gray-500">Submetido em {new Date(anuncioDetalhe.data_anuncio).toLocaleDateString('pt-PT')}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {mostrarCriarModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
@@ -540,9 +621,9 @@ export function Marketplace() {
                     required
                   >
                     <option value="">Selecione...</option>
-                    <option value="Vestido">Vestido</option>
-                    <option value="Fato Completo">Fato Completo</option>
-                    <option value="Acessório">Acessório</option>
+                    {tiposLista.map((tipo) => (
+                      <option key={tipo.id} value={tipo.nome}>{tipo.nome}</option>
+                    ))}
                   </select>
                 </div>
 
@@ -555,9 +636,9 @@ export function Marketplace() {
                     required
                   >
                     <option value="">Selecione...</option>
-                    <option value="Masculino">Masculino</option>
-                    <option value="Feminino">Feminino</option>
-                    <option value="Unissexo">Unissexo</option>
+                    {sexosLista.map((sexo) => (
+                      <option key={sexo.id} value={sexo.nome}>{sexo.nome}</option>
+                    ))}
                   </select>
                 </div>
               </div>

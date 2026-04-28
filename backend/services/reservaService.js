@@ -50,6 +50,7 @@ const RESERVA_INCLUDE = {
                     figurino: {
                         include: {
                             categoria: true,
+                            estado_condicao: true,
                             figurino_acessorio: {
                                 include: { acessorio: true }
                             }

@@ -135,10 +135,6 @@ const obterTodosFigurinos = async (req, res) => {
 
         const figurinos = await figurinoService.obterTodosFigurinos(filtros);
 
-        if (figurinos.length === 0) {
-            return res.status(200).json({ mensagem: "Sem figurinos." });
-        }
-
         return res.status(200).json(figurinos);
 
     } catch (erro) {

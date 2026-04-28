@@ -283,7 +283,7 @@ export async function marcarMovimentoExportado(id: number): Promise<void> {
 // ─── Marketplace ─────────────────────────────────────────────────────────────
 
 function mapAnuncioMarketplace(a: any): AnuncioMarketplace {
-  const estadoBase = a.situacao ?? a.estado_anuncio?.nome ?? '';
+  const estadoBase = a.estado_anuncio?.nome ?? a.situacao ?? '';
   const estadoNormalizado = typeof estadoBase === 'string' ? estadoBase.trim().toLowerCase() : '';
 
   const estado = estadoNormalizado === 'reprovado'

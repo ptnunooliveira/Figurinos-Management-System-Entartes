@@ -271,6 +271,11 @@ const obterAnunciosMarketplace = async () => {
           nome: true,
         },
       },
+      estado_anuncio: {
+        select: {
+          nome: true,
+        },
+      },
       utilizador: {
         select: {
           nome: true,
@@ -279,7 +284,7 @@ const obterAnunciosMarketplace = async () => {
     },
   });
 
-  const mapeados = anuncios.map(mapearAnuncioMarketplace);
+  const mapeados = anuncios.map((anuncio) => mapearAnuncioMarketplace(anuncio, { incluirAprovacao: true }));
   return Promise.all(mapeados.map(async (anuncio) => ({
     ...anuncio,
     imagens: await listarImagensAnuncio(anuncio.id),
@@ -328,6 +333,11 @@ const obterAnunciosMarketplaceGestao = async (estadoNome) => {
           nome: true,
         },
       },
+      estado_anuncio: {
+        select: {
+          nome: true,
+        },
+      },
       utilizador: {
         select: {
           nome: true,
@@ -336,7 +346,7 @@ const obterAnunciosMarketplaceGestao = async (estadoNome) => {
     },
   });
 
-  const mapeados = anuncios.map(mapearAnuncioMarketplace);
+  const mapeados = anuncios.map((anuncio) => mapearAnuncioMarketplace(anuncio, { incluirAprovacao: true }));
   return Promise.all(mapeados.map(async (anuncio) => ({
     ...anuncio,
     imagens: await listarImagensAnuncio(anuncio.id),

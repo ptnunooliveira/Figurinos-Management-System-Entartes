@@ -74,11 +74,17 @@ export function Marketplace() {
   const getCorEstado = (estado: string) => {
     switch (estado) {
       case "Aprovado":
+      case "Publicado":
         return "text-green-700 bg-green-100";
+      case "Submetido":
       case "Pendente":
+      case "PendenteRenovacao":
         return "text-yellow-700 bg-yellow-100";
       case "Rejeitado":
+      case "Reprovado":
         return "text-red-700 bg-red-100";
+      case "Arquivado":
+        return "text-gray-700 bg-gray-200";
       default:
         return "text-gray-700 bg-gray-100";
     }
@@ -87,10 +93,16 @@ export function Marketplace() {
   const getIconeEstado = (estado: string) => {
     switch (estado) {
       case "Aprovado":
+      case "Publicado":
         return CheckCircle;
+      case "Submetido":
       case "Pendente":
+      case "PendenteRenovacao":
         return Clock;
       case "Rejeitado":
+      case "Reprovado":
+        return XCircle;
+      case "Arquivado":
         return XCircle;
       default:
         return Clock;
@@ -279,7 +291,8 @@ export function Marketplace() {
       {/* Grelha de Anúncios */}
       <div className="space-y-4">
         {anunciosFiltrados.map((anuncio) => {
-          const IconeEstado = getIconeEstado(anuncio.estado);
+          const estadoAnuncio = anuncio.estado?.trim() ? anuncio.estado : "Submetido";
+          const IconeEstado = getIconeEstado(estadoAnuncio);
           return (
             <div key={anuncio.id} className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow overflow-hidden">
               <div className="flex flex-col sm:flex-row gap-0 sm:gap-6">
@@ -310,9 +323,9 @@ export function Marketplace() {
                         {anuncio.tamanho}
                       </span>
                       {(utilizadorAtual?.tipo === 'funcionario' || abaAtiva === "meusAnuncios") && (
-                        <span className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${getCorEstado(anuncio.estado)}`}>
+                        <span className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${getCorEstado(estadoAnuncio)}`}>
                           <IconeEstado className="w-3 h-3" />
-                          {anuncio.estado}
+                          {estadoAnuncio}
                         </span>
                       )}
                     </div>

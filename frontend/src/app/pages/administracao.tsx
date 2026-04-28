@@ -20,7 +20,7 @@ export function Administracao() {
   const [propostas, setPropostas] = useState<PropostaCobranca[]>([]);
 
   const carregarDados = () => {
-    getMarketplaceGestao('Pendente').then(setAnunciosPendentes);
+    getMarketplaceGestao('Submetido').then(setAnunciosPendentes);
     getOcorrencias().then(ocs => {
       setOcorrenciasPendentes(ocs.filter(o => {
         const e = o.estado?.toLowerCase();

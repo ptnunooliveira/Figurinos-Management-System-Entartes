@@ -15,10 +15,15 @@ export function removeToken(): void {
 
 export async function apiFetch(path: string, options: RequestInit = {}): Promise<Response> {
   const token = getToken();
+  const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
     ...(options.headers as Record<string, string> || {}),
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
+
+  if (!isFormData) {
+    headers['Content-Type'] = headers['Content-Type'] || 'application/json';
+  }
+
   return fetch(`${API_URL}${path}`, { ...options, headers });
 }

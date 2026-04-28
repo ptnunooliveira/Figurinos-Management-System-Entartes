@@ -40,11 +40,14 @@ const mapearErro = (res, error, mensagemGenerica) => {
 
   if (
     error.code === "ANUNCIO_NAO_PENDENTE" ||
+    error.code === "ANUNCIO_ESTADO_INVALIDO" ||
     error.code === "ESTADO_SUBMETIDO_NAO_ENCONTRADO" ||
     error.code === "ESTADO_APROVADO_NAO_ENCONTRADO" ||
     error.code === "ESTADO_REJEITADO_NAO_ENCONTRADO" ||
     error.code === "ESTADO_ARQUIVADO_NAO_ENCONTRADO" ||
-    error.code === "ANUNCIO_JA_ARQUIVADO"
+    error.code === "ANUNCIO_JA_ARQUIVADO" ||
+    error.code === "PRAZO_RESSUBMISSAO_INVALIDO" ||
+    error.code === "PRAZO_RESSUBMISSAO_EXPIRADO"
   ) {
     return res.status(409).json({ error: error.message });
   }
@@ -66,6 +69,11 @@ exports.newMarketplace = async (req, res) => {
       return res.status(400).json({ error: "Campos 'titulo', 'descricao' e 'tamanho' sao obrigatorios." });
     }
 
+    const imagens = Array.isArray(req.marketplaceImageFiles) ? req.marketplaceImageFiles : [];
+    if (!imagens.length) {
+      return res.status(400).json({ error: "Pelo menos uma imagem e obrigatoria." });
+    }
+
     if (req.body.id_categoria != null && !idCategoria) {
       return res.status(400).json({ error: "Campo 'id_categoria' invalido." });
     }
@@ -82,6 +90,7 @@ exports.newMarketplace = async (req, res) => {
       titulo,
       descricao,
       tamanho,
+      imagens,
       id_categoria: idCategoria,
       id_tipo: idTipo,
       id_sexo: idSexo,
@@ -261,6 +270,92 @@ exports.deleteMarketplace = async (req, res) => {
   }
 };
 
+// POST /marketplace/:id/ressubmeter
+exports.resubmitMarketplace = async (req, res) => {
+  try {
+    const id = parseId(req.params.id);
+    const userIdToken = parseId(req.user?.id);
+
+    if (!id) {
+      return res.status(400).json({ error: "Parametro 'id' invalido." });
+    }
+
+    if (!userIdToken) {
+      return res.status(401).json({ error: "Token invalido: utilizador nao identificado." });
+    }
+
+    const dados = {};
+
+    if (req.body.titulo !== undefined) {
+      dados.titulo = normalizarTexto(req.body.titulo);
+      if (!dados.titulo) {
+        return res.status(400).json({ error: "Campo 'titulo' invalido." });
+      }
+    }
+
+    if (req.body.descricao !== undefined) {
+      dados.descricao = normalizarTexto(req.body.descricao);
+      if (!dados.descricao) {
+        return res.status(400).json({ error: "Campo 'descricao' invalido." });
+      }
+    }
+
+    if (req.body.tamanho !== undefined) {
+      dados.tamanho = normalizarTexto(req.body.tamanho);
+      if (!dados.tamanho) {
+        return res.status(400).json({ error: "Campo 'tamanho' invalido." });
+      }
+    }
+
+    if (req.body.id_categoria !== undefined) {
+      dados.id_categoria = req.body.id_categoria === null ? null : parseId(req.body.id_categoria);
+      if (req.body.id_categoria !== null && !dados.id_categoria) {
+        return res.status(400).json({ error: "Campo 'id_categoria' invalido." });
+      }
+    }
+
+    if (req.body.id_tipo !== undefined) {
+      dados.id_tipo = req.body.id_tipo === null ? null : parseId(req.body.id_tipo);
+      if (req.body.id_tipo !== null && !dados.id_tipo) {
+        return res.status(400).json({ error: "Campo 'id_tipo' invalido." });
+      }
+    }
+
+    if (req.body.id_sexo !== undefined) {
+      dados.id_sexo = req.body.id_sexo === null ? null : parseId(req.body.id_sexo);
+      if (req.body.id_sexo !== null && !dados.id_sexo) {
+        return res.status(400).json({ error: "Campo 'id_sexo' invalido." });
+      }
+    }
+
+    const atualizado = await service.ressubmeterAnuncioMarketplace(id, userIdToken, dados);
+    return res.status(200).json(atualizado);
+  } catch (error) {
+    return mapearErro(res, error, "Erro ao ressubmeter anuncio.");
+  }
+};
+
+// POST /marketplace/:id/continuar
+exports.continueMarketplace = async (req, res) => {
+  try {
+    const id = parseId(req.params.id);
+    const userIdToken = parseId(req.user?.id);
+
+    if (!id) {
+      return res.status(400).json({ error: "Parametro 'id' invalido." });
+    }
+
+    if (!userIdToken) {
+      return res.status(401).json({ error: "Token invalido: utilizador nao identificado." });
+    }
+
+    const atualizado = await service.continuarAnuncioMarketplace(id, userIdToken);
+    return res.status(200).json(atualizado);
+  } catch (error) {
+    return mapearErro(res, error, "Erro ao continuar anuncio.");
+  }
+};
+
 module.exports = {
   newMarketplace: exports.newMarketplace,
   getMarketplace: exports.getMarketplace,
@@ -269,4 +364,6 @@ module.exports = {
   editMarketplace: exports.editMarketplace,
   updateMarketplaceStatus: exports.updateMarketplaceStatus,
   deleteMarketplace: exports.deleteMarketplace,
+  resubmitMarketplace: exports.resubmitMarketplace,
+  continueMarketplace: exports.continueMarketplace,
 };

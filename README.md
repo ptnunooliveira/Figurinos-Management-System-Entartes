@@ -41,3 +41,39 @@ Análise de Requisitos e Modelação: Especificação, Diagramas (BPMN, UML) e M
 Versão Beta (vBeta): Funcionalidades principais implementadas e testadas - Data a definir.
 Versão RTW (Ready to Web): Versão final, otimizada e pronta para produção - Maio.
 Apresentação Final: Defesa do projeto a 29 de Maio de 2026.
+
+
+# 6. Nota Técnica Marketplace
+
+Para acelerar a implementação do ciclo temporal do Marketplace sem alterar o modelo E-R nesta fase, o campo `dataaprovacao` foi reutilizado como "data da última decisão" do anúncio:
+
+- Quando um anúncio é publicado, `dataaprovacao` guarda a data de publicação.
+- Quando um anúncio é rejeitado, `dataaprovacao` guarda a data de rejeição.
+
+Com base nesta data e no estado atual do anúncio, o backend aplica verificações temporais:
+
+- `Rejeitado` por mais de 3 dias passa para `Arquivado` (equivalente funcional de eliminado lógico).
+- `Publicado` por mais de 30 dias passa para `PendenteRenovacao` (quando esse estado existe na tabela de estados).
+
+Nota: apesar de funcional, esta abordagem é transitória do ponto de vista semântico; numa fase posterior, recomenda-se renomear o campo para um nome neutro (ex.: `data_decisao`) ou introduzir campos dedicados.
+
+
+# 7. Política de Imagens (Marketplace)
+
+Para manter o projeto dentro dos limites gratuitos e com boa performance, os anúncios do Marketplace seguem esta política:
+
+- Máximo de `5` imagens por anúncio.
+- Tamanho máximo de `2MB` por imagem.
+- Formatos aceites: `JPG`, `PNG` e `WEBP`.
+
+Armazenamento:
+
+- As imagens são carregadas para Supabase Storage (bucket configurável por `SUPABASE_STORAGE_BUCKET`, por omissão `marketplace-images`).
+- As imagens ficam organizadas por pasta de anúncio em `marketplace/<id_anuncio>/...`.
+- As URLs públicas são resolvidas dinamicamente a partir do Storage quando os anúncios são consultados.
+
+Variáveis de ambiente necessárias no backend para upload:
+
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `SUPABASE_STORAGE_BUCKET` (opcional)

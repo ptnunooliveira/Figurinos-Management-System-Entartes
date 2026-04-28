@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Plus, ShoppingBag, Clock, CheckCircle, XCircle, Shirt, Upload, X, Search, Filter } from "lucide-react";
 import { getUtilizadorAtual } from "../lib/auth";
-import { getMarketplace, getMarketplaceGestao, getMarketplaceDoUtilizador, criarAnuncioMarketplace, getCategorias } from "../lib/services";
+import { getMarketplace, getMarketplaceGestao, getMarketplaceDoUtilizador, criarAnuncioMarketplace, getCategorias, getEstadosAnuncio } from "../lib/services";
 import type { AuxiliarItem } from "../lib/services";
 import type { AnuncioMarketplace } from "../lib/dados-mock";
 import { toast } from "sonner";
@@ -10,7 +10,8 @@ export function Marketplace() {
   const utilizadorAtual = getUtilizadorAtual();
   const [abaAtiva, setAbaAtiva] = useState<"explorar" | "meusAnuncios">("explorar");
   const [mostrarCriarModal, setMostrarCriarModal] = useState(false);
-  const [imagens, setImagens] = useState<string[]>([]);
+  const [imagensPreview, setImagensPreview] = useState<string[]>([]);
+  const [imagensFicheiro, setImagensFicheiro] = useState<File[]>([]);
   const [termoPesquisa, setTermoPesquisa] = useState("");
   const [categoriaSelecionada, setCategoriaSelecionada] = useState<string>("todas");
   const [estadoSelecionado, setEstadoSelecionado] = useState<string>("todos");
@@ -18,6 +19,7 @@ export function Marketplace() {
   const [todosAnuncios, setTodosAnuncios] = useState<AnuncioMarketplace[]>([]);
   const [meusAnunciosLista, setMeusAnunciosLista] = useState<AnuncioMarketplace[]>([]);
   const [categoriasLista, setCategoriasLista] = useState<AuxiliarItem[]>([]);
+  const [estadosAnuncioLista, setEstadosAnuncioLista] = useState<AuxiliarItem[]>([]);
 
   const [formulario, setFormulario] = useState({
     titulo: "",
@@ -30,6 +32,7 @@ export function Marketplace() {
 
   useEffect(() => {
     getCategorias().then(setCategoriasLista);
+    getEstadosAnuncio().then(setEstadosAnuncioLista);
     if (utilizadorAtual?.tipo === 'funcionario') {
       getMarketplaceGestao().then(setTodosAnuncios);
     } else {
@@ -47,11 +50,24 @@ export function Marketplace() {
     ? todosAnuncios
     : (abaAtiva === "explorar" ? outrosAnuncios : meusAnuncios);
 
+  const normalizarEstado = (estado: string) => estado.trim().toLowerCase();
+
+  const estadoCompativel = (estadoAnuncio: string, estadoFiltro: string) => {
+    const anuncio = normalizarEstado(estadoAnuncio);
+    const filtro = normalizarEstado(estadoFiltro);
+
+    if (anuncio === filtro) return true;
+    if ((anuncio === "aprovado" && filtro === "publicado") || (anuncio === "publicado" && filtro === "aprovado")) return true;
+    if ((anuncio === "pendente" && filtro === "submetido") || (anuncio === "submetido" && filtro === "pendente")) return true;
+
+    return false;
+  };
+
   const anunciosFiltrados = anunciosAMostrar.filter(anuncio => {
     const matchTermo = anuncio.titulo.toLowerCase().includes(termoPesquisa.toLowerCase()) ||
                        anuncio.descricao.toLowerCase().includes(termoPesquisa.toLowerCase());
     const matchCategoria = categoriaSelecionada === "todas" || anuncio.categoria === categoriaSelecionada;
-    const matchEstado = estadoSelecionado === "todos" || anuncio.estado === estadoSelecionado;
+    const matchEstado = estadoSelecionado === "todos" || estadoCompativel(anuncio.estado, estadoSelecionado);
     return matchTermo && matchCategoria && matchEstado;
   });
 
@@ -85,17 +101,23 @@ export function Marketplace() {
     const ficheiros = e.target.files;
     if (!ficheiros) return;
 
-    if (imagens.length + ficheiros.length > 5) {
+    if (imagensFicheiro.length + ficheiros.length > 5) {
       toast.error("Máximo de 5 imagens por anúncio");
       return;
     }
 
     Array.from(ficheiros).forEach(ficheiro => {
       if (ficheiro.type.startsWith('image/')) {
+        if (ficheiro.size > 2 * 1024 * 1024) {
+          toast.error("Cada imagem deve ter no máximo 2MB");
+          return;
+        }
+
+        setImagensFicheiro(prev => [...prev, ficheiro]);
         const reader = new FileReader();
         reader.onload = (event) => {
           if (event.target?.result) {
-            setImagens(prev => [...prev, event.target!.result as string]);
+            setImagensPreview(prev => [...prev, event.target!.result as string]);
           }
         };
         reader.readAsDataURL(ficheiro);
@@ -104,7 +126,8 @@ export function Marketplace() {
   };
 
   const removerImagem = (index: number) => {
-    setImagens(prev => prev.filter((_, i) => i !== index));
+    setImagensPreview(prev => prev.filter((_, i) => i !== index));
+    setImagensFicheiro(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -115,25 +138,28 @@ export function Marketplace() {
       return;
     }
 
-    if (imagens.length === 0) {
+    if (imagensFicheiro.length === 0) {
       toast.error("Por favor, adicione pelo menos uma imagem");
       return;
     }
 
     try {
       const categoriaObj = categoriasLista.find(c => c.nome === formulario.categoria);
-      await criarAnuncioMarketplace({
-        titulo: formulario.titulo,
-        descricao: formulario.descricao,
-        tamanho: formulario.tamanho,
-        id_categoria: categoriaObj?.id ?? null,
-        id_tipo: null,
-        id_sexo: null,
-      });
+      const payload = new FormData();
+      payload.append('titulo', formulario.titulo);
+      payload.append('descricao', formulario.descricao);
+      payload.append('tamanho', formulario.tamanho);
+      if (categoriaObj?.id) {
+        payload.append('id_categoria', String(categoriaObj.id));
+      }
+      imagensFicheiro.forEach((ficheiro) => payload.append('imagens', ficheiro));
+
+      await criarAnuncioMarketplace(payload);
       toast.success("Anúncio submetido para aprovação!");
       setMostrarCriarModal(false);
       setFormulario({ titulo: "", descricao: "", tamanho: "", categoria: "", tipo: "", sexo: "" });
-      setImagens([]);
+      setImagensPreview([]);
+      setImagensFicheiro([]);
       if (utilizadorAtual?.id) {
         getMarketplaceDoUtilizador(utilizadorAtual.id).then(setMeusAnunciosLista);
       }
@@ -234,9 +260,9 @@ export function Marketplace() {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               >
                 <option value="todos">Todos os Estados</option>
-                <option value="Aprovado">Aprovado</option>
-                <option value="Pendente">Pendente</option>
-                <option value="Rejeitado">Rejeitado</option>
+                {estadosAnuncioLista.map((estado) => (
+                  <option key={estado.id} value={estado.nome}>{estado.descricao ?? estado.nome}</option>
+                ))}
               </select>
             </div>
           )}
@@ -259,7 +285,11 @@ export function Marketplace() {
               <div className="flex flex-col sm:flex-row gap-0 sm:gap-6">
                 {/* Imagem/Ícone */}
                 <div className="w-full sm:w-32 h-32 bg-gradient-to-br from-fig-purple/10 via-fig-magenta/10 to-fig-green/10 flex items-center justify-center flex-shrink-0 relative">
-                  <Shirt className="w-16 h-16 text-fig-purple/30" />
+                  {anuncio.imagens.length > 0 ? (
+                    <img src={anuncio.imagens[0]} alt={anuncio.titulo} className="w-full h-full object-cover" />
+                  ) : (
+                    <Shirt className="w-16 h-16 text-fig-purple/30" />
+                  )}
                 </div>
 
                 {/* Conteúdo */}
@@ -307,16 +337,44 @@ export function Marketplace() {
                         <button className="w-full sm:w-auto bg-gradient-to-r from-fig-purple to-fig-magenta hover:shadow-lg text-white py-2 px-6 rounded-lg transition-all">
                           Ver Detalhes
                         </button>
-                      ) : (
-                        <div className="flex gap-2">
-                          <button className="flex-1 border border-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-50 transition-colors">
-                            Editar
-                          </button>
-                          <button className="flex-1 border border-red-300 text-red-700 py-2 px-4 rounded-lg hover:bg-red-50 transition-colors">
+                      ) : (() => {
+                        const estado = normalizarEstado(anuncio.estado);
+
+                        if (estado === "rejeitado" || estado === "reprovado") {
+                          return (
+                            <button className="w-full sm:w-auto bg-gradient-to-r from-fig-purple to-fig-magenta hover:shadow-lg text-white py-2 px-6 rounded-lg transition-all">
+                              Ressubmeter
+                            </button>
+                          );
+                        }
+
+                        if (estado === "pendenterenovacao" || estado === "pendente renovacao" || estado === "pendente_renovacao") {
+                          return (
+                            <div className="flex gap-2">
+                              <button className="w-full sm:w-auto bg-gradient-to-r from-fig-green to-emerald-500 hover:shadow-lg text-white py-2 px-6 rounded-lg transition-all">
+                                Manter
+                              </button>
+                              <button className="w-full sm:w-auto border border-red-300 text-red-700 py-2 px-6 rounded-lg hover:bg-red-50 transition-colors">
+                                Remover
+                              </button>
+                            </div>
+                          );
+                        }
+
+                        if (estado === "submetido" || estado === "pendente") {
+                          return (
+                            <p className="text-sm text-gray-500">
+                              A aguardar validação da equipa.
+                            </p>
+                          );
+                        }
+
+                        return (
+                          <button className="w-full sm:w-auto border border-red-300 text-red-700 py-2 px-6 rounded-lg hover:bg-red-50 transition-colors">
                             Remover
                           </button>
-                        </div>
-                      )}
+                        );
+                      })()}
                     </div>
                   </div>
                 </div>
@@ -367,7 +425,7 @@ export function Marketplace() {
                 </label>
 
                 <div className="grid grid-cols-3 gap-4 mb-4">
-                  {imagens.map((imagem, index) => (
+                  {imagensPreview.map((imagem, index) => (
                     <div key={index} className="relative group aspect-square">
                       <img
                         src={imagem}
@@ -384,7 +442,7 @@ export function Marketplace() {
                     </div>
                   ))}
 
-                  {imagens.length < 5 && (
+                  {imagensPreview.length < 5 && (
                     <label className="aspect-square border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-purple-400 hover:bg-purple-50 transition-colors">
                       <Upload className="w-6 h-6 text-gray-400 mb-1" />
                       <span className="text-xs text-gray-600">Adicionar</span>
@@ -497,7 +555,8 @@ export function Marketplace() {
                 type="button"
                 onClick={() => {
                   setMostrarCriarModal(false);
-                  setImagens([]);
+                  setImagensPreview([]);
+                  setImagensFicheiro([]);
                   setFormulario({ titulo: "", descricao: "", tamanho: "", categoria: "", tipo: "", sexo: "" });
                 }}
                 className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"

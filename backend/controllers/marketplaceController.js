@@ -328,7 +328,8 @@ exports.resubmitMarketplace = async (req, res) => {
       }
     }
 
-    const atualizado = await service.ressubmeterAnuncioMarketplace(id, userIdToken, dados);
+    const imagens = Array.isArray(req.marketplaceImageFiles) ? req.marketplaceImageFiles : [];
+    const atualizado = await service.ressubmeterAnuncioMarketplace(id, userIdToken, dados, imagens);
     return res.status(200).json(atualizado);
   } catch (error) {
     return mapearErro(res, error, "Erro ao ressubmeter anuncio.");

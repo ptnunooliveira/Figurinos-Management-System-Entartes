@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Plus, ShoppingBag, Clock, CheckCircle, XCircle, Shirt, Upload, X, Search, Filter } from "lucide-react";
 import { getUtilizadorAtual } from "../lib/auth";
-import { getMarketplace, getMarketplaceGestao, getMarketplaceDoUtilizador, criarAnuncioMarketplace, getCategorias, getEstadosAnuncio, getTiposFigurino, getSexos } from "../lib/services";
+import { getMarketplace, getMarketplaceGestao, getMarketplaceDoUtilizador, criarAnuncioMarketplace, getCategorias, getEstadosAnuncio, getTiposFigurino, getSexos, ressubmeterAnuncioMarketplace, eliminarAnuncioMarketplace, continuarAnuncioMarketplace } from "../lib/services";
 import type { AuxiliarItem } from "../lib/services";
 import type { AnuncioMarketplace } from "../lib/dados-mock";
 import { toast } from "sonner";
@@ -10,6 +10,10 @@ export function Marketplace() {
   const utilizadorAtual = getUtilizadorAtual();
   const [abaAtiva, setAbaAtiva] = useState<"explorar" | "meusAnuncios">("explorar");
   const [mostrarCriarModal, setMostrarCriarModal] = useState(false);
+  const [modoFormulario, setModoFormulario] = useState<"criar" | "ressubmeter">("criar");
+  const [anuncioEmRessubmissaoId, setAnuncioEmRessubmissaoId] = useState<number | null>(null);
+  const [anuncioParaRemover, setAnuncioParaRemover] = useState<AnuncioMarketplace | null>(null);
+  const [anuncioParaRenovar, setAnuncioParaRenovar] = useState<AnuncioMarketplace | null>(null);
   const [mostrarDetalheModal, setMostrarDetalheModal] = useState(false);
   const [anuncioDetalhe, setAnuncioDetalhe] = useState<AnuncioMarketplace | null>(null);
   const [imagensPreview, setImagensPreview] = useState<string[]>([]);
@@ -17,6 +21,11 @@ export function Marketplace() {
   const [termoPesquisa, setTermoPesquisa] = useState("");
   const [categoriaSelecionada, setCategoriaSelecionada] = useState<string>("todas");
   const [estadoSelecionado, setEstadoSelecionado] = useState<string>("todos");
+  const [tamanhoSelecionado, setTamanhoSelecionado] = useState<string>("todos");
+  const [tipoSelecionado, setTipoSelecionado] = useState<string>("todos");
+  const [sexoSelecionado, setSexoSelecionado] = useState<string>("todos");
+  const [dataSubmissaoInicio, setDataSubmissaoInicio] = useState<string>("");
+  const [dataSubmissaoFim, setDataSubmissaoFim] = useState<string>("");
 
   const [todosAnuncios, setTodosAnuncios] = useState<AnuncioMarketplace[]>([]);
   const [meusAnunciosLista, setMeusAnunciosLista] = useState<AnuncioMarketplace[]>([]);
@@ -74,8 +83,22 @@ export function Marketplace() {
                        anuncio.descricao.toLowerCase().includes(termoPesquisa.toLowerCase());
     const matchCategoria = categoriaSelecionada === "todas" || anuncio.categoria === categoriaSelecionada;
     const matchEstado = estadoSelecionado === "todos" || estadoCompativel(anuncio.estado, estadoSelecionado);
-    return matchTermo && matchCategoria && matchEstado;
+    const matchTamanho = tamanhoSelecionado === "todos" || anuncio.tamanho === tamanhoSelecionado;
+    const matchTipo = tipoSelecionado === "todos" || anuncio.tipo === tipoSelecionado;
+    const matchSexo = sexoSelecionado === "todos" || anuncio.sexo === sexoSelecionado;
+    const dataAnuncio = new Date(anuncio.data_anuncio);
+    const inicio = dataSubmissaoInicio ? new Date(dataSubmissaoInicio) : null;
+    const fim = dataSubmissaoFim ? new Date(dataSubmissaoFim) : null;
+    if (inicio) inicio.setHours(0, 0, 0, 0);
+    if (fim) fim.setHours(23, 59, 59, 999);
+
+    const matchDataInicio = !inicio || dataAnuncio >= inicio;
+    const matchDataFim = !fim || dataAnuncio <= fim;
+
+    return matchTermo && matchCategoria && matchEstado && matchTamanho && matchTipo && matchSexo && matchDataInicio && matchDataFim;
   });
+
+  const tamanhosDisponiveis = ["XS", "S", "M", "L", "XL", "XXL"];
 
   const getCorEstado = (estado: string) => {
     switch (estado) {
@@ -94,6 +117,45 @@ export function Marketplace() {
       default:
         return "text-gray-700 bg-gray-100";
     }
+  };
+
+  const getEstadoLabel = (estado: string) => {
+    const normalizado = normalizarEstado(estado);
+    if (utilizadorAtual?.tipo === 'aluno' && normalizado === 'arquivado') {
+      return 'Removido';
+    }
+    return estado;
+  };
+
+  const formatarDataPT = (data?: string) => {
+    if (!data) return null;
+    const parsed = new Date(data);
+    if (Number.isNaN(parsed.getTime())) return null;
+    return parsed.toLocaleDateString('pt-PT');
+  };
+
+  const getLinhaDataEstado = (estado: string, dataSubmissao: string, dataDecisao?: string) => {
+    const estadoNormalizado = normalizarEstado(estado);
+    const dataSubmissaoFmt = formatarDataPT(dataSubmissao);
+    const dataDecisaoFmt = formatarDataPT(dataDecisao);
+
+    if (estadoNormalizado === 'publicado') {
+      return dataDecisaoFmt ? `Publicado em ${dataDecisaoFmt}` : `Publicado`;
+    }
+
+    if (estadoNormalizado === 'arquivado') {
+      return dataDecisaoFmt ? `Removido em ${dataDecisaoFmt}` : `Removido`;
+    }
+
+    if (estadoNormalizado === 'rejeitado' || estadoNormalizado === 'reprovado') {
+      return dataDecisaoFmt ? `Rejeitado em ${dataDecisaoFmt}` : `Rejeitado`;
+    }
+
+    if (estadoNormalizado === 'pendenterenovacao' || estadoNormalizado === 'pendente renovacao' || estadoNormalizado === 'pendente_renovacao') {
+      return dataDecisaoFmt ? `Publicado em ${dataDecisaoFmt}` : `Pendente renovação`;
+    }
+
+    return dataSubmissaoFmt ? `Submetido em ${dataSubmissaoFmt}` : 'Submetido';
   };
 
   const getIconeEstado = (estado: string) => {
@@ -156,7 +218,7 @@ export function Marketplace() {
       return;
     }
 
-    if (imagensFicheiro.length === 0) {
+    if (modoFormulario === "criar" && imagensFicheiro.length === 0) {
       toast.error("Por favor, adicione pelo menos uma imagem");
       return;
     }
@@ -165,24 +227,41 @@ export function Marketplace() {
       const categoriaObj = categoriasLista.find(c => c.nome === formulario.categoria);
       const tipoObj = tiposLista.find(t => t.nome === formulario.tipo);
       const sexoObj = sexosLista.find(s => s.nome === formulario.sexo);
-      const payload = new FormData();
-      payload.append('titulo', formulario.titulo);
-      payload.append('descricao', formulario.descricao);
-      payload.append('tamanho', formulario.tamanho);
-      if (categoriaObj?.id) {
-        payload.append('id_categoria', String(categoriaObj.id));
-      }
-      if (tipoObj?.id) {
-        payload.append('id_tipo', String(tipoObj.id));
-      }
-      if (sexoObj?.id) {
-        payload.append('id_sexo', String(sexoObj.id));
-      }
-      imagensFicheiro.forEach((ficheiro) => payload.append('imagens', ficheiro));
+      if (modoFormulario === "ressubmeter" && anuncioEmRessubmissaoId) {
+        const payload = new FormData();
+        payload.append('titulo', formulario.titulo);
+        payload.append('descricao', formulario.descricao);
+        payload.append('tamanho', formulario.tamanho);
+        if (categoriaObj?.id) payload.append('id_categoria', String(categoriaObj.id));
+        if (tipoObj?.id) payload.append('id_tipo', String(tipoObj.id));
+        if (sexoObj?.id) payload.append('id_sexo', String(sexoObj.id));
+        imagensFicheiro.forEach((ficheiro) => payload.append('imagens', ficheiro));
 
-      await criarAnuncioMarketplace(payload);
-      toast.success("Anúncio submetido para aprovação!");
+        await ressubmeterAnuncioMarketplace(anuncioEmRessubmissaoId, payload);
+        toast.success("Anúncio ressubmetido para aprovação!");
+      } else {
+        const payload = new FormData();
+        payload.append('titulo', formulario.titulo);
+        payload.append('descricao', formulario.descricao);
+        payload.append('tamanho', formulario.tamanho);
+        if (categoriaObj?.id) {
+          payload.append('id_categoria', String(categoriaObj.id));
+        }
+        if (tipoObj?.id) {
+          payload.append('id_tipo', String(tipoObj.id));
+        }
+        if (sexoObj?.id) {
+          payload.append('id_sexo', String(sexoObj.id));
+        }
+        imagensFicheiro.forEach((ficheiro) => payload.append('imagens', ficheiro));
+
+        await criarAnuncioMarketplace(payload);
+        toast.success("Anúncio submetido para aprovação!");
+      }
+
       setMostrarCriarModal(false);
+      setModoFormulario("criar");
+      setAnuncioEmRessubmissaoId(null);
       setFormulario({ titulo: "", descricao: "", tamanho: "", categoria: "", tipo: "", sexo: "" });
       setImagensPreview([]);
       setImagensFicheiro([]);
@@ -199,9 +278,94 @@ export function Marketplace() {
     setMostrarDetalheModal(true);
   };
 
+  const abrirRessubmissao = (anuncio: AnuncioMarketplace) => {
+    setModoFormulario("ressubmeter");
+    setAnuncioEmRessubmissaoId(anuncio.id);
+    setFormulario({
+      titulo: anuncio.titulo ?? "",
+      descricao: anuncio.descricao ?? "",
+      tamanho: anuncio.tamanho ?? "",
+      categoria: anuncio.categoria ?? "",
+      tipo: anuncio.tipo ?? "",
+      sexo: anuncio.sexo ?? "",
+    });
+    setImagensPreview([]);
+    setImagensFicheiro([]);
+    setMostrarCriarModal(true);
+  };
+
   const fecharDetalhes = () => {
     setMostrarDetalheModal(false);
     setAnuncioDetalhe(null);
+  };
+
+  const limparFiltros = () => {
+    setTermoPesquisa("");
+    setCategoriaSelecionada("todas");
+    setEstadoSelecionado("todos");
+    setTamanhoSelecionado("todos");
+    setTipoSelecionado("todos");
+    setSexoSelecionado("todos");
+    setDataSubmissaoInicio("");
+    setDataSubmissaoFim("");
+  };
+
+  const abrirConfirmacaoRemocao = (anuncio: AnuncioMarketplace) => {
+    setAnuncioParaRemover(anuncio);
+  };
+
+  const fecharConfirmacaoRemocao = () => {
+    setAnuncioParaRemover(null);
+  };
+
+  const confirmarRemocao = async () => {
+    if (!anuncioParaRemover) return;
+
+    try {
+      await eliminarAnuncioMarketplace(anuncioParaRemover.id);
+      toast.success("Anúncio removido com sucesso.");
+      fecharConfirmacaoRemocao();
+
+      if (utilizadorAtual?.tipo === 'funcionario') {
+        getMarketplaceGestao().then(setTodosAnuncios);
+      } else {
+        getMarketplace().then(setTodosAnuncios);
+        if (utilizadorAtual?.id) {
+          getMarketplaceDoUtilizador(utilizadorAtual.id).then(setMeusAnunciosLista);
+        }
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao remover anúncio");
+    }
+  };
+
+  const abrirConfirmacaoRenovacao = (anuncio: AnuncioMarketplace) => {
+    setAnuncioParaRenovar(anuncio);
+  };
+
+  const fecharConfirmacaoRenovacao = () => {
+    setAnuncioParaRenovar(null);
+  };
+
+  const confirmarRenovacao = async () => {
+    if (!anuncioParaRenovar) return;
+
+    try {
+      await continuarAnuncioMarketplace(anuncioParaRenovar.id);
+      toast.success("Anúncio renovado por mais 30 dias.");
+      fecharConfirmacaoRenovacao();
+
+      if (utilizadorAtual?.tipo === 'funcionario') {
+        getMarketplaceGestao().then(setTodosAnuncios);
+      } else {
+        getMarketplace().then(setTodosAnuncios);
+        if (utilizadorAtual?.id) {
+          getMarketplaceDoUtilizador(utilizadorAtual.id).then(setMeusAnunciosLista);
+        }
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao renovar anúncio");
+    }
   };
 
   return (
@@ -269,7 +433,7 @@ export function Marketplace() {
         </div>
 
         {/* Filtros em Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               <Filter className="w-4 h-4 inline mr-1" />
@@ -287,6 +451,54 @@ export function Marketplace() {
             </select>
           </div>
 
+          {utilizadorAtual?.tipo === 'aluno' && abaAtiva === "explorar" && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Tamanho</label>
+              <select
+                value={tamanhoSelecionado}
+                onChange={(e) => setTamanhoSelecionado(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              >
+                <option value="todos">Todos os tamanhos</option>
+                {tamanhosDisponiveis.map((tamanho) => (
+                  <option key={tamanho} value={tamanho}>{tamanho}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {utilizadorAtual?.tipo === 'aluno' && abaAtiva === "explorar" && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Tipo</label>
+              <select
+                value={tipoSelecionado}
+                onChange={(e) => setTipoSelecionado(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              >
+                <option value="todos">Todos os tipos</option>
+                {tiposLista.map((tipo) => (
+                  <option key={tipo.id} value={tipo.nome}>{tipo.nome}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {utilizadorAtual?.tipo === 'aluno' && abaAtiva === "explorar" && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Sexo</label>
+              <select
+                value={sexoSelecionado}
+                onChange={(e) => setSexoSelecionado(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              >
+                <option value="todos">Todos</option>
+                {sexosLista.map((sexo) => (
+                  <option key={sexo.id} value={sexo.nome}>{sexo.nome}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
           {(utilizadorAtual?.tipo === 'funcionario' || abaAtiva === 'meusAnuncios') && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Estado</label>
@@ -302,6 +514,30 @@ export function Marketplace() {
               </select>
             </div>
           )}
+
+          {utilizadorAtual?.tipo === 'funcionario' && (
+            <div className="lg:col-start-1">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Data Submissão (Início)</label>
+              <input
+                type="date"
+                value={dataSubmissaoInicio}
+                onChange={(e) => setDataSubmissaoInicio(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              />
+            </div>
+          )}
+
+          {utilizadorAtual?.tipo === 'funcionario' && (
+            <div className="lg:col-start-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Data Submissão (Fim)</label>
+              <input
+                type="date"
+                value={dataSubmissaoFim}
+                onChange={(e) => setDataSubmissaoFim(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              />
+            </div>
+          )}
         </div>
 
         {/* Contagem de Resultados */}
@@ -309,6 +545,13 @@ export function Marketplace() {
           <p className="text-gray-600">
             {anunciosFiltrados.length} anúncio{anunciosFiltrados.length !== 1 ? 's' : ''} encontrado{anunciosFiltrados.length !== 1 ? 's' : ''}
           </p>
+          <button
+            type="button"
+            onClick={limparFiltros}
+            className="text-sm px-3 py-1.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
+          >
+            Limpar Filtros
+          </button>
         </div>
       </div>
 
@@ -316,7 +559,9 @@ export function Marketplace() {
       <div className="space-y-4">
         {anunciosFiltrados.map((anuncio) => {
           const estadoAnuncio = anuncio.estado?.trim() ? anuncio.estado : "Submetido";
+          const estadoLabel = getEstadoLabel(estadoAnuncio);
           const IconeEstado = getIconeEstado(estadoAnuncio);
+          const linhaDataEstado = getLinhaDataEstado(estadoAnuncio, anuncio.data_anuncio, anuncio.data_aprovacao);
           return (
             <div key={anuncio.id} className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow overflow-hidden">
               <div className="flex flex-col sm:flex-row gap-0 sm:gap-6">
@@ -349,14 +594,17 @@ export function Marketplace() {
                       {(utilizadorAtual?.tipo === 'funcionario' || abaAtiva === "meusAnuncios") && (
                         <span className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${getCorEstado(estadoAnuncio)}`}>
                           <IconeEstado className="w-3 h-3" />
-                          {estadoAnuncio}
+                          {estadoLabel}
                         </span>
                       )}
                     </div>
 
                     {/* Informação adicional */}
-                    <div className="text-xs text-gray-500 mb-3">
-                      Submetido em {new Date(anuncio.data_anuncio).toLocaleDateString('pt-PT')}
+                    <div className="text-xs text-gray-500 mb-3 space-y-1">
+                      {(abaAtiva === "meusAnuncios" || utilizadorAtual?.tipo === 'funcionario') && formatarDataPT(anuncio.data_anuncio) && (
+                        <p>Submetido em {formatarDataPT(anuncio.data_anuncio)}</p>
+                      )}
+                      <p>{linhaDataEstado}</p>
                     </div>
 
                     {/* Motivo de rejeição (se existir) */}
@@ -382,19 +630,42 @@ export function Marketplace() {
 
                         if (estado === "rejeitado" || estado === "reprovado") {
                           return (
-                            <button className="w-full sm:w-auto bg-gradient-to-r from-fig-purple to-fig-magenta hover:shadow-lg text-white py-2 px-6 rounded-lg transition-all">
-                              Ressubmeter
-                            </button>
+                            <div className="flex gap-2 flex-wrap">
+                              <button
+                                onClick={() => abrirDetalhes(anuncio)}
+                                className="w-full sm:w-auto bg-gradient-to-r from-fig-purple to-fig-magenta hover:shadow-lg text-white py-2 px-6 rounded-lg transition-all"
+                              >
+                                Ver Detalhes
+                              </button>
+                              <button
+                                onClick={() => abrirRessubmissao(anuncio)}
+                                className="w-full sm:w-auto bg-gradient-to-r from-fig-purple to-fig-magenta hover:shadow-lg text-white py-2 px-6 rounded-lg transition-all"
+                              >
+                                Ressubmeter
+                              </button>
+                            </div>
                           );
                         }
 
                         if (estado === "pendenterenovacao" || estado === "pendente renovacao" || estado === "pendente_renovacao") {
                           return (
-                            <div className="flex gap-2">
-                              <button className="w-full sm:w-auto bg-gradient-to-r from-fig-green to-emerald-500 hover:shadow-lg text-white py-2 px-6 rounded-lg transition-all">
+                            <div className="flex gap-2 flex-wrap">
+                              <button
+                                onClick={() => abrirDetalhes(anuncio)}
+                                className="w-full sm:w-auto bg-gradient-to-r from-fig-purple to-fig-magenta hover:shadow-lg text-white py-2 px-6 rounded-lg transition-all"
+                              >
+                                Ver Detalhes
+                              </button>
+                              <button
+                                onClick={() => abrirConfirmacaoRenovacao(anuncio)}
+                                className="w-full sm:w-auto bg-gradient-to-r from-fig-green to-emerald-500 hover:shadow-lg text-white py-2 px-6 rounded-lg transition-all"
+                              >
                                 Manter
                               </button>
-                              <button className="w-full sm:w-auto border border-red-300 text-red-700 py-2 px-6 rounded-lg hover:bg-red-50 transition-colors">
+                              <button
+                                onClick={() => abrirConfirmacaoRemocao(anuncio)}
+                                className="w-full sm:w-auto border border-red-300 text-red-700 py-2 px-6 rounded-lg hover:bg-red-50 transition-colors"
+                              >
                                 Remover
                               </button>
                             </div>
@@ -403,16 +674,51 @@ export function Marketplace() {
 
                         if (estado === "submetido" || estado === "pendente") {
                           return (
-                            <p className="text-sm text-gray-500">
-                              A aguardar validação da equipa.
-                            </p>
+                            <div className="flex gap-2 flex-wrap items-center">
+                              <button
+                                onClick={() => abrirDetalhes(anuncio)}
+                                className="w-full sm:w-auto bg-gradient-to-r from-fig-purple to-fig-magenta hover:shadow-lg text-white py-2 px-6 rounded-lg transition-all"
+                              >
+                                Ver Detalhes
+                              </button>
+                              <p className="text-sm text-gray-500">
+                                A aguardar validação da equipa.
+                              </p>
+                            </div>
+                          );
+                        }
+
+                        if (estado === "arquivado") {
+                          return (
+                            <div className="flex gap-2 flex-wrap items-center">
+                              <button
+                                onClick={() => abrirDetalhes(anuncio)}
+                                className="w-full sm:w-auto bg-gradient-to-r from-fig-purple to-fig-magenta hover:shadow-lg text-white py-2 px-6 rounded-lg transition-all"
+                              >
+                                Ver Detalhes
+                              </button>
+                              <p className="text-sm text-gray-500">
+                                Anúncio removido.
+                              </p>
+                            </div>
                           );
                         }
 
                         return (
-                          <button className="w-full sm:w-auto border border-red-300 text-red-700 py-2 px-6 rounded-lg hover:bg-red-50 transition-colors">
-                            Remover
-                          </button>
+                          <div className="flex gap-2 flex-wrap">
+                            <button
+                              onClick={() => abrirDetalhes(anuncio)}
+                              className="w-full sm:w-auto bg-gradient-to-r from-fig-purple to-fig-magenta hover:shadow-lg text-white py-2 px-6 rounded-lg transition-all"
+                            >
+                              Ver Detalhes
+                            </button>
+                            <button
+                              onClick={() => abrirConfirmacaoRemocao(anuncio)}
+                              className="w-full sm:w-auto border border-red-300 text-red-700 py-2 px-6 rounded-lg hover:bg-red-50 transition-colors"
+                            >
+                              Remover
+                            </button>
+                          </div>
                         );
                       })()}
                     </div>
@@ -454,7 +760,7 @@ export function Marketplace() {
           <div className="bg-white rounded-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b sticky top-0 bg-white flex items-start justify-between gap-4">
               <div>
-                <h2 className="text-xl font-semibold text-gray-900">{anuncioDetalhe.titulo}</h2>
+              <h2 className="text-xl font-semibold text-gray-900">{anuncioDetalhe.titulo}</h2>
                 <p className="text-sm text-gray-600 mt-1">Detalhes do anúncio</p>
               </div>
               <button
@@ -507,17 +813,22 @@ export function Marketplace() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b sticky top-0 bg-white">
-              <h2 className="text-xl font-semibold text-gray-900">Criar Novo Anúncio</h2>
-              <p className="text-sm text-gray-600 mt-1">Partilhe o seu figurino com a comunidade</p>
+              <h2 className="text-xl font-semibold text-gray-900">{modoFormulario === "ressubmeter" ? "Ressubmeter Anúncio" : "Criar Novo Anúncio"}</h2>
+              <p className="text-sm text-gray-600 mt-1">
+                {modoFormulario === "ressubmeter" ? "Atualize os dados e reenvie para validação" : "Partilhe o seu figurino com a comunidade"}
+              </p>
             </div>
-
+            
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               {/* Upload de Imagens */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Fotografias do Figurino * (máximo 5)
+                  Fotografias do Figurino {modoFormulario === "criar" ? "*" : ""} (máximo 5)
                 </label>
-
+                {modoFormulario === "ressubmeter" && (
+                  <p className="text-xs text-amber-700 mb-2">Se carregar novas imagens, as imagens atuais do anúncio serão substituídas.</p>
+                )}
+                
                 <div className="grid grid-cols-3 gap-4 mb-4">
                   {imagensPreview.map((imagem, index) => (
                     <div key={index} className="relative group aspect-square">
@@ -649,6 +960,8 @@ export function Marketplace() {
                 type="button"
                 onClick={() => {
                   setMostrarCriarModal(false);
+                  setModoFormulario("criar");
+                  setAnuncioEmRessubmissaoId(null);
                   setImagensPreview([]);
                   setImagensFicheiro([]);
                   setFormulario({ titulo: "", descricao: "", tamanho: "", categoria: "", tipo: "", sexo: "" });
@@ -661,7 +974,63 @@ export function Marketplace() {
                 onClick={handleSubmit}
                 className="px-6 py-2 bg-gradient-to-r from-fig-purple to-fig-magenta text-white rounded-lg hover:shadow-lg transition-all"
               >
-                Submeter Anúncio para Aprovação
+                {modoFormulario === "ressubmeter" ? "Ressubmeter para Aprovação" : "Submeter Anúncio para Aprovação"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {anuncioParaRemover && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-md w-full">
+            <div className="p-6 border-b">
+              <h2 className="text-xl font-bold text-gray-900">Remover anúncio</h2>
+              <p className="text-sm text-gray-700 mt-2">Tem a certeza que deseja remover o anúncio? Esta ação não é reversível.</p>
+            </div>
+
+            <div className="p-6 border-t bg-gray-50 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={fecharConfirmacaoRemocao}
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={confirmarRemocao}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+              >
+                Confirmar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {anuncioParaRenovar && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-md w-full">
+            <div className="p-6 border-b">
+              <h2 className="text-xl font-bold text-gray-900">Renovar anúncio</h2>
+              <p className="text-sm text-gray-700 mt-2">Pretende renovar o seu anúncio por mais 30 dias?</p>
+            </div>
+
+            <div className="p-6 border-t bg-gray-50 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={fecharConfirmacaoRenovacao}
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={confirmarRenovacao}
+                className="px-4 py-2 bg-fig-green hover:bg-fig-green/90 text-white rounded-lg transition-colors"
+              >
+                Confirmar
               </button>
             </div>
           </div>

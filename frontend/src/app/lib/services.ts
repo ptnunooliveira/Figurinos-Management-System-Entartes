@@ -357,6 +357,36 @@ export async function aprovarAnuncioMarketplace(id: number, aprovado: boolean, m
   return res.json();
 }
 
+export async function ressubmeterAnuncioMarketplace(id: number, dados: FormData): Promise<any> {
+  const res = await apiFetch(`/marketplace/${id}/ressubmeter`, {
+    method: 'POST',
+    headers: {},
+    body: dados,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error ?? 'Erro ao ressubmeter anúncio');
+  }
+  return res.json();
+}
+
+export async function eliminarAnuncioMarketplace(id: number): Promise<void> {
+  const res = await apiFetch(`/marketplace/${id}`, { method: 'DELETE' });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error ?? 'Erro ao remover anúncio');
+  }
+}
+
+export async function continuarAnuncioMarketplace(id: number): Promise<any> {
+  const res = await apiFetch(`/marketplace/${id}/continuar`, { method: 'POST' });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error ?? 'Erro ao renovar anúncio');
+  }
+  return res.json();
+}
+
 // ─── Ocorrências ──────────────────────────────────────────────────────────────
 
 function mapOcorrencia(o: any): Ocorrencia {

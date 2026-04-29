@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { CheckCircle, XCircle, Shirt, AlertCircle, Euro, FileText, ListChecks } from "lucide-react";
+import { CheckCircle, XCircle, Shirt, AlertCircle, Euro, FileText, ListChecks, X } from "lucide-react";
 import {
   getMarketplaceGestao, aprovarAnuncioMarketplace,
   getOcorrencias, criarPropostaCobranca, atualizarEstadoOcorrencia,
@@ -18,6 +18,9 @@ export function Administracao() {
   const [anunciosPendentes, setAnunciosPendentes] = useState<AnuncioMarketplace[]>([]);
   const [ocorrenciasPendentes, setOcorrenciasPendentes] = useState<Ocorrencia[]>([]);
   const [propostas, setPropostas] = useState<PropostaCobranca[]>([]);
+  const [anuncioParaRejeitar, setAnuncioParaRejeitar] = useState<AnuncioMarketplace | null>(null);
+  const [motivoRejeicao, setMotivoRejeicao] = useState("");
+  const [anuncioDetalhe, setAnuncioDetalhe] = useState<AnuncioMarketplace | null>(null);
 
   const carregarDados = () => {
     getMarketplaceGestao('Submetido').then(setAnunciosPendentes);
@@ -44,9 +47,7 @@ export function Administracao() {
     }
   };
 
-  const rejeitarAnuncio = async (id: number) => {
-    const motivo = prompt("Motivo da rejeição:");
-    if (!motivo) return;
+  const rejeitarAnuncio = async (id: number, motivo: string) => {
     try {
       await aprovarAnuncioMarketplace(id, false, motivo);
       toast.success("Anúncio rejeitado");
@@ -55,6 +56,32 @@ export function Administracao() {
       toast.error(err.message || "Erro ao rejeitar anúncio");
     }
   };
+
+  const abrirModalRejeicao = (anuncio: AnuncioMarketplace) => {
+    setAnuncioParaRejeitar(anuncio);
+    setMotivoRejeicao("");
+  };
+
+  const fecharModalRejeicao = () => {
+    setAnuncioParaRejeitar(null);
+    setMotivoRejeicao("");
+  };
+
+  const confirmarRejeicao = async () => {
+    if (!anuncioParaRejeitar) return;
+
+    const motivo = motivoRejeicao.trim();
+    if (!motivo) {
+      toast.error("Indique o motivo da rejeição");
+      return;
+    }
+
+    await rejeitarAnuncio(anuncioParaRejeitar.id, motivo);
+    fecharModalRejeicao();
+  };
+
+  const abrirDetalhesAnuncio = (anuncio: AnuncioMarketplace) => setAnuncioDetalhe(anuncio);
+  const fecharDetalhesAnuncio = () => setAnuncioDetalhe(null);
 
   const handleResolverOcorrencia = async (id: number) => {
     try {
@@ -169,7 +196,11 @@ export function Administracao() {
                 <div key={anuncio.id} className="border rounded-lg p-4">
                   <div className="flex items-start gap-4">
                     <div className="w-20 h-20 bg-gradient-to-br from-fig-purple/20 to-fig-magenta/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <Shirt className="w-10 h-10 text-fig-purple" />
+                      {anuncio.imagens?.length > 0 ? (
+                        <img src={anuncio.imagens[0]} alt={anuncio.titulo} className="w-20 h-20 rounded-lg object-cover" />
+                      ) : (
+                        <Shirt className="w-10 h-10 text-fig-purple" />
+                      )}
                     </div>
                     <div className="flex-1">
                       <h4 className="font-semibold text-gray-900 mb-1">{anuncio.titulo}</h4>
@@ -185,8 +216,16 @@ export function Administracao() {
                       <p className="text-xs text-gray-500">
                         Submetido em {new Date(anuncio.data_anuncio).toLocaleDateString('pt-PT')}
                       </p>
+                      <div className="mt-3">
+                        <button
+                          onClick={() => abrirDetalhesAnuncio(anuncio)}
+                          className="w-full sm:w-auto bg-gradient-to-r from-fig-purple to-fig-magenta hover:shadow-lg text-white py-2 px-6 rounded-lg transition-all"
+                        >
+                          Ver Detalhes
+                        </button>
+                      </div>
                     </div>
-                    <div className="flex flex-col gap-2">
+                    <div className="flex flex-col gap-2 self-center">
                       <button
                         onClick={() => aprovarAnuncio(anuncio.id)}
                         className="flex items-center gap-2 px-4 py-2 bg-fig-green hover:bg-fig-green/90 text-white rounded-lg transition-colors"
@@ -195,7 +234,7 @@ export function Administracao() {
                         Aprovar
                       </button>
                       <button
-                        onClick={() => rejeitarAnuncio(anuncio.id)}
+                        onClick={() => abrirModalRejeicao(anuncio)}
                         className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
                       >
                         <XCircle className="w-4 h-4" />
@@ -212,6 +251,88 @@ export function Administracao() {
               <p className="text-gray-600">Nenhum anúncio pendente de aprovação</p>
             </div>
           )}
+        </div>
+      )}
+
+      {anuncioParaRejeitar && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-md w-full">
+            <div className="p-6 border-b">
+              <h2 className="text-xl font-bold text-gray-900">Motivo da rejeição</h2>
+              <p className="text-sm text-gray-600 mt-1 line-clamp-1">{anuncioParaRejeitar.titulo}</p>
+            </div>
+
+            <div className="p-6 space-y-3">
+              <textarea
+                value={motivoRejeicao}
+                onChange={(e) => setMotivoRejeicao(e.target.value)}
+                rows={4}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-fig-purple focus:border-transparent"
+                placeholder="Ex: Descrição incompleta e sem detalhes do estado da peça."
+              />
+            </div>
+
+            <div className="p-6 border-t bg-gray-50 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={fecharModalRejeicao}
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={confirmarRejeicao}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+              >
+                Confirmar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {anuncioDetalhe && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b sticky top-0 bg-white flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">{anuncioDetalhe.titulo}</h2>
+                <p className="text-sm text-gray-600 mt-1">Detalhes do anúncio</p>
+              </div>
+              <button type="button" onClick={fecharDetalhesAnuncio} className="text-gray-500 hover:text-gray-700" aria-label="Fechar">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {anuncioDetalhe.imagens?.length > 0 ? (
+                  anuncioDetalhe.imagens.map((img, idx) => (
+                    <img key={`${anuncioDetalhe.id}-${idx}`} src={img} alt={`${anuncioDetalhe.titulo} ${idx + 1}`} className="w-full h-56 object-cover rounded-lg border" />
+                  ))
+                ) : (
+                  <div className="sm:col-span-2 h-56 rounded-lg border bg-gray-50 flex items-center justify-center">
+                    <Shirt className="w-16 h-16 text-gray-300" />
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <h3 className="font-medium text-gray-900 mb-2">Descrição</h3>
+                <p className="text-gray-700">{anuncioDetalhe.descricao || "Sem descrição."}</p>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                <div className="bg-gray-50 rounded-lg p-3"><span className="text-gray-500">Categoria</span><p className="font-medium">{anuncioDetalhe.categoria || "—"}</p></div>
+                <div className="bg-gray-50 rounded-lg p-3"><span className="text-gray-500">Tamanho</span><p className="font-medium">{anuncioDetalhe.tamanho || "—"}</p></div>
+                <div className="bg-gray-50 rounded-lg p-3"><span className="text-gray-500">Tipo</span><p className="font-medium">{anuncioDetalhe.tipo || "—"}</p></div>
+                <div className="bg-gray-50 rounded-lg p-3"><span className="text-gray-500">Sexo</span><p className="font-medium">{anuncioDetalhe.sexo || "—"}</p></div>
+              </div>
+
+              <p className="text-xs text-gray-500">Submetido em {new Date(anuncioDetalhe.data_anuncio).toLocaleDateString('pt-PT')}</p>
+            </div>
+          </div>
         </div>
       )}
 

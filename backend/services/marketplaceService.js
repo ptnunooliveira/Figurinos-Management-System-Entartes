@@ -12,7 +12,7 @@
 
 // Importar Prisma Client
 const prisma = require("../prisma/client");
-const { uploadImagensAnuncio, listarImagensAnuncio } = require("../utils/marketplaceStorage");
+const { uploadImagensAnuncio, listarImagensAnuncio, substituirImagensAnuncio } = require("../utils/marketplaceStorage");
 
 const DIAS_PARA_RESSUBMISSAO = 3;
 const DIAS_PARA_RENOVACAO = 30;
@@ -494,7 +494,7 @@ const atualizarEstadoAnuncioMarketplace = async (id, aprovado, motivorejeicao) =
   return obterAnuncioMarketplacePorId(id);
 };
 
-const ressubmeterAnuncioMarketplace = async (id, idUtilizador, dados) => {
+const ressubmeterAnuncioMarketplace = async (id, idUtilizador, dados, imagens) => {
   const anuncio = await prisma.anuncio_marketplace.findUnique({ where: { id } });
 
   if (!anuncio) {
@@ -527,17 +527,13 @@ const ressubmeterAnuncioMarketplace = async (id, idUtilizador, dados) => {
     throw err;
   }
 
-  if (!anuncio.dataaprovacao) {
-    const err = new Error("Data de decisao nao encontrada para validar prazo de ressubmissao.");
-    err.code = "PRAZO_RESSUBMISSAO_INVALIDO";
-    throw err;
-  }
-
-  const prazoLimite = adicionarDias(anuncio.dataaprovacao, DIAS_PARA_RESSUBMISSAO);
-  if (new Date() > prazoLimite) {
-    const err = new Error("Prazo de ressubmissao expirado.");
-    err.code = "PRAZO_RESSUBMISSAO_EXPIRADO";
-    throw err;
+  if (anuncio.dataaprovacao) {
+    const prazoLimite = adicionarDias(anuncio.dataaprovacao, DIAS_PARA_RESSUBMISSAO);
+    if (new Date() > prazoLimite) {
+      const err = new Error("Prazo de ressubmissao expirado.");
+      err.code = "PRAZO_RESSUBMISSAO_EXPIRADO";
+      throw err;
+    }
   }
 
   const payloadAtualizacao = {
@@ -557,6 +553,10 @@ const ressubmeterAnuncioMarketplace = async (id, idUtilizador, dados) => {
     where: { id },
     data: payloadAtualizacao,
   });
+
+  if (Array.isArray(imagens) && imagens.length > 0) {
+    await substituirImagensAnuncio(id, idUtilizador, imagens);
+  }
 
   return obterAnuncioMarketplacePorId(id);
 };

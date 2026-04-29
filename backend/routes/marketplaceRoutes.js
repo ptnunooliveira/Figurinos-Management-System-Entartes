@@ -29,7 +29,7 @@ route.get("/:userid", authMiddleware, controller.getMarketplaceById);
 // editar anuncio do marketplace (apenas se estiver pendente)
 route.patch("/:id", authMiddleware, perfilMiddleware(["ALUNO"]), controller.editMarketplace);
 // ressubmeter anuncio rejeitado (no prazo de 3 dias)
-route.post("/:id/ressubmeter", authMiddleware, perfilMiddleware(["ALUNO"]), controller.resubmitMarketplace);
+route.post("/:id/ressubmeter", authMiddleware, perfilMiddleware(["ALUNO"]), uploadMarketplaceImages, controller.resubmitMarketplace);
 // aprovar ou rejeitar anuncio do marketplace (apenas se estiver pendente)
 route.patch("/:id/aprovar", authMiddleware, perfilMiddleware(["FUNCIONARIO", "ADMIN"]), controller.updateMarketplaceStatus);
 // mudar para arquivado um anuncio do marketplace (apenas se estiver aprovado)

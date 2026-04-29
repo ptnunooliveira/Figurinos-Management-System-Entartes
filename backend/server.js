@@ -12,6 +12,7 @@
 
 // Importar a aplicação configurada
 const app = require("./app");
+const marketplaceService = require("./services/marketplaceService");
 
 
 // CONFIGURAÇÃO DA PORTA
@@ -24,3 +25,16 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Servidor a correr na porta ${PORT}`);
 }); 
+
+const INTERVALO_VERIFICACAO_MARKETPLACE_MS = 5 * 60 * 1000;
+
+const executarVerificacaoMarketplace = async () => {
+    try {
+        await marketplaceService.processarTransicoesTemporaisMarketplace();
+    } catch (error) {
+        console.error("Erro ao processar transicoes temporais do marketplace:", error.message);
+    }
+};
+
+executarVerificacaoMarketplace();
+setInterval(executarVerificacaoMarketplace, INTERVALO_VERIFICACAO_MARKETPLACE_MS);

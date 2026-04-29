@@ -10,11 +10,7 @@
  * ------------------------------------------------------------------------
  */
 
-// Importar Prisma Client
-const { PrismaClient } = require("@prisma/client");
-
-// Instanciar cliente Prisma
-const prisma = new PrismaClient();
+const prisma = require("../prisma/client");
 
 //#region categoria
 

@@ -363,7 +363,27 @@ export async function aprovarAnuncioMarketplace(id: number, aprovado: boolean, m
 
 // ─── Ocorrências ──────────────────────────────────────────────────────────────
 
-function mapOcorrencia(o: any): Ocorrencia {
+export interface OcorrenciaDetalhada extends Ocorrencia {
+  figurino_id?: number;
+  figurino_nome?: string;
+  figurino_categoria?: string;
+  figurino_ativo?: boolean;
+  cliente_id?: number;
+  cliente_nome?: string;
+  cliente_email?: string;
+  propostas?: {
+    id: number;
+    valor: number;
+    estado: string;
+    dataproposta?: string;
+    contestacoes?: { id: number; descricao: string; valorcontraproposta?: number | null; data?: string }[];
+  }[];
+  orcamentos?: { id: number; valor: number; fornecedor?: string; aprovado?: boolean | null }[];
+}
+
+function mapOcorrencia(o: any): OcorrenciaDetalhada {
+  const fig = o.linha_reserva?.anuncio_escola?.figurino;
+  const cliente = o.linha_reserva?.reserva?.utilizador;
   return {
     id: o.id,
     descricao: o.descricao ?? '',
@@ -372,10 +392,35 @@ function mapOcorrencia(o: any): Ocorrencia {
     data_criacao: o.dataregisto ?? '',
     tipo: '',
     valor_proposto: o.valor ?? undefined,
+    figurino_id: fig?.id,
+    figurino_nome: fig?.descricao ?? '',
+    figurino_categoria: fig?.categoria?.nomecategoria ?? '',
+    figurino_ativo: fig?.ativo ?? true,
+    cliente_id: cliente?.id,
+    cliente_nome: cliente?.nome ?? '',
+    cliente_email: cliente?.email ?? '',
+    propostas: (o.propostacobranca ?? []).map((p: any) => ({
+      id: p.id,
+      valor: p.valor ?? 0,
+      estado: p.estadopropostacobranca?.nome ?? '',
+      dataproposta: p.dataproposta ?? undefined,
+      contestacoes: (p.contestacao ?? []).map((c: any) => ({
+        id: c.id,
+        descricao: c.descricao ?? '',
+        valorcontraproposta: c.valorcontraproposta,
+        data: c.data ?? undefined,
+      })),
+    })),
+    orcamentos: (o.orcamento ?? []).map((or: any) => ({
+      id: or.id,
+      valor: or.valor ?? 0,
+      fornecedor: or.fornecedor ?? '',
+      aprovado: or.aprovado,
+    })),
   };
 }
 
-export async function getOcorrencias(): Promise<Ocorrencia[]> {
+export async function getOcorrencias(): Promise<OcorrenciaDetalhada[]> {
   try {
     const res = await apiFetch('/ocorrencias');
     if (!res.ok) return [];
@@ -386,6 +431,47 @@ export async function getOcorrencias(): Promise<Ocorrencia[]> {
     return [];
   }
 }
+
+export async function getMinhasOcorrencias(): Promise<OcorrenciaDetalhada[]> {
+  try {
+    const res = await apiFetch('/ocorrencias/mine');
+    if (!res.ok) return [];
+    const data = await res.json();
+    if (!Array.isArray(data)) return [];
+    return data.map(mapOcorrencia);
+  } catch {
+    return [];
+  }
+}
+
+export async function criarContestacao(dados: {
+  id_proposta_cobranca: number;
+  descricao: string;
+  valorcontraproposta?: number | null;
+}): Promise<any> {
+  const res = await apiFetch('/contestacoes', {
+    method: 'POST',
+    body: JSON.stringify(dados),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.erro ?? err.error ?? 'Erro ao registar contestação');
+  }
+  return res.json();
+}
+
+export async function getOcorrencia(id: number): Promise<OcorrenciaDetalhada | null> {
+  try {
+    const res = await apiFetch(`/ocorrencias/${id}`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    return mapOcorrencia(data);
+  } catch {
+    return null;
+  }
+}
+
+export const getEstadosOcorrencia = () => getAuxiliar('/pesquisa/estados-ocorrencia');
 
 export async function getMarketplaceDoUtilizador(userId: number): Promise<AnuncioMarketplace[]> {
   try {

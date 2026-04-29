@@ -19,7 +19,7 @@ export function Devolucao() {
   const [carregando, setCarregando] = useState(true);
   const [estadosCondicao, setEstadosCondicao] = useState<AuxiliarItem[]>([]);
   const [checklist, setChecklist] = useState<Array<{
-    id: number; nome: string; estadoInicial: string; estadoFinal: string;
+    id: number; nome: string;
     observacoes: string; verificado: boolean; temProblema: boolean;
   }>>([]);
   const [estadoFigurino, setEstadoFigurino] = useState("Bom");
@@ -49,8 +49,6 @@ export function Devolucao() {
         setChecklist(acessorios.map((acc, idx) => ({
           id: idx + 1,
           nome: acc.nome,
-          estadoInicial: "Bom",
-          estadoFinal: "Bom",
           observacoes: "",
           verificado: false,
           temProblema: false,
@@ -72,11 +70,10 @@ export function Devolucao() {
     );
   };
 
-  const atualizarEstadoFinal = (id: number, estado: string) => {
-    const temProblema = estado === "Mau" || estado === "Em Falta";
+  const toggleProblema = (id: number) => {
     setChecklist(prev =>
       prev.map(item =>
-        item.id === id ? { ...item, estadoFinal: estado, temProblema } : item
+        item.id === id ? { ...item, temProblema: !item.temProblema } : item
       )
     );
   };
@@ -299,23 +296,18 @@ export function Devolucao() {
                     />
                     <div className="flex-1">
                       <p className="font-medium text-gray-900">{item.nome}</p>
-                      <p className="text-xs text-gray-500">Estado inicial: {item.estadoInicial}</p>
                     </div>
                   </label>
 
-                  <select
-                    value={item.estadoFinal}
-                    onChange={(e) => atualizarEstadoFinal(item.id, e.target.value)}
-                    className={`px-3 py-1 border rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
-                      item.temProblema ? 'border-orange-400 bg-white' : 'border-gray-300'
-                    }`}
-                  >
-                    <option value="Muito Bom">Muito Bom</option>
-                    <option value="Bom">Bom</option>
-                    <option value="Razoável">Razoável</option>
-                    <option value="Mau">Mau</option>
-                    <option value="Em Falta">Em Falta</option>
-                  </select>
+                  <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={item.temProblema}
+                      onChange={() => toggleProblema(item.id)}
+                      className="w-4 h-4 text-orange-600 rounded focus:ring-orange-500"
+                    />
+                    Marcar como problema
+                  </label>
                 </div>
 
                 {item.verificado && item.temProblema && (

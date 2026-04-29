@@ -55,21 +55,6 @@ export function Reservas() {
     }
   };
 
-  const getEstadoBase = (reserva: any) => {
-    const estadoMap: Record<string, number> = {
-      "PENDENTE": 1,
-      "CONFIRMADA": 2,
-      "EM CURSO": 3,
-      "CONCLUIDA": 4,
-      "CANCELADA": 5,
-      "ATRASADA": 6,
-    };
-    const linhasEstados = reserva.linhas?.map((l: any) => estadoMap[l.estado?.toUpperCase()] || 0) || [];
-    const minLinhaEstado = linhasEstados.length > 0 ? Math.min(...linhasEstados) : 0;
-    const estadoNames = ["", "PENDENTE", "CONFIRMADA", "EM CURSO", "CONCLUIDA", "CANCELADA", "ATRASADA"];
-    return estadoNames[minLinhaEstado] || reserva.estado;
-  };
-
   const reservasAtivas = reservas.filter(r =>
     r.estado === "CONFIRMADA" || r.estado === "EM CURSO" ||
     r.estado === "PENDENTE"
@@ -275,8 +260,7 @@ export function Reservas() {
               {/* Ações da Reserva */}
               {utilizadorAtual?.tipo === 'funcionario' && abaAtiva === "ativas" && (
                 (() => {
-                  const estadoBase = getEstadoBase(reserva);
-                  const e = estadoBase?.toUpperCase();
+                  const e = reserva.estado?.toUpperCase();
                   if (e === 'PENDENTE') {
                     return (
                       <div className="bg-gray-50 px-6 py-4 flex justify-end gap-3 flex-wrap">

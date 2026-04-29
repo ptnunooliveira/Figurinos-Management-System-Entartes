@@ -19,7 +19,7 @@ export function Levantamento() {
   const [carregando, setCarregando] = useState(true);
   const [estadosCondicao, setEstadosCondicao] = useState<AuxiliarItem[]>([]);
   const [checklist, setChecklist] = useState<Array<{
-    id: number; nome: string; estado: string; observacoes: string; verificado: boolean;
+    id: number; nome: string; observacoes: string; verificado: boolean;
   }>>([]);
   const [estadoFigurino, setEstadoFigurino] = useState("Bom");
   const [observacoesGerais, setObservacoesGerais] = useState("");
@@ -36,7 +36,6 @@ export function Levantamento() {
         setChecklist(acessorios.map((acc, idx) => ({
           id: idx + 1,
           nome: acc.nome,
-          estado: "Bom",
           observacoes: "",
           verificado: false,
         })));
@@ -53,14 +52,6 @@ export function Levantamento() {
     setChecklist(prev =>
       prev.map(item =>
         item.id === id ? { ...item, verificado: !item.verificado } : item
-      )
-    );
-  };
-
-  const atualizarEstado = (id: number, estado: string) => {
-    setChecklist(prev =>
-      prev.map(item =>
-        item.id === id ? { ...item, estado } : item
       )
     );
   };
@@ -227,31 +218,17 @@ export function Levantamento() {
           <div className="space-y-4">
             {checklist.map(item => (
               <div key={item.id} className="border rounded-lg p-4">
-                <div className="flex items-start gap-4">
-                  <label className="flex items-center gap-3 flex-1 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={item.verificado}
-                      onChange={() => toggleVerificado(item.id)}
-                      className="w-5 h-5 text-purple-600 rounded focus:ring-purple-500"
-                    />
-                    <div className="flex-1">
-                      <p className="font-medium text-gray-900">{item.nome}</p>
-                    </div>
-                  </label>
-
-                  <select
-                    value={item.estado}
-                    onChange={(e) => atualizarEstado(item.id, e.target.value)}
-                    className="px-3 py-1 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  >
-                    <option value="Muito Bom">Muito Bom</option>
-                    <option value="Bom">Bom</option>
-                    <option value="Razoável">Razoável</option>
-                    <option value="Mau">Mau</option>
-                    <option value="Em Falta">Em Falta</option>
-                  </select>
-                </div>
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={item.verificado}
+                    onChange={() => toggleVerificado(item.id)}
+                    className="w-5 h-5 text-purple-600 rounded focus:ring-purple-500"
+                  />
+                  <div className="flex-1">
+                    <p className="font-medium text-gray-900">{item.nome}</p>
+                  </div>
+                </label>
 
                 {item.verificado && (
                   <div className="mt-3">

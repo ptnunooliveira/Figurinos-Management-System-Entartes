@@ -61,8 +61,8 @@ model checklist {
   dataassinatura        DateTime?        @db.Date
   id_reserva            Int?
   id_funcionario        Int?
-  assinaturafuncionario String?          @db.VarChar(255)
-  assinaturaencarregado String?          @db.VarChar(255)
+  assinaturafuncionario String?
+  assinaturaencarregado String?
   id_tipo_checklist     Int?
   funcionario           funcionario?     @relation(fields: [id_funcionario], references: [id_utilizador], onDelete: NoAction, onUpdate: NoAction, map: "fk_checklist_funcionario")
   reserva               reserva?         @relation(fields: [id_reserva], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_checklist_reserva")
@@ -165,6 +165,7 @@ model figurino {
   id_tipo            Int?
   id_sexo            Int?
   id_estado_figurino Int?
+  ativo              Boolean?             @default(true)
   anuncio_escola     anuncio_escola[]
   checklist_item     checklist_item[]
   categoria          categoria?           @relation(fields: [id_categoria], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_figurino_categoria")
@@ -172,7 +173,6 @@ model figurino {
   sexo               sexo?                @relation(fields: [id_sexo], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_figurino_sexo")
   tipo_figurino      tipo_figurino?       @relation(fields: [id_tipo], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_figurino_tipo")
   figurino_acessorio figurino_acessorio[]
-  ativo              Boolean              @default(true)
 }
 
 model figurino_acessorio {

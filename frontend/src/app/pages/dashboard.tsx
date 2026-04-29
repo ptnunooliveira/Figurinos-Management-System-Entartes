@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Calendar, Shirt, ShoppingBag, AlertCircle, TrendingUp, FileText } from "lucide-react";
 import { Link } from "react-router";
 import { getUtilizadorAtual } from "../lib/auth";
-import { getReservas, getMinhasReservas, getOcorrencias, getMarketplace, getMarketplaceGestao, getAnunciosEscola } from "../lib/services";
+import { getReservas, getMinhasReservas, getOcorrencias, getMinhasOcorrencias, getMarketplace, getMarketplaceGestao, getAnunciosEscola } from "../lib/services";
 import type { LinhaReserva } from "../lib/dados-mock";
 
 export function Dashboard() {
@@ -31,7 +31,7 @@ export function Dashboard() {
       getOcorrencias().then(ocs => {
         setOcorrenciasPendentes(ocs.filter(o => {
           const e = o.estado?.toLowerCase();
-          return e === 'em análise' || e === 'pendente';
+          return e === 'a aguardar' || e === 'a aguardar orçamento';
         }).length);
       });
       getMarketplaceGestao().then(anuncios => {
@@ -50,6 +50,12 @@ export function Dashboard() {
           .flatMap(r => r.linhas)
           .slice(0, 3);
         setProximasReservas(proximas);
+      });
+      getMinhasOcorrencias().then(ocs => {
+        setOcorrenciasPendentes(ocs.filter(o => {
+          const e = o.estado?.toLowerCase();
+          return e === 'a aguardar' || e === 'a aguardar orçamento';
+        }).length);
       });
       getMarketplace().then(anuncios => {
         setTotalMarketplace(anuncios.length);
@@ -84,7 +90,7 @@ export function Dashboard() {
       valor: ocorrenciasPendentes,
       icon: AlertCircle,
       cor: "bg-orange-500",
-      link: "/administracao",
+      link: "/ocorrencias",
     },
   ];
 
@@ -161,7 +167,7 @@ export function Dashboard() {
                 )}
                 {ocorrenciasPendentes > 0 && (
                   <Link
-                    to="/administracao"
+                    to="/ocorrencias"
                     className="block p-4 bg-orange-50 border-l-4 border-orange-500 rounded hover:bg-orange-100 transition-colors"
                   >
                     <div className="flex items-start gap-3">

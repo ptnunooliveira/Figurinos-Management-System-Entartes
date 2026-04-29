@@ -72,7 +72,7 @@ const register = async (req, res) => {
 const login = async (req, res) => {
     try {
         // Obter dados enviados no body
-        const { email, password } = req.body;
+        const { email, password } = req.body || {};
 
         // Validação básica dos campos obrigatórios
         if (!email || !password) {
@@ -88,6 +88,18 @@ const login = async (req, res) => {
         return res.status(200).json(result);
 
     } catch (error) {
+        if (error.code === "INVALID_CREDENTIALS") {
+            return res.status(401).json({
+                message: error.message
+            });
+        }
+
+        if (error.code === "INACTIVE_USER") {
+            return res.status(403).json({
+                message: error.message
+            });
+        }
+
         return res.status(500).json({
             message: error.message || "Erro ao fazer login."
         });

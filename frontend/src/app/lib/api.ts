@@ -20,6 +20,12 @@ export async function apiFetch(path: string, options: RequestInit = {}): Promise
     ...(options.headers as Record<string, string> || {}),
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
+
+  const hasBody = options.body !== undefined && options.body !== null;
+  if (hasBody && !isFormData && !headers['Content-Type']) {
+    headers['Content-Type'] = 'application/json';
+  }
+
   const response = await fetch(`${API_URL}${path}`, { ...options, headers });
 
   if (response.status === 401 && path !== '/auth/login') {

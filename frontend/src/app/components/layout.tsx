@@ -127,7 +127,7 @@ export function Layout() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-gray-900 truncate">{nomeUtilizador}</p>
-              <p className="text-xs text-gray-500 capitalize">{utilizadorAtual?.tipo}</p>
+              <p className="text-xs text-gray-500 capitalize">{(utilizadorAtual?.perfil ?? utilizadorAtual?.tipo ?? '').toLowerCase()}</p>
             </div>
           </div>
           <button
@@ -204,7 +204,7 @@ export function Layout() {
                     </div>
                     <div>
                       <p className="font-medium text-gray-900">{nomeUtilizador}</p>
-                      <p className="text-sm text-gray-500 capitalize">{utilizadorAtual?.tipo}</p>
+                      <p className="text-sm text-gray-500 capitalize">{(utilizadorAtual?.perfil ?? utilizadorAtual?.tipo ?? '').toLowerCase()}</p>
                     </div>
                   </div>
                   <button

@@ -8,6 +8,7 @@ export interface Utilizador {
   data_registo: string;
   ativo: boolean;
   tipo: 'aluno' | 'funcionario' | 'encarregado';
+  perfil?: string;
   numero_aluno?: number;
   n_mecanografico?: number;
   cargo?: string;

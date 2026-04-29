@@ -141,7 +141,7 @@ export function AnunciosEscola() {
       toast.error("Por favor, preencha todas as datas");
       return;
     }
-    if (!alunoReserva) {
+    if (utilizadorAtual?.tipo === 'funcionario' && !alunoReserva) {
       toast.error("Por favor, selecione um aluno");
       return;
     }
@@ -158,7 +158,7 @@ export function AnunciosEscola() {
     try {
       await criarReserva(
         [{ id_anuncio: anuncioReserva.id, datainicio: dataInicioReserva, datafim: dataFimReserva }],
-        parseInt(alunoReserva)
+        utilizadorAtual?.tipo === 'funcionario' && alunoReserva ? parseInt(alunoReserva) : undefined
       );
       toast.success("Reserva criada com sucesso!");
       handleFecharReserva();
@@ -372,7 +372,10 @@ export function AnunciosEscola() {
                         </button>
                       </div>
                     ) : (
-                      <button className="w-full sm:w-auto bg-gradient-to-r from-fig-purple to-fig-magenta hover:shadow-lg text-white py-2 px-6 rounded-lg transition-all">
+                      <button
+                        onClick={() => handleAbrirReserva(anuncio)}
+                        className="w-full sm:w-auto bg-gradient-to-r from-fig-purple to-fig-magenta hover:shadow-lg text-white py-2 px-6 rounded-lg transition-all"
+                      >
                         Reservar
                       </button>
                     )}
@@ -547,20 +550,22 @@ export function AnunciosEscola() {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">Aluno *</label>
-                <select
-                  value={alunoReserva}
-                  onChange={(e) => setAlunoReserva(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  required
-                >
-                  <option value="">Selecione um aluno</option>
-                  {utilizadores.map((u) => (
-                    <option key={u.id} value={u.id}>{u.nome}</option>
-                  ))}
-                </select>
-              </div>
+              {utilizadorAtual?.tipo === 'funcionario' && (
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">Aluno *</label>
+                  <select
+                    value={alunoReserva}
+                    onChange={(e) => setAlunoReserva(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    required
+                  >
+                    <option value="">Selecione um aluno</option>
+                    {utilizadores.map((u) => (
+                      <option key={u.id} value={u.id}>{u.nome}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               <div className="space-y-4">
                 <h4 className="font-semibold text-gray-900 flex items-center gap-2">
@@ -603,7 +608,7 @@ export function AnunciosEscola() {
               </button>
               <button
                 onClick={handleConfirmarReserva}
-                disabled={!dataInicioReserva || !dataFimReserva || !alunoReserva}
+                disabled={!dataInicioReserva || !dataFimReserva || (utilizadorAtual?.tipo === 'funcionario' && !alunoReserva)}
                 className="px-6 py-3 bg-gradient-to-r from-fig-purple to-fig-magenta hover:shadow-lg text-white rounded-lg transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Submeter Pedido

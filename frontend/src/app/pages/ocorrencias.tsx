@@ -532,7 +532,7 @@ function DetalheOcorrencia(props: DetalheProps) {
         <div className="bg-white rounded-xl shadow-sm p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Ações</h2>
 
-          {aguardar && (
+          {aguardar && !acaoAtiva && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <BotaoAcao
                 onClick={onNecessitaOrcamento}
@@ -565,7 +565,7 @@ function DetalheOcorrencia(props: DetalheProps) {
             </div>
           )}
 
-          {aguardarOrcamento && (
+          {aguardarOrcamento && !acaoAtiva && (
             <BotaoAcao
               onClick={onRegistarOrcamento}
               cor="purple"

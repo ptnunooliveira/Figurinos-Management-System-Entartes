@@ -13,9 +13,7 @@
  * ------------------------------------------------------------
  */
 
-// Importa o PrismaClient do pacote @prisma/client
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../prisma/client');
 
 const devolucaoService = require('./devolucaoService.js');
 

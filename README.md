@@ -52,11 +52,8 @@ Para acelerar a implementação do ciclo temporal do Marketplace sem alterar o m
 
 Com base nesta data e no estado atual do anúncio, o backend aplica verificações temporais:
 
-- `Rejeitado` por mais de 3 dias passa para `Arquivado` (equivalente funcional de eliminado lógico).
-- `Publicado` por mais de 30 dias passa para `PendenteRenovacao` (quando esse estado existe na tabela de estados).
-
-Nota: apesar de funcional, esta abordagem é transitória do ponto de vista semântico; numa fase posterior, recomenda-se renomear o campo para um nome neutro (ex.: `data_decisao`) ou introduzir campos dedicados.
-
+- `Rejeitado` por mais de 3 dias passa para `Arquivado` (soft delete).
+- `Publicado` por mais de 30 dias passa para `PendenteRenovacao`.
 
 # 7. Política de Imagens (Marketplace)
 
@@ -71,9 +68,3 @@ Armazenamento:
 - As imagens são carregadas para Supabase Storage (bucket configurável por `SUPABASE_STORAGE_BUCKET`, por omissão `marketplace-images`).
 - As imagens ficam organizadas por pasta de anúncio em `marketplace/<id_anuncio>/...`.
 - As URLs públicas são resolvidas dinamicamente a partir do Storage quando os anúncios são consultados.
-
-Variáveis de ambiente necessárias no backend para upload:
-
-- `SUPABASE_URL`
-- `SUPABASE_SERVICE_ROLE_KEY`
-- `SUPABASE_STORAGE_BUCKET` (opcional)

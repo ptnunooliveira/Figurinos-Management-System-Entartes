@@ -466,11 +466,22 @@ const obterDisponibilidadeFigurino = async (idFigurino, dataInicio, dataFim) => 
 };
 
 
+const desativarFigurino = async (idFigurino) => {
+    try {
+        const result = await prisma.$executeRaw`UPDATE figurino SET ativo = false WHERE id = ${idFigurino}`;
+        return { id: idFigurino, ativo: false, affectedRows: result };
+    } catch (error) {
+        console.error("Erro no service desativarFigurino:", error);
+        throw error;
+    }
+};
+
 module.exports = {
     obterTodosFigurinos,
     obterFigurino,
     criarFigurino,
     atualizarFigurino,
     obterHistoricoFigurino,
-    obterDisponibilidadeFigurino
+    obterDisponibilidadeFigurino,
+    desativarFigurino
 };

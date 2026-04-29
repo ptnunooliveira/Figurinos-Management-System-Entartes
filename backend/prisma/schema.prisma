@@ -172,6 +172,7 @@ model figurino {
   sexo               sexo?                @relation(fields: [id_sexo], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_figurino_sexo")
   tipo_figurino      tipo_figurino?       @relation(fields: [id_tipo], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_figurino_tipo")
   figurino_acessorio figurino_acessorio[]
+  ativo              Boolean              @default(true)
 }
 
 model figurino_acessorio {

@@ -356,6 +356,25 @@ const obterDisponibilidadeFigurino = async (req, res) => {
     }
 };
 
+const desativarFigurino = async (req, res) => {
+    try {
+        const idFigurino = parseInt(req.params.id);
+        if (isNaN(idFigurino)) {
+            return res.status(400).json({ erro: "O ID do figurino tem que ser um número válido." });
+        }
+
+        const figurino = await figurinoService.desativarFigurino(idFigurino);
+        return res.status(200).json(figurino);
+    } catch (erro) {
+        console.error("Erro ao desativar figurino:", erro);
+        console.error("Stack:", erro.stack);
+        console.error("Message:", erro.message);
+        if (erro.status) {
+            return res.status(erro.status).json({ erro: erro.message });
+        }
+        return res.status(500).json({ erro: erro.message || "Erro interno do servidor." });
+    }
+};
 
 module.exports = {
     associarAcessorio,
@@ -364,5 +383,6 @@ module.exports = {
     obterHistoricoFigurino,
     criarFigurino,
     atualizarFigurino,
-    obterDisponibilidadeFigurino
+    obterDisponibilidadeFigurino,
+    desativarFigurino
 };

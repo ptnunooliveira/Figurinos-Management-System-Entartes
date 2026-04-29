@@ -24,7 +24,7 @@ export function Dashboard() {
       getReservas().then(reservas => {
         const ativas = reservas.filter(r => {
           const e = r.estado?.toUpperCase();
-          return e === 'CONFIRMADA' || e === 'APROVADA' || e === 'EM CURSO';
+          return e === 'CONFIRMADA' || e === 'EM CURSO';
         });
         setReservasAtivas(ativas.length);
       });
@@ -42,11 +42,11 @@ export function Dashboard() {
       getMinhasReservas().then(reservas => {
         const ativas = reservas.filter(r => {
           const e = r.estado?.toUpperCase();
-          return e === 'CONFIRMADA' || e === 'APROVADA' || e === 'EM CURSO';
+          return e === 'CONFIRMADA' || e === 'EM CURSO';
         });
         setReservasAtivas(ativas.length);
         const proximas = reservas
-          .filter(r => r.estado?.toUpperCase() === 'CONFIRMADA' || r.estado?.toUpperCase() === 'APROVADA')
+          .filter(r => r.estado?.toUpperCase() === 'CONFIRMADA')
           .flatMap(r => r.linhas)
           .slice(0, 3);
         setProximasReservas(proximas);
@@ -88,36 +88,6 @@ export function Dashboard() {
     },
   ];
 
-  const atividadeRecente = [
-    {
-      tipo: "Reserva",
-      descricao: "Nova reserva criada - Vestido Vitoriano Azul",
-      tempo: "Há 2 horas",
-      icon: Calendar,
-      cor: "text-blue-600",
-    },
-    {
-      tipo: "Marketplace",
-      descricao: "Novo anúncio submetido - Fato de Super-Herói",
-      tempo: "Há 5 horas",
-      icon: ShoppingBag,
-      cor: "text-purple-600",
-    },
-    {
-      tipo: "Devolução",
-      descricao: "Figurino devolvido - Vestido Charleston Anos 20",
-      tempo: "Ontem",
-      icon: Shirt,
-      cor: "text-green-600",
-    },
-    {
-      tipo: "Ocorrência",
-      descricao: "Nova ocorrência reportada",
-      tempo: "Há 2 dias",
-      icon: AlertCircle,
-      cor: "text-orange-600",
-    },
-  ];
 
   return (
     <div className="space-y-8">
@@ -157,33 +127,8 @@ export function Dashboard() {
         })}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Atividade Recente */}
-        <div className="bg-white rounded-xl shadow-sm p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-semibold text-gray-900">Atividade Recente</h2>
-            <TrendingUp className="w-5 h-5 text-gray-400" />
-          </div>
-          <div className="space-y-4">
-            {atividadeRecente.map((atividade, index) => {
-              const Icon = atividade.icon;
-              return (
-                <div key={index} className="flex items-start gap-4 pb-4 border-b last:border-b-0 last:pb-0">
-                  <div className={`${atividade.cor} mt-1`}>
-                    <Icon className="w-5 h-5" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900">{atividade.tipo}</p>
-                    <p className="text-sm text-gray-600 truncate">{atividade.descricao}</p>
-                    <p className="text-xs text-gray-400 mt-1">{atividade.tempo}</p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Próximas Reservas ou Alertas */}
+      {/* Próximas Reservas ou Alertas */}
+      <div className="grid grid-cols-1 gap-6">
         <div className="bg-white rounded-xl shadow-sm p-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-lg font-semibold text-gray-900">

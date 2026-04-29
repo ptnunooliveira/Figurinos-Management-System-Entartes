@@ -13,6 +13,7 @@ export interface FigurinoAPI {
   descricao: string | null;
   tamanho: string | null;
   localizacao: string | null;
+  ativo?: boolean | null;
   categoria: { id: number; nomecategoria: string } | null;
   tipo_figurino: { id: number; nome: string } | null;
   sexo: { id: number; nome: string } | null;
@@ -65,10 +66,30 @@ export async function getFigurinosRaw(): Promise<FigurinoAPI[]> {
     if (!res.ok) return [];
     const data = await res.json();
     if (!Array.isArray(data)) return [];
-    return data;
+    return data.filter((f: FigurinoAPI) => f.ativo !== false);
   } catch {
     return [];
   }
+}
+
+export async function desativarFigurino(id: number): Promise<void> {
+  const res = await apiFetch(`/figurinos/${id}/desativar`, { method: 'PATCH' });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.erro ?? err.error ?? 'Erro ao desativar figurino');
+  }
+}
+
+export async function atualizarFigurino(id: number, dados: { descricao?: string; tamanho?: string; localizacao?: string }): Promise<FigurinoAPI> {
+  const res = await apiFetch(`/figurinos/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(dados),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.erro ?? err.error ?? 'Erro ao atualizar figurino');
+  }
+  return res.json();
 }
 
 export async function getAnunciosEscola(): Promise<AnuncioEscolaAPI[]> {
@@ -498,10 +519,13 @@ export async function eliminarAnuncioEscola(id: number): Promise<void> {
 
 // ─── Reservas extra ───────────────────────────────────────────────────────────
 
-export async function criarReserva(linhas: { id_anuncio_escola: number; datainicio: string; datafim: string }[]): Promise<any> {
+export async function criarReserva(linhas: { id_anuncio: number; datainicio: string; datafim: string }[], id_aluno?: number): Promise<any> {
+  const body: any = { linhas };
+  if (id_aluno) body.id_aluno = id_aluno;
+
   const res = await apiFetch('/reservas', {
     method: 'POST',
-    body: JSON.stringify({ linhas }),
+    body: JSON.stringify(body),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
@@ -545,6 +569,17 @@ export async function atualizarEstadoOcorrencia(id: number, idEstado: number): P
 }
 
 // ─── Utilizadores ─────────────────────────────────────────────────────────────
+
+export async function getUtilizadores(): Promise<any[]> {
+  try {
+    const res = await apiFetch('/users');
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data) ? data : [];
+  } catch {
+    return [];
+  }
+}
 
 export async function updateUser(id: number, dados: { nome?: string; email?: string; contacto?: string }): Promise<any> {
   const res = await apiFetch(`/utilizadores/${id}`, {

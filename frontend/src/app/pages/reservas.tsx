@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Calendar, Clock, CheckCircle, XCircle, AlertCircle, Shirt, ClipboardCheck, PackageOpen, Search, Filter, Ban } from "lucide-react";
 import { Link } from "react-router";
 import { getUtilizadorAtual } from "../lib/auth";
-import { getReservas, getMinhasReservas, cancelarReserva } from "../lib/services";
+import { getReservas, getMinhasReservas, cancelarReserva, atualizarEstadoReserva } from "../lib/services";
 import type { Reserva } from "../lib/dados-mock";
 import { calcularDias, formatarMoeda } from "../lib/utils";
 import { toast } from "sonner";
@@ -31,6 +31,28 @@ export function Reservas() {
       carregarReservas();
     } catch (err: any) {
       toast.error(err.message || "Erro ao cancelar reserva");
+    }
+  };
+
+  const handleAprovarReserva = async (id: number) => {
+    if (!window.confirm("Aprovar esta reserva?")) return;
+    try {
+      await atualizarEstadoReserva(id, 2);
+      toast.success("Reserva aprovada com sucesso!");
+      carregarReservas();
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao aprovar reserva");
+    }
+  };
+
+  const handleRecusarReserva = async (id: number) => {
+    if (!window.confirm("Tem a certeza que deseja recusar esta reserva?")) return;
+    try {
+      await atualizarEstadoReserva(id, 5);
+      toast.success("Reserva recusada.");
+      carregarReservas();
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao recusar reserva");
     }
   };
 
@@ -237,24 +259,60 @@ export function Reservas() {
               </div>
 
               {/* Ações da Reserva */}
-              {utilizadorAtual?.tipo === 'funcionario' && abaAtiva === "ativas" && (
-                <div className="bg-gray-50 px-6 py-4 flex justify-end gap-3 flex-wrap">
-                  <Link
-                    to={`/levantamento/${reserva.id}`}
-                    className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                  >
-                    <ClipboardCheck className="w-4 h-4" />
-                    Processar Levantamento
-                  </Link>
-                  <Link
-                    to={`/devolucao/${reserva.id}`}
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    <PackageOpen className="w-4 h-4" />
-                    Processar Devolução
-                  </Link>
-                </div>
-              )}
+              {utilizadorAtual?.tipo === 'funcionario' && abaAtiva === "ativas" && (() => {
+                const e = reserva.estado?.toUpperCase();
+                if (e === 'PENDENTE') {
+                  return (
+                    <div className="bg-gray-50 px-6 py-4 flex justify-end gap-3 flex-wrap">
+                      <button
+                        onClick={() => handleAprovarReserva(reserva.id)}
+                        className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                      >
+                        <CheckCircle className="w-4 h-4" />
+                        Aprovar Reserva
+                      </button>
+                      <button
+                        onClick={() => handleRecusarReserva(reserva.id)}
+                        className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                      >
+                        <XCircle className="w-4 h-4" />
+                        Recusar Reserva
+                      </button>
+                    </div>
+                  );
+                }
+                if (e === 'CONFIRMADA' || e === 'APROVADA') {
+                  return (
+                    <div className="bg-gray-50 px-6 py-4 flex justify-end gap-3 flex-wrap">
+                      <Link
+                        to={`/levantamento/${reserva.id}`}
+                        className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                      >
+                        <ClipboardCheck className="w-4 h-4" />
+                        Processar Levantamento
+                      </Link>
+                    </div>
+                  );
+                }
+                if (e === 'EM CURSO') {
+                  const temLinhaEmCurso = reserva.linhas.some(
+                    l => l.estado?.toUpperCase() === 'EM CURSO'
+                  );
+                  if (!temLinhaEmCurso) return null;
+                  return (
+                    <div className="bg-gray-50 px-6 py-4 flex justify-end gap-3 flex-wrap">
+                      <Link
+                        to={`/devolucao/${reserva.id}`}
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                      >
+                        <PackageOpen className="w-4 h-4" />
+                        Processar Devolução
+                      </Link>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
               {utilizadorAtual?.tipo !== 'funcionario' && abaAtiva === "ativas" && (
                 (() => {
                   const e = reserva.estado?.toUpperCase();

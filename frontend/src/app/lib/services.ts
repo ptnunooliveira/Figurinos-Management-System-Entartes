@@ -149,7 +149,7 @@ function mapLinhaReserva(lr: any): LinhaReserva {
         categoria: fig.categoria?.nomecategoria ?? '',
         tipo: '',
         sexo: '',
-        estado: '',
+        estado: fig.estado_condicao?.nome ?? '',
         imagens: [],
         acessorios: (fig.figurino_acessorio ?? []).map((fa: any) => fa.acessorio),
         valor_diario: lr.anuncio_escola?.valordiarioaluguer ?? 0,

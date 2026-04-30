@@ -87,19 +87,25 @@ const login = async ({ email, password }) => {
 
     // Verificar se o utilizador existe
     if (!user) {
-        throw new Error("Credenciais inválidas.");
+        const error = new Error("Credenciais invalidas.");
+        error.code = "INVALID_CREDENTIALS";
+        throw error;
     }
 
     // Verificar se o utilizador está ativo
     if (!user.ativo) {
-        throw new Error("Utilizador inativo.");
+        const error = new Error("Utilizador inativo.");
+        error.code = "INACTIVE_USER";
+        throw error;
     }
 
     // Comparar password recebida com a password guardada
     const isMatch = await comparePassword(password, user.pw_hashed);
 
     if (!isMatch) {
-        throw new Error("Credenciais inválidas.");
+        const error = new Error("Credenciais invalidas.");
+        error.code = "INVALID_CREDENTIALS";
+        throw error;
     }
 
     // Gerar token

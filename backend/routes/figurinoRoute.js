@@ -40,4 +40,7 @@ router.post('/', authMiddleware, perfilMiddleware('FUNCIONARIO'), figurinoContro
 // PUT /api/figurinos/:id
 router.put('/:id', authMiddleware, perfilMiddleware('FUNCIONARIO'), figurinoController.atualizarFigurino);
 
+// PATCH /api/figurinos/:id/desativar
+router.patch('/:id/desativar', authMiddleware, perfilMiddleware('FUNCIONARIO'), figurinoController.desativarFigurino);
+
 module.exports = router;

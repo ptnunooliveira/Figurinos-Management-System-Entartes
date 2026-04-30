@@ -55,6 +55,14 @@ route.get(
   controller.getOcorrencias
 );
 
+// GET /ocorrencias/mine — ocorrências do aluno autenticado (apenas as próprias)
+route.get(
+  "/ocorrencias/mine",
+  authMiddleware,
+  perfilMiddleware(["ALUNO"]),
+  controller.getMinhasOcorrencias
+);
+
 // GET /ocorrencias/:id — detalhe de uma ocorrência (funcionário/admin)
 route.get(
   "/ocorrencias/:id",

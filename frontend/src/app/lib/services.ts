@@ -13,6 +13,7 @@ export interface FigurinoAPI {
   descricao: string | null;
   tamanho: string | null;
   localizacao: string | null;
+  ativo?: boolean | null;
   categoria: { id: number; nomecategoria: string } | null;
   tipo_figurino: { id: number; nome: string } | null;
   sexo: { id: number; nome: string } | null;
@@ -65,10 +66,33 @@ export async function getFigurinosRaw(): Promise<FigurinoAPI[]> {
     if (!res.ok) return [];
     const data = await res.json();
     if (!Array.isArray(data)) return [];
-    return data;
+    return data.filter((f: FigurinoAPI) => f.ativo !== false);
   } catch {
     return [];
   }
+}
+
+export async function desativarFigurino(id: number): Promise<void> {
+  const res = await apiFetch(`/figurinos/${id}/desativar`, { method: 'PATCH' });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.erro ?? err.error ?? 'Erro ao desativar figurino');
+  }
+}
+
+export async function atualizarFigurino(
+  id: number,
+  dados: { descricao?: string; tamanho?: string; localizacao?: string; id_estado_figurino?: number | null },
+): Promise<FigurinoAPI> {
+  const res = await apiFetch(`/figurinos/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(dados),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.erro ?? err.error ?? 'Erro ao atualizar figurino');
+  }
+  return res.json();
 }
 
 export async function getAnunciosEscola(): Promise<AnuncioEscolaAPI[]> {
@@ -149,7 +173,7 @@ function mapLinhaReserva(lr: any): LinhaReserva {
         categoria: fig.categoria?.nomecategoria ?? '',
         tipo: '',
         sexo: '',
-        estado: '',
+        estado: fig.estado_condicao?.nome ?? '',
         imagens: [],
         acessorios: (fig.figurino_acessorio ?? []).map((fa: any) => fa.acessorio),
         valor_diario: lr.anuncio_escola?.valordiarioaluguer ?? 0,
@@ -232,6 +256,32 @@ export async function criarChecklist(idReserva: number, dados: {
     throw new Error(err.erro ?? 'Erro ao criar checklist');
   }
   return res.json();
+}
+
+export interface ChecklistAPI {
+  id: number;
+  id_tipo_checklist: number;
+  id_reserva: number;
+  dataassinatura: string | null;
+  tipo_checklist?: { id: number; nome: string | null } | null;
+  checklist_item: Array<{
+    id: number;
+    idfigurino: number;
+    id_estado: number | null;
+    observacoes: string | null;
+    estado_condicao?: { id: number; nome: string | null } | null;
+  }>;
+}
+
+export async function getChecklistsReserva(idReserva: number): Promise<ChecklistAPI[]> {
+  try {
+    const res = await apiFetch(`/reservas/${idReserva}/checklists`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data) ? data : [];
+  } catch {
+    return [];
+  }
 }
 
 // ─── Conta Corrente ──────────────────────────────────────────────────────────
@@ -398,7 +448,33 @@ export async function continuarAnuncioMarketplace(id: number): Promise<any> {
 
 // ─── Ocorrências ──────────────────────────────────────────────────────────────
 
-function mapOcorrencia(o: any): Ocorrencia {
+export interface OcorrenciaDetalhada extends Ocorrencia {
+  figurino_id?: number;
+  figurino_nome?: string;
+  figurino_descricao?: string;
+  figurino_tamanho?: string;
+  figurino_localizacao?: string;
+  figurino_estado_id?: number | null;
+  figurino_estado_nome?: string;
+  figurino_categoria?: string;
+  figurino_ativo?: boolean;
+  cliente_id?: number;
+  cliente_nome?: string;
+  cliente_email?: string;
+  propostas?: {
+    id: number;
+    valor: number;
+    estado: string;
+    dataproposta?: string;
+    descricao?: string | null;
+    contestacoes?: { id: number; descricao: string; valorcontraproposta?: number | null; data?: string }[];
+  }[];
+  orcamentos?: { id: number; valor: number; fornecedor?: string; descricao?: string | null; aprovado?: boolean | null }[];
+}
+
+function mapOcorrencia(o: any): OcorrenciaDetalhada {
+  const fig = o.linha_reserva?.anuncio_escola?.figurino;
+  const cliente = o.linha_reserva?.reserva?.utilizador;
   return {
     id: o.id,
     descricao: o.descricao ?? '',
@@ -407,10 +483,42 @@ function mapOcorrencia(o: any): Ocorrencia {
     data_criacao: o.dataregisto ?? '',
     tipo: '',
     valor_proposto: o.valor ?? undefined,
+    figurino_id: fig?.id,
+    figurino_nome: fig?.descricao ?? '',
+    figurino_descricao: fig?.descricao ?? '',
+    figurino_tamanho: fig?.tamanho ?? '',
+    figurino_localizacao: fig?.localizacao ?? '',
+    figurino_estado_id: fig?.id_estado_figurino ?? null,
+    figurino_estado_nome: fig?.estado_condicao?.nome ?? '',
+    figurino_categoria: fig?.categoria?.nomecategoria ?? '',
+    figurino_ativo: fig?.ativo ?? true,
+    cliente_id: cliente?.id,
+    cliente_nome: cliente?.nome ?? '',
+    cliente_email: cliente?.email ?? '',
+    propostas: (o.propostacobranca ?? []).map((p: any) => ({
+      id: p.id,
+      valor: p.valor ?? 0,
+      estado: p.estadopropostacobranca?.nome ?? '',
+      dataproposta: p.dataproposta ?? undefined,
+      descricao: p.descricao ?? null,
+      contestacoes: (p.contestacao ?? []).map((c: any) => ({
+        id: c.id,
+        descricao: c.descricao ?? '',
+        valorcontraproposta: c.valorcontraproposta,
+        data: c.data ?? undefined,
+      })),
+    })),
+    orcamentos: (o.orcamento ?? []).map((or: any) => ({
+      id: or.id,
+      valor: or.valor ?? 0,
+      fornecedor: or.fornecedor ?? '',
+      descricao: or.descricao ?? null,
+      aprovado: or.aprovado,
+    })),
   };
 }
 
-export async function getOcorrencias(): Promise<Ocorrencia[]> {
+export async function getOcorrencias(): Promise<OcorrenciaDetalhada[]> {
   try {
     const res = await apiFetch('/ocorrencias');
     if (!res.ok) return [];
@@ -421,6 +529,47 @@ export async function getOcorrencias(): Promise<Ocorrencia[]> {
     return [];
   }
 }
+
+export async function getMinhasOcorrencias(): Promise<OcorrenciaDetalhada[]> {
+  try {
+    const res = await apiFetch('/ocorrencias/mine');
+    if (!res.ok) return [];
+    const data = await res.json();
+    if (!Array.isArray(data)) return [];
+    return data.map(mapOcorrencia);
+  } catch {
+    return [];
+  }
+}
+
+export async function criarContestacao(dados: {
+  id_proposta_cobranca: number;
+  descricao: string;
+  valorcontraproposta?: number | null;
+}): Promise<any> {
+  const res = await apiFetch('/contestacoes', {
+    method: 'POST',
+    body: JSON.stringify(dados),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.erro ?? err.error ?? 'Erro ao registar contestação');
+  }
+  return res.json();
+}
+
+export async function getOcorrencia(id: number): Promise<OcorrenciaDetalhada | null> {
+  try {
+    const res = await apiFetch(`/ocorrencias/${id}`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    return mapOcorrencia(data);
+  } catch {
+    return null;
+  }
+}
+
+export const getEstadosOcorrencia = () => getAuxiliar('/pesquisa/estados-ocorrencia');
 
 // Obtém os anúncios de um utilizador específico.
 export async function getMarketplaceDoUtilizador(userId: number): Promise<AnuncioMarketplace[]> {
@@ -451,10 +600,30 @@ export async function criarOcorrencia(dados: {
   return res.json();
 }
 
-export async function criarPropostaCobranca(idOcorrencia: number, valor: number): Promise<any> {
+export async function criarOrcamento(idOcorrencia: number, dados: {
+  fornecedor: string;
+  descricao?: string | null;
+  valor?: number | null;
+}): Promise<any> {
+  const res = await apiFetch(`/ocorrencias/${idOcorrencia}/orcamentos`, {
+    method: 'POST',
+    body: JSON.stringify(dados),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error ?? err.erro ?? 'Erro ao registar orçamento');
+  }
+  return res.json();
+}
+
+export async function criarPropostaCobranca(idOcorrencia: number, valor: number, descricao?: string | null): Promise<any> {
   const res = await apiFetch('/propostas-cobranca', {
     method: 'POST',
-    body: JSON.stringify({ id_ocorrencia: idOcorrencia, valor }),
+    body: JSON.stringify({
+      id_ocorrencia: idOcorrencia,
+      valor,
+      descricao: descricao && descricao.trim() !== '' ? descricao.trim() : null,
+    }),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
@@ -555,10 +724,13 @@ export async function eliminarAnuncioEscola(id: number): Promise<void> {
 
 // ─── Reservas extra ───────────────────────────────────────────────────────────
 
-export async function criarReserva(linhas: { id_anuncio_escola: number; datainicio: string; datafim: string }[]): Promise<any> {
+export async function criarReserva(linhas: { id_anuncio: number; datainicio: string; datafim: string }[], id_aluno?: number): Promise<any> {
+  const body: any = { linhas };
+  if (id_aluno) body.id_aluno = id_aluno;
+
   const res = await apiFetch('/reservas', {
     method: 'POST',
-    body: JSON.stringify({ linhas }),
+    body: JSON.stringify(body),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
@@ -602,6 +774,17 @@ export async function atualizarEstadoOcorrencia(id: number, idEstado: number): P
 }
 
 // ─── Utilizadores ─────────────────────────────────────────────────────────────
+
+export async function getUtilizadores(): Promise<any[]> {
+  try {
+    const res = await apiFetch('/users');
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data) ? data : [];
+  } catch {
+    return [];
+  }
+}
 
 export async function updateUser(id: number, dados: { nome?: string; email?: string; contacto?: string }): Promise<any> {
   const res = await apiFetch(`/utilizadores/${id}`, {

@@ -61,8 +61,13 @@ model checklist {
   dataassinatura        DateTime?        @db.Date
   id_reserva            Int?
   id_funcionario        Int?
-  assinaturafuncionario String?          @db.VarChar(255)
-  assinaturaencarregado String?          @db.VarChar(255)
+<<<<<<< HEAD
+  assinaturafuncionario String?
+  assinaturaencarregado String?
+=======
+  assinaturafuncionario String?          @db.Text
+  assinaturaencarregado String?          @db.Text
+>>>>>>> main
   id_tipo_checklist     Int?
   funcionario           funcionario?     @relation(fields: [id_funcionario], references: [id_utilizador], onDelete: NoAction, onUpdate: NoAction, map: "fk_checklist_funcionario")
   reserva               reserva?         @relation(fields: [id_reserva], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_checklist_reserva")
@@ -165,6 +170,7 @@ model figurino {
   id_tipo            Int?
   id_sexo            Int?
   id_estado_figurino Int?
+  ativo              Boolean?             @default(true)
   anuncio_escola     anuncio_escola[]
   checklist_item     checklist_item[]
   categoria          categoria?           @relation(fields: [id_categoria], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_figurino_categoria")
@@ -239,6 +245,7 @@ model propostacobranca {
   valor                     Float?
   dataproposta              DateTime?               @db.Date
   id_estadopropostacobranca Int?
+  descricao                 String?
   contestacao               contestacao[]
   estadopropostacobranca    estadopropostacobranca? @relation(fields: [id_estadopropostacobranca], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_proposta_estado")
   ocorrencia                ocorrencia?             @relation(fields: [id_ocorrencia], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_proposta_ocorrencia")

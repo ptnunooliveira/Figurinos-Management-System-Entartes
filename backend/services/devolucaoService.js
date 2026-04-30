@@ -11,7 +11,13 @@
  * ------------------------------------------------------------------------
  */
 
+<<<<<<< HEAD
+const { PrismaClient } = require("@prisma/client");
+const { ID_ESTADO_OCORRENCIA } = require("../utils/estadosOcorrencia");
+const prisma = new PrismaClient();
+=======
 const prisma = require("../prisma/client");
+>>>>>>> main
 
 //#region devolucoes
 
@@ -57,12 +63,21 @@ const figurinoTemDanoPorComparacao = async (id_linha_reserva, id_checklist_devol
   });
 
   const itemLevantamento = checklistLevantamento?.checklist_item[0];
-  if (!itemLevantamento) return false;
 
   const itemDevolucao = await prisma.checklist_item.findFirst({
     where: { id_checklist: id_checklist_devolucao, idfigurino },
   });
   if (!itemDevolucao) return false;
+
+  if (!itemLevantamento) {
+    // Sem checklist de levantamento: compara com o estado atual do figurino em BD
+    const figurino = await prisma.figurino.findUnique({
+      where: { id: idfigurino },
+      select: { id_estado_figurino: true },
+    });
+    if (figurino?.id_estado_figurino == null) return false;
+    return (itemDevolucao.id_estado ?? 0) > figurino.id_estado_figurino;
+  }
 
   return (itemDevolucao.id_estado ?? 0) > (itemLevantamento.id_estado ?? 0);
 };
@@ -142,7 +157,7 @@ const criarDevolucao = async ({ id_linha_reserva, id_checklist, datadevolucao })
         descricao: "Figurino devolvido com estado de condicao inferior ao registado no levantamento.",
         valor: null,
         dataregisto: new Date(),
-        id_estado: 1,
+        id_estado: ID_ESTADO_OCORRENCIA.AGUARDAR,
         id_linha_reserva,
       },
       include: {
@@ -159,13 +174,52 @@ const criarDevolucao = async ({ id_linha_reserva, id_checklist, datadevolucao })
 
 //#region ocorrencias
 
+// Include reutilizado para devolver os dados completos da ocorrência ao frontend
+const OCORRENCIA_INCLUDE_COMPLETO = {
+  estado_ocorrencia: true,
+  linha_reserva: {
+    include: {
+      anuncio_escola: {
+        include: {
+          figurino: { include: { categoria: true, estado_condicao: true } },
+        },
+      },
+      reserva: {
+        include: {
+          utilizador: { select: { id: true, nome: true, email: true } },
+        },
+      },
+    },
+  },
+  orcamento: true,
+  propostacobranca: {
+    include: {
+      estadopropostacobranca: true,
+      contestacao: true,
+    },
+  },
+};
+
 // Listar todas as ocorrências
 const obterOcorrencias = async () => {
   return prisma.ocorrencia.findMany({
-    include: {
-      estado_ocorrencia: true,
-      linha_reserva: true,
+    include: OCORRENCIA_INCLUDE_COMPLETO,
+    orderBy: { id: "desc" },
+  });
+};
+
+// Listar as ocorrências de um utilizador (filtra pela reserva associada à linha_reserva).
+// Excluem-se as ocorrências em "A aguardar resposta do aluno" (id=5): nesse estado
+// o aluno só atua via o detalhe da proposta, não pela lista geral de ocorrências.
+const obterOcorrenciasDoUtilizador = async (idUtilizador) => {
+  return prisma.ocorrencia.findMany({
+    where: {
+      linha_reserva: {
+        reserva: { id_utilizador: idUtilizador },
+      },
+      id_estado: { not: ID_ESTADO_OCORRENCIA.AGUARDAR_ALUNO },
     },
+    include: OCORRENCIA_INCLUDE_COMPLETO,
     orderBy: { id: "desc" },
   });
 };
@@ -174,11 +228,7 @@ const obterOcorrencias = async () => {
 const obterOcorrenciaPorId = async (id) => {
   return prisma.ocorrencia.findUnique({
     where: { id },
-    include: {
-      estado_ocorrencia: true,
-      linha_reserva: true,
-      orcamento: true,
-    },
+    include: OCORRENCIA_INCLUDE_COMPLETO,
   });
 };
 
@@ -233,7 +283,7 @@ const criarOcorrencia = async ({ descricao, valor, id_linha_reserva, id_estado }
       descricao,
       valor: valor ?? null,
       dataregisto: new Date(),
-      id_estado: id_estado ?? 1,
+      id_estado: id_estado ?? ID_ESTADO_OCORRENCIA.AGUARDAR,
       id_linha_reserva,
     },
     include: {
@@ -315,6 +365,7 @@ module.exports = {
   obterDevolucaoPorId,
   criarDevolucao,
   obterOcorrencias,
+  obterOcorrenciasDoUtilizador,
   obterOcorrenciaPorId,
   criarOcorrencia,
   atualizarEstadoOcorrencia,

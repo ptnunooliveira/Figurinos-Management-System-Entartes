@@ -1,3 +1,13 @@
+/**
+ * ------------------------------------------------------------------------
+ * File: marketplaceStorage.js
+ * Author: Tiago Gonçalves
+ * Date: 2026-04-29
+ * Version: 1.0
+ * Description:
+ * Acesso ao armazenamento de fotos do marketplace
+ * ------------------------------------------------------------------------
+ */
 const { createClient } = require("@supabase/supabase-js");
 
 const obterExtensao = (mimetype) => {

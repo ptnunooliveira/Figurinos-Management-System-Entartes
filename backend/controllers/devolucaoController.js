@@ -132,6 +132,20 @@ exports.getOcorrencias = async (req, res) => {
   }
 };
 
+// GET /ocorrencias/mine — ocorrências do utilizador autenticado
+exports.getMinhasOcorrencias = async (req, res) => {
+  try {
+    const idUtilizador = req.user?.id;
+    if (!idUtilizador) {
+      return res.status(401).json({ error: "Utilizador nao autenticado." });
+    }
+    const data = await service.obterOcorrenciasDoUtilizador(idUtilizador);
+    return res.status(200).json(data);
+  } catch (error) {
+    return res.status(500).json({ error: "Erro ao procurar ocorrencias." });
+  }
+};
+
 // GET /ocorrencias/:id
 exports.getOcorrenciaById = async (req, res) => {
   try {

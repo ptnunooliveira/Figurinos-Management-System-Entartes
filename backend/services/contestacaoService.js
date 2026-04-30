@@ -12,7 +12,13 @@
  * ------------------------------------------------------------
  */
 
+<<<<<<< HEAD
+const { PrismaClient } = require('@prisma/client');
+const { ID_ESTADO_OCORRENCIA } = require('../utils/estadosOcorrencia');
+const prisma = new PrismaClient();
+=======
 const prisma = require('../prisma/client');
+>>>>>>> main
 
 
 // Obter todas as contestações
@@ -57,22 +63,48 @@ const obterContestacao = async (idContestacao) => {
 };
 
 
+// Id do estado "Rejeitada" na tabela estadopropostacobranca.
+// Tem de corresponder ao registo existente na BD.
+const ID_ESTADO_PROPOSTA_REJEITADA = 3;
+
 // Criar contestação
+// Em transação:
+//   1. cria a contestação
+//   2. marca a proposta de cobrança como Rejeitada
+//   3. atualiza a ocorrência para "proposta contestada"
+// Tudo numa só chamada: assim o aluno (que pode criar contestações) não
+// precisa de chamar PATCH /propostas-cobranca/:id/estado (exclusivo de FUNCIONARIO).
 const criarContestacao = async (dadosContestacao) => {
-    const contestacao = await prisma.contestacao.create({
-        data: dadosContestacao,
-        include: {
-            utilizador: true,
-            propostacobranca: {
-                include: {
-                    ocorrencia: true,
-                    estadopropostacobranca: true
+    return prisma.$transaction(async (tx) => {
+        const contestacao = await tx.contestacao.create({
+            data: dadosContestacao,
+            include: {
+                utilizador: true,
+                propostacobranca: {
+                    include: {
+                        ocorrencia: true,
+                        estadopropostacobranca: true
+                    }
                 }
             }
-        }
-    });
+        });
 
-    return contestacao;
+        // Marca a proposta como rejeitada para o funcionário identificar facilmente
+        await tx.propostacobranca.update({
+            where: { id: dadosContestacao.id_proposta_cobranca },
+            data: { id_estadopropostacobranca: ID_ESTADO_PROPOSTA_REJEITADA }
+        });
+
+        const idOcorrencia = contestacao.propostacobranca?.id_ocorrencia;
+        if (idOcorrencia) {
+            await tx.ocorrencia.update({
+                where: { id: idOcorrencia },
+                data: { id_estado: ID_ESTADO_OCORRENCIA.PROPOSTA_CONTESTADA }
+            });
+        }
+
+        return contestacao;
+    });
 };
 
 

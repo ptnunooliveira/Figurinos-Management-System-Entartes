@@ -162,6 +162,8 @@ const criarChecklist = async (idFuncionario, dadosChecklist, idReserva) => {
     }
 
     // Checklist de devolução
+    const ocorrenciasGeradas = [];
+
     if(dadosChecklist.id_tipo_checklist === 2){
 
         const ID_ESTADO_RESERVA_CONCLUIDA = 4;
@@ -183,26 +185,17 @@ const criarChecklist = async (idFuncionario, dadosChecklist, idReserva) => {
                     where: { id: linhaPendente.id },
                     data: { id_estado_linha_reserva: ID_ESTADO_LINHA_CONCLUIDA }
                 });
-            }
 
-            // INTEGRAÇÃO DO SERVICE DE DEVOLUÇÃO
-            const resultadoDevolucao = await devolucaoService.criarDevolucao({
-                id_linha_reserva: linhaPendente.id,
-                id_checklist: novaChecklist.id,
-                datadevolucao: new Date()
-            });
+                const resultadoDevolucao = await devolucaoService.criarDevolucao({
+                    id_linha_reserva: linhaPendente.id,
+                    id_checklist: novaChecklist.id,
+                    datadevolucao: new Date()
+                });
 
-            if(resultadoDevolucao){
-
-                console.log(`Devolução registada na tabela para a linha ${linhaPendente.id}.`);
-            } else {
-                
-                console.log(`Falha ao criar registo da devolução para a linha ${linhaPendente.id}.`);
-            }
-
-            if(resultadoDevolucao.ocorrencia){
-
-                console.log(`Ocorrência gerada automaticamente para a linha ${linhaPendente.id} devido a danos no figurino!`);
+                if(resultadoDevolucao?.ocorrencia){
+                    ocorrenciasGeradas.push(resultadoDevolucao.ocorrencia);
+                    console.log(`Ocorrência gerada automaticamente para a linha ${linhaPendente.id}.`);
+                }
             }
         }
 
@@ -223,17 +216,10 @@ const criarChecklist = async (idFuncionario, dadosChecklist, idReserva) => {
                     id_funcionario: idFuncionario
                 }
             });
-
-            console.log(`Reserva ${idReserva} concluída com sucesso!`);
         }
-        else{
-
-            console.log(`Reserva ${idReserva} continua em curso (Devolução Parcial).`);
-        }
-
     }
 
-    return novaChecklist;
+    return { ...novaChecklist, ocorrencias: ocorrenciasGeradas };
 };
 
 module.exports = {

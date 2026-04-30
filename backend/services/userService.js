@@ -16,10 +16,10 @@ const bcrypt = require('bcrypt');
 const prisma = require('../prisma/client');
 
 
-// LISTAR UTILIZADORES (apenas ativos)
+// LISTAR ALUNOS ATIVOS (para seleção em reservas)
 const getAllUsers = async () => {
     return await prisma.utilizador.findMany({
-        where: { ativo: true }, // Evita devolver utilizadores desativados
+        where: { ativo: true, perfil: 'ALUNO' },
         select: {
             id: true,
             nome: true,

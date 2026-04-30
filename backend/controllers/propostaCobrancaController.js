@@ -64,7 +64,8 @@ const criarPropostaCobranca = async (req, res) => {
             id_ocorrencia,
             valor,
             dataproposta,
-            id_estadopropostacobranca
+            id_estadopropostacobranca,
+            descricao
         } = req.body;
 
         if (id_ocorrencia === undefined || id_ocorrencia === null || isNaN(parseInt(id_ocorrencia))) {
@@ -75,15 +76,18 @@ const criarPropostaCobranca = async (req, res) => {
             return res.status(400).json({ erro: "O campo 'valor' é obrigatório e tem que ser numérico." });
         }
 
-        if (id_estadopropostacobranca === undefined || id_estadopropostacobranca === null || isNaN(parseInt(id_estadopropostacobranca))) {
-            return res.status(400).json({ erro: "O campo 'id_estadopropostacobranca' é obrigatório e tem que ser numérico." });
-        }
+        // id_estadopropostacobranca é opcional; se não for indicado usa 1 (estado inicial)
+        const idEstadoProposta =
+            id_estadopropostacobranca !== undefined && id_estadopropostacobranca !== null && !isNaN(parseInt(id_estadopropostacobranca))
+                ? parseInt(id_estadopropostacobranca)
+                : 1;
 
         const dadosProposta = {
             id_ocorrencia: parseInt(id_ocorrencia),
             valor: parseFloat(valor),
             dataproposta: dataproposta ? new Date(dataproposta) : new Date(),
-            id_estadopropostacobranca: parseInt(id_estadopropostacobranca)
+            id_estadopropostacobranca: idEstadoProposta,
+            descricao: typeof descricao === 'string' && descricao.trim() !== '' ? descricao.trim() : null
         };
 
         const proposta = await propostaCobrancaService.criarPropostaCobranca(dadosProposta);

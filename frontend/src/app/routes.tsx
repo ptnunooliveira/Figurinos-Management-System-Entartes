@@ -11,14 +11,23 @@ import { Devolucao } from "./pages/devolucao";
 import { Marketplace } from "./pages/marketplace";
 import { Perfil } from "./pages/perfil";
 import { Administracao } from "./pages/administracao";
+import { Ocorrencias } from "./pages/ocorrencias";
 import { Faturacao } from "./pages/faturacao";
 import { NaoEncontrado } from "./pages/nao-encontrado";
-import { isAuthenticated } from "./lib/auth";
+import { isAuthenticated, getUtilizadorAtual } from "./lib/auth";
 
 // Componente de proteção de rota
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   if (!isAuthenticated()) {
     return <Navigate to="/login" replace />;
+  }
+  return <>{children}</>;
+}
+
+// Bloqueia acesso a alunos (apenas funcionário/admin)
+function FuncionarioRoute({ children }: { children: React.ReactNode }) {
+  if (getUtilizadorAtual()?.tipo !== "funcionario") {
+    return <Navigate to="/" replace />;
   }
   return <>{children}</>;
 }
@@ -64,17 +73,25 @@ export const router = createBrowserRouter([
         path: "devolucao/:id", 
         element: <Devolucao />,
       },
-      { 
-        path: "marketplace", 
+      {
+        path: "ocorrencias",
+        element: <Ocorrencias />,
+      },
+      {
+        path: "marketplace",
         element: <Marketplace />,
       },
       { 
         path: "perfil", 
         element: <Perfil />,
       },
-      { 
-        path: "administracao", 
-        element: <Administracao />,
+      {
+        path: "administracao",
+        element: (
+          <FuncionarioRoute>
+            <Administracao />
+          </FuncionarioRoute>
+        ),
       },
       { 
         path: "faturacao", 

@@ -21,9 +21,18 @@ export async function apiFetch(path: string, options: RequestInit = {}): Promise
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
 
-  if (!isFormData) {
-    headers['Content-Type'] = headers['Content-Type'] || 'application/json';
+  const hasBody = options.body !== undefined && options.body !== null;
+  if (hasBody && !isFormData && !headers['Content-Type']) {
+    headers['Content-Type'] = 'application/json';
   }
 
-  return fetch(`${API_URL}${path}`, { ...options, headers });
+  const response = await fetch(`${API_URL}${path}`, { ...options, headers });
+
+  if (response.status === 401 && path !== '/auth/login') {
+    localStorage.removeItem('fighappens_auth');
+    localStorage.removeItem('fighappens_token');
+    window.location.href = '/login';
+  }
+
+  return response;
 }

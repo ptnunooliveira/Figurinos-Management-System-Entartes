@@ -11,11 +11,13 @@
 
 const service = require("../services/marketplaceService");
 
+// Converte ids recebidos por params/body para inteiro positivo.
 const parseId = (value) => {
   const parsed = Number(value);
   return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
 };
 
+// Normaliza texto removendo espaços extra e valores vazios.
 const normalizarTexto = (value) => {
   if (typeof value !== "string") {
     return null;
@@ -25,6 +27,7 @@ const normalizarTexto = (value) => {
   return texto || null;
 };
 
+// Mapeia erros de domínio para códigos HTTP consistentes.
 const mapearErro = (res, error, mensagemGenerica) => {
   if (error.code === "P2025") {
     return res.status(404).json({ error: error.message });

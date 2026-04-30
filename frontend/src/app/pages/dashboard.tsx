@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Calendar, Shirt, ShoppingBag, AlertCircle, TrendingUp, FileText, Bell } from "lucide-react";
 import { Link } from "react-router";
 import { getUtilizadorAtual } from "../lib/auth";
-import { getReservas, getMinhasReservas, getOcorrencias, getMarketplace, getMarketplaceGestao, getAnunciosEscola, getMarketplaceDoUtilizador } from "../lib/services";
+import { getReservas, getMinhasReservas, getOcorrencias, getMarketplace, getMarketplaceGestao, getAnunciosEscola, getMarketplaceDoUtilizador, getPropostasCobranca } from "../lib/services";
 import type { LinhaReserva } from "../lib/dados-mock";
 
 interface NotificacaoDashboard {
@@ -20,6 +20,7 @@ export function Dashboard() {
   const [figurinosDisponiveis, setFigurinosDisponiveis] = useState(0);
   const [ocorrenciasPendentes, setOcorrenciasPendentes] = useState(0);
   const [anunciosPendentes, setAnunciosPendentes] = useState(0);
+  const [propostasPendentes, setPropostasPendentes] = useState(0);
   const [totalMarketplace, setTotalMarketplace] = useState(0);
   const [proximasReservas, setProximasReservas] = useState<LinhaReserva[]>([]);
   const [mostrarNotificacoes, setMostrarNotificacoes] = useState(false);
@@ -61,15 +62,58 @@ export function Dashboard() {
         });
         setReservasAtivas(ativas.length);
       });
-      getOcorrencias().then(ocs => {
-        setOcorrenciasPendentes(ocs.filter(o => {
+      Promise.all([getOcorrencias(), getMarketplaceGestao(), getPropostasCobranca()]).then(([ocs, anuncios, propostas]) => {
+        const ocorrenciasAResponder = ocs.filter((o) => {
           const e = o.estado?.toLowerCase();
           return e === 'em análise' || e === 'pendente';
-        }).length);
-      });
-      getMarketplaceGestao().then(anuncios => {
+        }).length;
+
+        const anunciosAResponder = anuncios.filter((a) => {
+          const estado = (a.estado || "").toLowerCase();
+          return estado === "submetido" || estado === "pendente";
+        }).length;
+
+        const propostasAResponder = propostas.filter((p) => {
+          const estado = (p.estado || "").toLowerCase();
+          return estado !== "aceite" && estado !== "rejeitada" && estado !== "finalizada";
+        }).length;
+
+        setOcorrenciasPendentes(ocorrenciasAResponder);
+        setAnunciosPendentes(anunciosAResponder);
+        setPropostasPendentes(propostasAResponder);
         setTotalMarketplace(anuncios.length);
-        setAnunciosPendentes(anuncios.filter(a => a.estado === 'Pendente').length);
+
+        const vistas = obterChavesVistas();
+        const notificacoesGeradas: NotificacaoDashboard[] = [];
+
+        if (anunciosAResponder > 0) {
+          const chave = `admin:anuncios:${anunciosAResponder}`;
+          notificacoesGeradas.push({
+            chave,
+            mensagem: `Tem ${anunciosAResponder} anúncio${anunciosAResponder !== 1 ? "s" : ""} para responder.`,
+            lida: vistas.includes(chave),
+          });
+        }
+
+        if (ocorrenciasAResponder > 0) {
+          const chave = `admin:ocorrencias:${ocorrenciasAResponder}`;
+          notificacoesGeradas.push({
+            chave,
+            mensagem: `Tem ${ocorrenciasAResponder} ocorrência${ocorrenciasAResponder !== 1 ? "s" : ""} para analisar.`,
+            lida: vistas.includes(chave),
+          });
+        }
+
+        if (propostasAResponder > 0) {
+          const chave = `admin:propostas:${propostasAResponder}`;
+          notificacoesGeradas.push({
+            chave,
+            mensagem: `Tem ${propostasAResponder} proposta${propostasAResponder !== 1 ? "s" : ""} para responder.`,
+            lida: vistas.includes(chave),
+          });
+        }
+
+        setNotificacoes(notificacoesGeradas);
       });
     } else {
       getMinhasReservas().then(reservas => {
@@ -194,7 +238,7 @@ export function Dashboard() {
         <div className="flex items-start justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold mb-2">
-              Bem-vindo{utilizadorAtual?.tipo === 'funcionario' && 'a'} ao FigHappens, {utilizadorAtual?.nome.split(' ')[0]}! 👋
+              Bem-vindo ao FigHappens, {utilizadorAtual?.nome.split(' ')[0]}! 👋
             </h1>
             {utilizadorAtual?.tipo === 'aluno' && (
               <p className="text-fig-green-light text-lg">
@@ -203,7 +247,7 @@ export function Dashboard() {
             )}
           </div>
 
-          {utilizadorAtual?.tipo === 'aluno' && (
+          {!!utilizadorAtual && (
             <div className="relative">
               <button
                 type="button"
@@ -348,7 +392,7 @@ export function Dashboard() {
                     </div>
                   </Link>
                 )}
-                {anunciosPendentes === 0 && ocorrenciasPendentes === 0 && (
+                {anunciosPendentes === 0 && ocorrenciasPendentes === 0 && propostasPendentes === 0 && (
                   <div className="text-center py-8 text-gray-500">
                     <AlertCircle className="w-12 h-12 mx-auto mb-3 text-green-300" />
                     <p className="text-sm">Tudo em ordem! 🎉</p>

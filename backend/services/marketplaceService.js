@@ -17,6 +17,7 @@ const { uploadImagensAnuncio, listarImagensAnuncio, substituirImagensAnuncio } =
 const DIAS_PARA_RESSUBMISSAO = 3;
 const DIAS_PARA_RENOVACAO = 30;
 
+// Converte Date para formato YYYY-MM-DD usado nas respostas.
 const formatarData = (valor) => {
   if (!valor) {
     return null;
@@ -25,6 +26,7 @@ const formatarData = (valor) => {
   return valor.toISOString().slice(0, 10);
 };
 
+// Traduz o estado técnico do anúncio para um resumo funcional de aprovação.
 const obterResumoAprovacao = (estadoNome) => {
   const normalizado = typeof estadoNome === "string" ? estadoNome.toLowerCase() : "";
 
@@ -51,6 +53,7 @@ const obterResumoAprovacao = (estadoNome) => {
   return { aprovado: null, situacao: "Pendente" };
 };
 
+// Mapeia o registo de BD para o formato consumido pelo frontend.
 const mapearAnuncioMarketplace = (anuncio, opcoes = {}) => {
   const resposta = {
     id: anuncio.id,
@@ -80,6 +83,7 @@ const mapearAnuncioMarketplace = (anuncio, opcoes = {}) => {
   return resposta;
 };
 
+// Procura um estado de anúncio por nome (case-insensitive).
 const obterEstadoAnuncioPorNome = async (nomeEstado) => {
   return prisma.estado_anuncio.findFirst({
     where: {
@@ -91,6 +95,7 @@ const obterEstadoAnuncioPorNome = async (nomeEstado) => {
   });
 };
 
+// Procura o primeiro estado existente numa lista de nomes alternativos.
 const obterEstadoAnuncioPorNomes = async (nomesEstado) => {
   for (const nome of nomesEstado) {
     const estado = await obterEstadoAnuncioPorNome(nome);
@@ -102,12 +107,14 @@ const obterEstadoAnuncioPorNomes = async (nomesEstado) => {
   return null;
 };
 
+// Devolve uma nova data com N dias adicionados/subtraídos.
 const adicionarDias = (data, dias) => {
   const base = new Date(data);
   base.setDate(base.getDate() + dias);
   return base;
 };
 
+// Aplica transições automáticas por tempo (Rejeitado->Arquivado, Publicado->PendenteRenovacao).
 const processarTransicoesTemporaisMarketplace = async () => {
   const estadoRejeitado = await obterEstadoAnuncioPorNome("Rejeitado");
   const estadoArquivado = await obterEstadoAnuncioPorNome("Arquivado");
@@ -147,6 +154,7 @@ const processarTransicoesTemporaisMarketplace = async () => {
   }
 };
 
+// Obtém um anúncio por id com detalhes e imagens.
 const obterAnuncioMarketplacePorId = async (id) => {
   const anuncio = await prisma.anuncio_marketplace.findUnique({
     where: { id },
@@ -194,6 +202,7 @@ const obterAnuncioMarketplacePorId = async (id) => {
   return resposta;
 };
 
+// Cria anúncio novo em estado Submetido e opcionalmente faz upload das imagens.
 const criarAnuncioMarketplace = async ({ titulo, descricao, tamanho, imagens, id_categoria, id_tipo, id_sexo, id_utilizador }) => {
   const estadoSubmetido = await obterEstadoAnuncioPorNome("Submetido");
 
@@ -233,6 +242,7 @@ const criarAnuncioMarketplace = async ({ titulo, descricao, tamanho, imagens, id
   return obterAnuncioMarketplacePorId(criado.id);
 };
 
+// Lista anúncios visíveis no marketplace público (Publicado).
 const obterAnunciosMarketplace = async () => {
   await processarTransicoesTemporaisMarketplace();
 
@@ -291,6 +301,7 @@ const obterAnunciosMarketplace = async () => {
   })));
 };
 
+// Lista anúncios para gestão, com filtro opcional por estado.
 const obterAnunciosMarketplaceGestao = async (estadoNome) => {
   await processarTransicoesTemporaisMarketplace();
 
@@ -353,6 +364,7 @@ const obterAnunciosMarketplaceGestao = async (estadoNome) => {
   })));
 };
 
+// Lista anúncios de um utilizador específico, incluindo estados internos.
 const obterAnunciosMarketplacePorUtilizador = async (idUtilizador) => {
   await processarTransicoesTemporaisMarketplace();
 
@@ -402,6 +414,7 @@ const obterAnunciosMarketplacePorUtilizador = async (idUtilizador) => {
   })));
 };
 
+// Edita anúncio do dono apenas quando ainda está Submetido.
 const atualizarAnuncioMarketplace = async (id, idUtilizador, dados) => {
   const anuncio = await prisma.anuncio_marketplace.findUnique({ where: { id } });
 
@@ -439,6 +452,7 @@ const atualizarAnuncioMarketplace = async (id, idUtilizador, dados) => {
   return obterAnuncioMarketplacePorId(id);
 };
 
+// Aprova ou rejeita um anúncio submetido, registando data/motivo quando aplicável.
 const atualizarEstadoAnuncioMarketplace = async (id, aprovado, motivorejeicao) => {
   const anuncio = await prisma.anuncio_marketplace.findUnique({ where: { id } });
 
@@ -494,6 +508,7 @@ const atualizarEstadoAnuncioMarketplace = async (id, aprovado, motivorejeicao) =
   return obterAnuncioMarketplacePorId(id);
 };
 
+// Ressubmete anúncio rejeitado dentro do prazo de 3 dias, com atualização opcional de dados/imagens.
 const ressubmeterAnuncioMarketplace = async (id, idUtilizador, dados, imagens) => {
   const anuncio = await prisma.anuncio_marketplace.findUnique({ where: { id } });
 
@@ -561,6 +576,7 @@ const ressubmeterAnuncioMarketplace = async (id, idUtilizador, dados, imagens) =
   return obterAnuncioMarketplacePorId(id);
 };
 
+// Renova anúncio em PendenteRenovacao para voltar a Publicado.
 const continuarAnuncioMarketplace = async (id, idUtilizador) => {
   const anuncio = await prisma.anuncio_marketplace.findUnique({ where: { id } });
 
@@ -605,6 +621,7 @@ const continuarAnuncioMarketplace = async (id, idUtilizador) => {
   return obterAnuncioMarketplacePorId(id);
 };
 
+// Faz soft delete do anúncio, mudando estado para Arquivado.
 const eliminarAnuncioMarketplace = async (id, idUtilizador) => {
   const anuncio = await prisma.anuncio_marketplace.findUnique({ where: { id } });
 

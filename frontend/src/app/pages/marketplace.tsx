@@ -374,11 +374,7 @@ export function Marketplace() {
       <div className="flex items-start justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Marketplace</h1>
-          <p className="text-gray-600">
-            {utilizadorAtual?.tipo === 'funcionario'
-              ? 'Gerir anúncios submetidos pelos alunos'
-              : 'Partilhe ou encontre figurinos na comunidade'}
-          </p>
+          <p className="text-gray-600">Partilhe ou encontre figurinos na comunidade</p>
         </div>
         {utilizadorAtual?.tipo === 'aluno' && (
           <button
@@ -433,7 +429,12 @@ export function Marketplace() {
         </div>
 
         {/* Filtros em Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div
+          className={[
+            "grid grid-cols-1 sm:grid-cols-2 gap-4",
+            utilizadorAtual?.tipo === "funcionario" ? "lg:grid-cols-2 max-w-4xl mx-auto" : "lg:grid-cols-3",
+          ].join(" ")}
+        >
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               <Filter className="w-4 h-4 inline mr-1" />
@@ -761,7 +762,7 @@ export function Marketplace() {
             <div className="p-6 border-b sticky top-0 bg-white flex items-start justify-between gap-4">
               <div>
               <h2 className="text-xl font-semibold text-gray-900">{anuncioDetalhe.titulo}</h2>
-                <p className="text-sm text-gray-600 mt-1">Detalhes do anúncio</p>
+                <p className="text-sm text-gray-600 mt-1">Anúncio criado por: {anuncioDetalhe.utilizador || "Utilizador desconhecido"}</p>
               </div>
               <button
                 type="button"

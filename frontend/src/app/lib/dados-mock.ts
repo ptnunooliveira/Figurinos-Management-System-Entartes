@@ -53,6 +53,7 @@ export interface AnuncioMarketplace {
   sexo: string;
   estado: string;
   id_utilizador: number;
+  utilizador?: string;
   imagens: string[];
 }
 

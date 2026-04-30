@@ -298,7 +298,7 @@ export function Administracao() {
             <div className="p-6 border-b sticky top-0 bg-white flex items-start justify-between gap-4">
               <div>
                 <h2 className="text-xl font-bold text-gray-900">{anuncioDetalhe.titulo}</h2>
-                <p className="text-sm text-gray-600 mt-1">Detalhes do anúncio</p>
+                <p className="text-sm text-gray-600 mt-1">Anúncio criado por: {anuncioDetalhe.utilizador || "Utilizador desconhecido"}</p>
               </div>
               <button type="button" onClick={fecharDetalhesAnuncio} className="text-gray-500 hover:text-gray-700" aria-label="Fechar">
                 <X className="w-5 h-5" />

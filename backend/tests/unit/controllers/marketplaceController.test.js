@@ -28,6 +28,9 @@ describe("marketplaceController", () => {
     jest.clearAllMocks();
   });
 
+  // ----------------------------------------------------------------------
+  // Testes unitarios de validacao de input no controller
+  // ----------------------------------------------------------------------
   test("updateMarketplaceStatus retorna 400 quando aprovado nao e boolean", async () => {
     const req = { params: { id: "10" }, body: { aprovado: "sim" } };
     const res = mockRes();
@@ -47,6 +50,9 @@ describe("marketplaceController", () => {
     expect(res.status).toHaveBeenCalledWith(400);
   });
 
+  // ----------------------------------------------------------------------
+  // Testes unitarios de perfect path no controller
+  // ----------------------------------------------------------------------
   test("updateMarketplaceStatus retorna 200 em aprovacao valida", async () => {
     mockService.atualizarEstadoAnuncioMarketplace.mockResolvedValue({ id: 10 });
     const req = { params: { id: "10" }, body: { aprovado: true } };
@@ -58,6 +64,9 @@ describe("marketplaceController", () => {
     expect(res.status).toHaveBeenCalledWith(200);
   });
 
+  // ----------------------------------------------------------------------
+  // Testes unitarios de erros de autenticacao/regras no controller
+  // ----------------------------------------------------------------------
   test("resubmitMarketplace retorna 401 sem user no token", async () => {
     const req = { params: { id: "8" }, user: null, body: {} };
     const res = mockRes();

@@ -168,7 +168,7 @@ const OCORRENCIA_INCLUDE_COMPLETO = {
     include: {
       anuncio_escola: {
         include: {
-          figurino: { include: { categoria: true } },
+          figurino: { include: { categoria: true, estado_condicao: true } },
         },
       },
       reserva: {
@@ -195,13 +195,16 @@ const obterOcorrencias = async () => {
   });
 };
 
-// Listar as ocorrências de um utilizador (filtra pela reserva associada à linha_reserva)
+// Listar as ocorrências de um utilizador (filtra pela reserva associada à linha_reserva).
+// Excluem-se as ocorrências em "A aguardar resposta do aluno" (id=5): nesse estado
+// o aluno só atua via o detalhe da proposta, não pela lista geral de ocorrências.
 const obterOcorrenciasDoUtilizador = async (idUtilizador) => {
   return prisma.ocorrencia.findMany({
     where: {
       linha_reserva: {
         reserva: { id_utilizador: idUtilizador },
       },
+      id_estado: { not: ID_ESTADO_OCORRENCIA.AGUARDAR_ALUNO },
     },
     include: OCORRENCIA_INCLUDE_COMPLETO,
     orderBy: { id: "desc" },

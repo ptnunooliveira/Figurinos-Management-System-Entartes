@@ -87,9 +87,9 @@ const obterPropostaCobranca = async (idProposta) => {
 
 
 // Criar proposta de cobrança
-// Se a ocorrência associada estiver em "proposta contestada" (BPMN: aluno tinha rejeitado a
-// proposta anterior), o reenvio de uma nova proposta volta a colocá-la em "a aguardar"
-// para o aluno reavaliar.
+// Sempre que uma proposta é enviada ao aluno, a ocorrência fica em
+// "A aguardar resposta do aluno". Isto cobre tanto a primeira proposta
+// como o reenvio após contestação (BPMN: aluno tinha rejeitado a proposta anterior).
 const criarPropostaCobranca = async (dadosProposta) => {
     return prisma.$transaction(async (tx) => {
         const proposta = await tx.propostacobranca.create({
@@ -100,10 +100,10 @@ const criarPropostaCobranca = async (dadosProposta) => {
             }
         });
 
-        if (proposta.id_ocorrencia && proposta.ocorrencia?.id_estado === ID_ESTADO_OCORRENCIA.PROPOSTA_CONTESTADA) {
+        if (proposta.id_ocorrencia) {
             const ocorrenciaAtualizada = await tx.ocorrencia.update({
                 where: { id: proposta.id_ocorrencia },
-                data: { id_estado: ID_ESTADO_OCORRENCIA.AGUARDAR }
+                data: { id_estado: ID_ESTADO_OCORRENCIA.AGUARDAR_ALUNO }
             });
             proposta.ocorrencia = ocorrenciaAtualizada;
         }

@@ -24,7 +24,10 @@ import {
   criarContestacao,
   criarOrcamento,
   desativarFigurino,
+  atualizarFigurino,
+  getEstadosCondicao,
   type OcorrenciaDetalhada,
+  type AuxiliarItem,
 } from "../lib/services";
 import { getUtilizadorAtual } from "../lib/auth";
 import { toast } from "sonner";
@@ -38,9 +41,11 @@ const ESTADO_PROPOSTA = {
 
 // Ids da tabela estado_ocorrencia (sincronizados com a BD)
 const ESTADO = {
-  AGUARDAR: 1,            // A aguardar
+  AGUARDAR: 1,            // A aguardar (ação do funcionário)
   RESOLVIDA: 2,           // Resolvida
   AGUARDAR_ORCAMENTO: 3,  // A aguardar orçamento
+  CONTESTADA: 4,          // Contestada pelo aluno
+  AGUARDAR_ALUNO: 5,      // A aguardar resposta do aluno
 } as const;
 
 type AcaoTipo =
@@ -84,6 +89,19 @@ export function Ocorrencias() {
   // Modal "Ver detalhes da proposta"
   const [propostaAVisualizar, setPropostaAVisualizar] = useState<number | null>(null);
 
+  // Modal "Editar figurino" (antes da cobrança no fluxo de Atualizar especificação)
+  const [editandoFigurino, setEditandoFigurino] = useState(false);
+  const [figDescricao, setFigDescricao] = useState("");
+  const [figTamanho, setFigTamanho] = useState("");
+  const [figLocalizacao, setFigLocalizacao] = useState("");
+  const [figEstadoId, setFigEstadoId] = useState<number | null>(null);
+  const [estadosCondicao, setEstadosCondicao] = useState<AuxiliarItem[]>([]);
+  const [submetendoFigurino, setSubmetendoFigurino] = useState(false);
+
+  useEffect(() => {
+    getEstadosCondicao().then(setEstadosCondicao);
+  }, []);
+
   const carregar = () => {
     setCarregando(true);
     const fn = isFuncionario ? getOcorrencias : getMinhasOcorrencias;
@@ -113,6 +131,8 @@ export function Ocorrencias() {
     const e = (estado || "").toLowerCase();
     if (e === "resolvida") return "bg-green-100 text-green-700";
     if (e === "a aguardar orçamento") return "bg-amber-100 text-amber-800";
+    if (e === "a aguardar resposta do aluno") return "bg-blue-100 text-blue-700";
+    if (e === "contestada pelo aluno") return "bg-red-100 text-red-700";
     if (e === "a aguardar") return "bg-orange-100 text-orange-700";
     return "bg-gray-100 text-gray-700";
   };
@@ -121,6 +141,7 @@ export function Ocorrencias() {
     const e = (estado || "").toLowerCase();
     if (e === "resolvida") return CheckCircle;
     if (e === "a aguardar orçamento") return Clock;
+    if (e === "a aguardar resposta do aluno") return Clock;
     return AlertTriangle;
   };
 
@@ -156,7 +177,49 @@ export function Ocorrencias() {
   };
 
   const handleAtualizarEspecificacao = () => {
-    setAcaoAtiva("atualizar_especificacao");
+    if (!selecionada) return;
+    // Pré-preenche o formulário de edição do figurino com os valores atuais
+    setFigDescricao(selecionada.figurino_descricao ?? "");
+    setFigTamanho(""); // tamanho não é exposto no map; mantém vazio (opcional)
+    setFigLocalizacao(selecionada.figurino_localizacao ?? "");
+    setFigEstadoId(selecionada.figurino_estado_id ?? null);
+    setEditandoFigurino(true);
+  };
+
+  const fecharEditarFigurino = () => {
+    setEditandoFigurino(false);
+    setFigDescricao("");
+    setFigTamanho("");
+    setFigLocalizacao("");
+    setFigEstadoId(null);
+  };
+
+  const submeterEdicaoFigurino = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (submetendoFigurino) return;
+    if (!selecionada?.figurino_id) {
+      toast.error("Esta ocorrência não tem figurino associado.");
+      return;
+    }
+    setSubmetendoFigurino(true);
+    try {
+      await atualizarFigurino(selecionada.figurino_id, {
+        descricao: figDescricao.trim() || undefined,
+        tamanho: figTamanho.trim() || undefined,
+        localizacao: figLocalizacao.trim() || undefined,
+        id_estado_figurino: figEstadoId ?? undefined,
+      });
+      toast.success("Figurino atualizado");
+      fecharEditarFigurino();
+      // Avança para o passo de proposta de cobrança ao cliente
+      setAcaoAtiva("atualizar_especificacao");
+      // Recarrega para refletir os novos dados do figurino na ocorrência
+      await recarregarSelecionada(selecionada.id);
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao atualizar figurino");
+    } finally {
+      setSubmetendoFigurino(false);
+    }
   };
 
   const handleAbate = () => {
@@ -165,6 +228,29 @@ export function Ocorrencias() {
 
   const handleRegistarOrcamento = () => {
     setAcaoAtiva("registar_orcamento");
+  };
+
+  // Funcionário aceita o valor da contraproposta do aluno: cria nova proposta
+  // com esse valor e a ocorrência transita automaticamente para AGUARDAR_ALUNO.
+  const handleAceitarContraproposta = async (valor: number) => {
+    if (!selecionada) return;
+    if (submetendoProposta) return;
+    if (!window.confirm(`Aceitar a contraproposta do aluno (€${valor.toFixed(2)}) e enviar nova proposta?`)) return;
+    setSubmetendoProposta(true);
+    try {
+      await criarPropostaCobranca(selecionada.id, valor, "Proposta com o valor sugerido pelo aluno na contestação.");
+      toast.success("Contraproposta aceite. Nova proposta enviada ao aluno.");
+      await recarregarSelecionada(selecionada.id);
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao aceitar contraproposta");
+    } finally {
+      setSubmetendoProposta(false);
+    }
+  };
+
+  // Funcionário envia uma nova proposta com valor próprio (após contestação)
+  const handleContrapor = () => {
+    setAcaoAtiva("atualizar_especificacao");
   };
 
   const fecharFormProposta = () => {
@@ -215,7 +301,7 @@ export function Ocorrencias() {
     }
     try {
       // O backend, em transação, marca a proposta como Rejeitada e a ocorrência
-      // como "proposta contestada" — o aluno não precisa (nem pode) chamar
+      // como "contestada pelo aluno" — o aluno não precisa (nem pode) chamar
       // PATCH /propostas-cobranca/:id/estado.
       await criarContestacao({
         id_proposta_cobranca: propostaAContestar,
@@ -267,10 +353,9 @@ export function Ocorrencias() {
       // 2. Criar a proposta de cobrança ao cliente (incluindo notas/descrição)
       await criarPropostaCobranca(selecionada.id, valor, descricaoProposta);
 
-      // 3. Atualizar o estado da ocorrência
-      // Após registar orçamento, volta a "A aguardar" (resposta do cliente).
-      // Nos outros fluxos mantém-se "A aguardar" também.
-      await atualizarEstadoOcorrencia(selecionada.id, ESTADO.AGUARDAR);
+      // 3. Atualizar o estado da ocorrência → "A aguardar resposta do aluno"
+      // (em qualquer dos fluxos a proposta foi enviada ao aluno).
+      await atualizarEstadoOcorrencia(selecionada.id, ESTADO.AGUARDAR_ALUNO);
 
       toast.success(
         acaoAtiva === "registar_orcamento"
@@ -327,6 +412,19 @@ export function Ocorrencias() {
         propostaAVisualizar={propostaAVisualizar}
         onAbrirVisualizacao={setPropostaAVisualizar}
         onFecharVisualizacao={() => setPropostaAVisualizar(null)}
+        editandoFigurino={editandoFigurino}
+        figDescricao={figDescricao}
+        figTamanho={figTamanho}
+        figLocalizacao={figLocalizacao}
+        figEstadoId={figEstadoId}
+        estadosCondicao={estadosCondicao}
+        submetendoFigurino={submetendoFigurino}
+        onFigDescricaoChange={setFigDescricao}
+        onFigTamanhoChange={setFigTamanho}
+        onFigLocalizacaoChange={setFigLocalizacao}
+        onFigEstadoChange={setFigEstadoId}
+        onCancelarEditarFigurino={fecharEditarFigurino}
+        onSubmeterEdicaoFigurino={submeterEdicaoFigurino}
       />
     );
   }
@@ -430,6 +528,19 @@ interface DetalheProps {
   propostaAVisualizar: number | null;
   onAbrirVisualizacao: (idProposta: number) => void;
   onFecharVisualizacao: () => void;
+  editandoFigurino: boolean;
+  figDescricao: string;
+  figTamanho: string;
+  figLocalizacao: string;
+  figEstadoId: number | null;
+  estadosCondicao: AuxiliarItem[];
+  submetendoFigurino: boolean;
+  onFigDescricaoChange: (v: string) => void;
+  onFigTamanhoChange: (v: string) => void;
+  onFigLocalizacaoChange: (v: string) => void;
+  onFigEstadoChange: (v: number | null) => void;
+  onCancelarEditarFigurino: () => void;
+  onSubmeterEdicaoFigurino: (e: React.FormEvent) => void;
 }
 
 function DetalheOcorrencia(props: DetalheProps) {
@@ -470,13 +581,36 @@ function DetalheOcorrencia(props: DetalheProps) {
     propostaAVisualizar,
     onAbrirVisualizacao,
     onFecharVisualizacao,
+    editandoFigurino,
+    figDescricao,
+    figTamanho,
+    figLocalizacao,
+    figEstadoId,
+    estadosCondicao,
+    submetendoFigurino,
+    onFigDescricaoChange,
+    onFigTamanhoChange,
+    onFigLocalizacaoChange,
+    onFigEstadoChange,
+    onCancelarEditarFigurino,
+    onSubmeterEdicaoFigurino,
   } = props;
 
   const estadoLower = (o.estado || "").toLowerCase();
+  // Estado "A aguardar" inicial: funcionário escolhe entre 4 ações.
   const aguardar = estadoLower === "a aguardar";
+  // Estado "Contestada pelo aluno": funcionário aceita contraproposta ou envia nova.
+  const contestadaPeloAluno = estadoLower === "contestada pelo aluno";
   const aguardarOrcamento = estadoLower === "a aguardar orçamento";
   const resolvida = estadoLower === "resolvida";
   const IconeEstado = iconeEstado(o.estado);
+
+  // Última contestação registada (a mais recente nas propostas), para "Aceitar contraproposta"
+  const contestacoesOrdenadas = (o.propostas ?? [])
+    .flatMap(p => (p.contestacoes ?? []).map(c => ({ ...c, idProposta: p.id })))
+    .sort((a, b) => (b.data || '').localeCompare(a.data || ''));
+  const ultimaContestacao = contestacoesOrdenadas[0];
+  const valorContrapropostaAluno = ultimaContestacao?.valorcontraproposta ?? null;
 
   // Existe uma proposta a aguardar resposta do cliente?
   // (estado != "aceite" e != "rejeitada" → cliente ainda não respondeu)
@@ -654,6 +788,27 @@ function DetalheOcorrencia(props: DetalheProps) {
                 icone={Hammer}
                 titulo="Figurino para abate"
                 descricao="O figurino está irrecuperável. Marca-o para abate e abre proposta de valor a cobrar ao cliente."
+              />
+            </div>
+          )}
+
+          {contestadaPeloAluno && !acaoAtiva && (
+            <div className="space-y-3">
+              {valorContrapropostaAluno != null && (
+                <BotaoAcao
+                  onClick={() => onAceitarContraproposta(valorContrapropostaAluno)}
+                  cor="green"
+                  icone={ThumbsUp}
+                  titulo={`Aceitar contraproposta do aluno (€${Number(valorContrapropostaAluno).toFixed(2)})`}
+                  descricao="Aceita o valor proposto pelo aluno e envia uma nova proposta com esse valor. A ocorrência volta a 'A aguardar resposta do aluno'."
+                />
+              )}
+              <BotaoAcao
+                onClick={onContrapor}
+                cor="purple"
+                icone={Wrench}
+                titulo="Contrapropor com novo valor"
+                descricao="Envia ao aluno uma nova proposta com um valor à sua escolha. A ocorrência volta a 'A aguardar resposta do aluno'."
               />
             </div>
           )}
@@ -893,6 +1048,94 @@ function DetalheOcorrencia(props: DetalheProps) {
         </div>
       )}
 
+      {/* Modal "Editar figurino" — primeiro passo de "Atualizar especificação" */}
+      {editandoFigurino && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b flex items-start justify-between">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">Atualizar especificação do figurino</h2>
+                <p className="text-sm text-gray-600 mt-1">
+                  Reveja os dados do figurino antes de enviar a proposta de penalização ao cliente.
+                </p>
+              </div>
+              <button
+                onClick={onCancelarEditarFigurino}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={onSubmeterEdicaoFigurino} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Descrição</label>
+                <textarea
+                  value={figDescricao}
+                  onChange={(e) => onFigDescricaoChange(e.target.value)}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-fig-purple focus:border-transparent"
+                  rows={3}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Tamanho</label>
+                <input
+                  type="text"
+                  value={figTamanho}
+                  onChange={(e) => onFigTamanhoChange(e.target.value)}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-fig-purple focus:border-transparent"
+                  placeholder="Ex: M, 38, 12 anos"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Localização</label>
+                <input
+                  type="text"
+                  value={figLocalizacao}
+                  onChange={(e) => onFigLocalizacaoChange(e.target.value)}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-fig-purple focus:border-transparent"
+                  placeholder="Ex: Armário 3, Prateleira B"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Estado de condição</label>
+                <select
+                  value={figEstadoId ?? ""}
+                  onChange={(e) => onFigEstadoChange(e.target.value === "" ? null : Number(e.target.value))}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-fig-purple focus:border-transparent"
+                >
+                  <option value="">— Selecione —</option>
+                  {estadosCondicao.map(est => (
+                    <option key={est.id} value={est.id}>{est.nome}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={onCancelarEditarFigurino}
+                  disabled={submetendoFigurino}
+                  className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={submetendoFigurino}
+                  className="flex-1 px-6 py-3 bg-gradient-to-r from-fig-purple to-fig-magenta text-white rounded-lg hover:shadow-lg transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {submetendoFigurino ? "A guardar..." : "Guardar e prosseguir"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Modal "Ver detalhes da proposta" */}
       {propostaAVisualizar !== null && (() => {
         const p = (o.propostas ?? []).find(pp => pp.id === propostaAVisualizar);
@@ -1023,7 +1266,7 @@ function Campo({ label, valor }: { label: string; valor: string }) {
 
 interface BotaoAcaoProps {
   onClick: () => void;
-  cor: "amber" | "red" | "blue" | "gray" | "purple";
+  cor: "amber" | "red" | "blue" | "gray" | "purple" | "green";
   icone: any;
   titulo: string;
   descricao: string;
@@ -1036,6 +1279,7 @@ function BotaoAcao({ onClick, cor, icone: Icone, titulo, descricao }: BotaoAcaoP
     blue: "border-blue-200 hover:bg-blue-50 text-blue-700",
     gray: "border-gray-300 hover:bg-gray-50 text-gray-700",
     purple: "border-fig-purple/30 hover:bg-fig-purple/5 text-fig-purple",
+    green: "border-green-200 hover:bg-green-50 text-green-700",
   };
   return (
     <button

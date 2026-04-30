@@ -80,7 +80,10 @@ export async function desativarFigurino(id: number): Promise<void> {
   }
 }
 
-export async function atualizarFigurino(id: number, dados: { descricao?: string; tamanho?: string; localizacao?: string }): Promise<FigurinoAPI> {
+export async function atualizarFigurino(
+  id: number,
+  dados: { descricao?: string; tamanho?: string; localizacao?: string; id_estado_figurino?: number | null },
+): Promise<FigurinoAPI> {
   const res = await apiFetch(`/figurinos/${id}`, {
     method: 'PUT',
     body: JSON.stringify(dados),
@@ -392,6 +395,11 @@ export async function aprovarAnuncioMarketplace(id: number, aprovado: boolean, m
 export interface OcorrenciaDetalhada extends Ocorrencia {
   figurino_id?: number;
   figurino_nome?: string;
+  figurino_descricao?: string;
+  figurino_tamanho?: string;
+  figurino_localizacao?: string;
+  figurino_estado_id?: number | null;
+  figurino_estado_nome?: string;
   figurino_categoria?: string;
   figurino_ativo?: boolean;
   cliente_id?: number;
@@ -421,6 +429,11 @@ function mapOcorrencia(o: any): OcorrenciaDetalhada {
     valor_proposto: o.valor ?? undefined,
     figurino_id: fig?.id,
     figurino_nome: fig?.descricao ?? '',
+    figurino_descricao: fig?.descricao ?? '',
+    figurino_tamanho: fig?.tamanho ?? '',
+    figurino_localizacao: fig?.localizacao ?? '',
+    figurino_estado_id: fig?.id_estado_figurino ?? null,
+    figurino_estado_nome: fig?.estado_condicao?.nome ?? '',
     figurino_categoria: fig?.categoria?.nomecategoria ?? '',
     figurino_ativo: fig?.ativo ?? true,
     cliente_id: cliente?.id,

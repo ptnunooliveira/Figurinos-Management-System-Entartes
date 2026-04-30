@@ -174,12 +174,7 @@ export function Devolucao() {
         }).catch(() => {});
       }
 
-      const problemasEncontrados = checklist.filter(item => item.temProblema).length + ocorrencias.length;
-      if (problemasEncontrados > 0) {
-        toast.success(`Devolução registada com ${problemasEncontrados} ocorrência${problemasEncontrados !== 1 ? 's' : ''}`);
-      } else {
-        toast.success("Devolução registada sem problemas!");
-      }
+      toast.success("Devolução registada");
       setTimeout(() => navigate("/reservas"), 1500);
     } catch (err: any) {
       toast.error(err.message || "Erro ao registar devolução");

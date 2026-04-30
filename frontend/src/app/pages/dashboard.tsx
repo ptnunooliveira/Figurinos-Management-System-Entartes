@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Calendar, Shirt, ShoppingBag, AlertCircle, TrendingUp, FileText, Bell } from "lucide-react";
 import { Link } from "react-router";
 import { getUtilizadorAtual } from "../lib/auth";
-import { getReservas, getMinhasReservas, getOcorrencias, getMinhasOcorrencias, getMarketplace, getMarketplaceGestao, getAnunciosEscola } from "../lib/services";
+import { getReservas, getMinhasReservas, getOcorrencias, getMinhasOcorrencias, getMarketplace, getMarketplaceGestao, getMarketplaceDoUtilizador, getAnunciosEscola } from "../lib/services";
 import type { LinhaReserva } from "../lib/dados-mock";
 
 interface NotificacaoDashboard {

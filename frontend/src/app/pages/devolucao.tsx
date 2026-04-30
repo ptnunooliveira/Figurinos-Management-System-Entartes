@@ -23,9 +23,11 @@ export function Devolucao() {
     observacoes: string; verificado: boolean; temProblema: boolean;
   }>>([]);
   const [idEstadoFigurinoSel, setIdEstadoFigurinoSel] = useState<number | null>(null);
+  const [estadoFinalId, setEstadoFinalId] = useState<number | null>(null);
   // id do estado registado na checklist de levantamento, para detetar agravamento
   const [idEstadoLevantamento, setIdEstadoLevantamento] = useState<number | null>(null);
   const [observacoesGerais, setObservacoesGerais] = useState("");
+  const [ocorrenciaAlerta, setOcorrenciaAlerta] = useState<{ id: number } | null>(null);
   const [ocorrencias, setOcorrencias] = useState<Array<{
     id: number;
     tipo: string;
@@ -74,6 +76,7 @@ export function Devolucao() {
 
   const linhaReserva = reserva?.linhas[0];
   const figurino = linhaReserva?.anuncio.figurino;
+  const estadoInicialNome = estadosCondicao.find((e) => e.id === idEstadoLevantamento)?.nome ?? "—";
 
   const toggleVerificado = (id: number) => {
     setChecklist(prev =>
@@ -157,7 +160,7 @@ export function Devolucao() {
           id_linha_reserva: linha.id,
           idfigurino: linha.anuncio.figurino.id,
           id_estado: estadoFinalId,
-          observacoes: observacoes || undefined,
+          observacoes: observacoesGerais || undefined,
         })),
       });
 
@@ -311,12 +314,14 @@ export function Devolucao() {
                 Observações
               </label>
               <textarea
-                value={observacoes}
-                onChange={e => setObservacoes(e.target.value)}
+                value={observacoesGerais}
+                onChange={e => setObservacoesGerais(e.target.value)}
                 rows={3}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 placeholder="Anote quaisquer observações sobre o estado do figurino..."
               />
+            </div>
+          </div>
             </div>
           </div>
 
@@ -327,12 +332,10 @@ export function Devolucao() {
           </h2>
 
           <div className="space-y-4">
-            {checklist.map(item => (
+            {checklist.map((item) => (
               <div
                 key={item.id}
-                className={`border rounded-lg p-4 ${
-                  item.temProblema ? 'border-orange-300 bg-orange-50' : ''
-                }`}
+                className={`border rounded-lg p-4 ${item.temProblema ? "border-orange-300 bg-orange-50" : ""}`}
               >
                 <div className="flex items-start gap-4">
                   <label className="flex items-center gap-3 flex-1 cursor-pointer">
@@ -357,33 +360,56 @@ export function Devolucao() {
                     Marcar como problema
                   </label>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => limparAssinatura('funcionario')}
-                  className="text-sm text-purple-600 hover:text-purple-700 mt-2"
-                >
-                  Limpar Assinatura
-                </button>
-              </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Assinatura do Cliente ({reserva?.utilizador.nome})
-                </label>
-                <div className="border-2 border-gray-300 rounded-lg overflow-hidden">
-                  <SignatureCanvas
-                    ref={assinaturaClienteRef}
-                    canvasProps={{ className: 'w-full h-40 bg-gray-50' }}
-                  />
-                </div>
-                <button
-                  type="button"
-                  onClick={() => limparAssinatura('cliente')}
-                  className="text-sm text-purple-600 hover:text-purple-700 mt-2"
-                >
-                  Limpar Assinatura
-                </button>
+                <textarea
+                  value={item.observacoes}
+                  onChange={(e) => atualizarObservacoes(item.id, e.target.value)}
+                  rows={2}
+                  className="w-full mt-3 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  placeholder="Observações do acessório (opcional)..."
+                />
               </div>
+            ))}
+          </div>
+
+          {/* Assinaturas */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Assinatura do Funcionário ({utilizadorAtual?.nome})
+              </label>
+              <div className="border-2 border-gray-300 rounded-lg overflow-hidden">
+                <SignatureCanvas
+                  ref={assinaturaFuncionarioRef}
+                  canvasProps={{ className: "w-full h-40 bg-gray-50" }}
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => limparAssinatura("funcionario")}
+                className="text-sm text-purple-600 hover:text-purple-700 mt-2"
+              >
+                Limpar Assinatura
+              </button>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Assinatura do Cliente ({reserva?.utilizador.nome})
+              </label>
+              <div className="border-2 border-gray-300 rounded-lg overflow-hidden">
+                <SignatureCanvas
+                  ref={assinaturaClienteRef}
+                  canvasProps={{ className: "w-full h-40 bg-gray-50" }}
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => limparAssinatura("cliente")}
+                className="text-sm text-purple-600 hover:text-purple-700 mt-2"
+              >
+                Limpar Assinatura
+              </button>
             </div>
           </div>
 
@@ -403,6 +429,7 @@ export function Devolucao() {
               Confirmar Devolução
             </button>
           </div>
+        </div>
         </form>
       )}
     </div>

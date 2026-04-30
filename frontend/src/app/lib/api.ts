@@ -15,10 +15,24 @@ export function removeToken(): void {
 
 export async function apiFetch(path: string, options: RequestInit = {}): Promise<Response> {
   const token = getToken();
+  const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
     ...(options.headers as Record<string, string> || {}),
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
-  return fetch(`${API_URL}${path}`, { ...options, headers });
+
+  const hasBody = options.body !== undefined && options.body !== null;
+  if (hasBody && !isFormData && !headers['Content-Type']) {
+    headers['Content-Type'] = 'application/json';
+  }
+
+  const response = await fetch(`${API_URL}${path}`, { ...options, headers });
+
+  if (response.status === 401 && path !== '/auth/login') {
+    localStorage.removeItem('fighappens_auth');
+    localStorage.removeItem('fighappens_token');
+    window.location.href = '/login';
+  }
+
+  return response;
 }

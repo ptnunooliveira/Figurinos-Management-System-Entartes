@@ -13,6 +13,9 @@ export function Administracao() {
 
   const [anunciosPendentes, setAnunciosPendentes] = useState<AnuncioMarketplace[]>([]);
   const [propostas, setPropostas] = useState<PropostaCobranca[]>([]);
+  const [anuncioParaRejeitar, setAnuncioParaRejeitar] = useState<AnuncioMarketplace | null>(null);
+  const [motivoRejeicao, setMotivoRejeicao] = useState("");
+  const [anuncioDetalhe, setAnuncioDetalhe] = useState<AnuncioMarketplace | null>(null);
 
   const carregarDados = () => {
     getMarketplaceGestao('Pendente').then(setAnunciosPendentes);
@@ -33,9 +36,7 @@ export function Administracao() {
     }
   };
 
-  const rejeitarAnuncio = async (id: number) => {
-    const motivo = prompt("Motivo da rejeição:");
-    if (!motivo) return;
+  const rejeitarAnuncio = async (id: number, motivo: string) => {
     try {
       await aprovarAnuncioMarketplace(id, false, motivo);
       toast.success("Anúncio rejeitado");
@@ -111,7 +112,11 @@ export function Administracao() {
                 <div key={anuncio.id} className="border rounded-lg p-4">
                   <div className="flex items-start gap-4">
                     <div className="w-20 h-20 bg-gradient-to-br from-fig-purple/20 to-fig-magenta/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <Shirt className="w-10 h-10 text-fig-purple" />
+                      {anuncio.imagens?.length > 0 ? (
+                        <img src={anuncio.imagens[0]} alt={anuncio.titulo} className="w-20 h-20 rounded-lg object-cover" />
+                      ) : (
+                        <Shirt className="w-10 h-10 text-fig-purple" />
+                      )}
                     </div>
                     <div className="flex-1">
                       <h4 className="font-semibold text-gray-900 mb-1">{anuncio.titulo}</h4>
@@ -127,8 +132,16 @@ export function Administracao() {
                       <p className="text-xs text-gray-500">
                         Submetido em {new Date(anuncio.data_anuncio).toLocaleDateString('pt-PT')}
                       </p>
+                      <div className="mt-3">
+                        <button
+                          onClick={() => abrirDetalhesAnuncio(anuncio)}
+                          className="w-full sm:w-auto bg-gradient-to-r from-fig-purple to-fig-magenta hover:shadow-lg text-white py-2 px-6 rounded-lg transition-all"
+                        >
+                          Ver Detalhes
+                        </button>
+                      </div>
                     </div>
-                    <div className="flex flex-col gap-2">
+                    <div className="flex flex-col gap-2 self-center">
                       <button
                         onClick={() => aprovarAnuncio(anuncio.id)}
                         className="flex items-center gap-2 px-4 py-2 bg-fig-green hover:bg-fig-green/90 text-white rounded-lg transition-colors"
@@ -137,7 +150,7 @@ export function Administracao() {
                         Aprovar
                       </button>
                       <button
-                        onClick={() => rejeitarAnuncio(anuncio.id)}
+                        onClick={() => abrirModalRejeicao(anuncio)}
                         className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
                       >
                         <XCircle className="w-4 h-4" />

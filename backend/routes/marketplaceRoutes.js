@@ -15,10 +15,11 @@ const route = express.Router();
 const controller = require("../controllers/marketplaceController");
 const authMiddleware = require("../middleware/authMiddleware");
 const perfilMiddleware = require("../middleware/perfilMiddleware");
+const { uploadMarketplaceImages } = require("../middleware/uploadMarketplaceImages");
 
 // Routes para marketplace
 // criar novo anuncio
-route.post("/", authMiddleware, perfilMiddleware(["ALUNO"]), controller.newMarketplace);
+route.post("/", authMiddleware, perfilMiddleware(["ALUNO"]), uploadMarketplaceImages, controller.newMarketplace);
 // obter anuncios do marketplace
 route.get("/", authMiddleware, controller.getMarketplace);
 // visualizar anuncios do marketplace para gestao (todos os anuncios, incluindo os rejeitados e arquivados)
@@ -27,10 +28,14 @@ route.get("/gestao", authMiddleware, perfilMiddleware(["FUNCIONARIO", "ADMIN"]),
 route.get("/:userid", authMiddleware, controller.getMarketplaceById);
 // editar anuncio do marketplace (apenas se estiver pendente)
 route.patch("/:id", authMiddleware, perfilMiddleware(["ALUNO"]), controller.editMarketplace);
+// ressubmeter anuncio rejeitado (no prazo de 3 dias)
+route.post("/:id/ressubmeter", authMiddleware, perfilMiddleware(["ALUNO"]), uploadMarketplaceImages, controller.resubmitMarketplace);
 // aprovar ou rejeitar anuncio do marketplace (apenas se estiver pendente)
 route.patch("/:id/aprovar", authMiddleware, perfilMiddleware(["FUNCIONARIO", "ADMIN"]), controller.updateMarketplaceStatus);
 // mudar para arquivado um anuncio do marketplace (apenas se estiver aprovado)
 route.delete("/:id", authMiddleware, perfilMiddleware(["ALUNO"]), controller.deleteMarketplace);
+// continuar anuncio pendente de renovacao
+route.post("/:id/continuar", authMiddleware, perfilMiddleware(["ALUNO"]), controller.continueMarketplace);
 
 // Exportar routes
 module.exports = route;

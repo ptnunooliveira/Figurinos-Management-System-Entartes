@@ -11,10 +11,9 @@
  * ------------------------------------------------------------
  */
 
-const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcrypt');
 
-const prisma = new PrismaClient();
+const prisma = require('../prisma/client');
 
 
 // LISTAR ALUNOS ATIVOS (para seleção em reservas)

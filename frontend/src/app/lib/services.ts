@@ -110,6 +110,7 @@ export async function getAnunciosEscola(): Promise<AnuncioEscolaAPI[]> {
 export interface AuxiliarItem {
   id: number;
   nome: string;
+  descricao?: string;
 }
 
 async function getAuxiliar(path: string): Promise<AuxiliarItem[]> {
@@ -131,6 +132,21 @@ export async function getCategorias(): Promise<AuxiliarItem[]> {
     const data = await res.json();
     if (!Array.isArray(data)) return [];
     return data.map((c: { id: number; nomecategoria: string }) => ({ id: c.id, nome: c.nomecategoria }));
+  } catch {
+    return [];
+  }
+}
+export async function getEstadosAnuncio(): Promise<AuxiliarItem[]> {
+  try {
+    const res = await apiFetch('/pesquisa/estados-anuncio');
+    if (!res.ok) return [];
+    const data = await res.json();
+    if (!Array.isArray(data)) return [];
+    return data.map((e: { id: number; nome: string; descricao?: string | null }) => ({
+      id: e.id,
+      nome: e.nome,
+      descricao: e.descricao ?? e.nome,
+    }));
   } catch {
     return [];
   }
@@ -157,7 +173,7 @@ function mapLinhaReserva(lr: any): LinhaReserva {
         categoria: fig.categoria?.nomecategoria ?? '',
         tipo: '',
         sexo: '',
-        estado: '',
+        estado: fig.estado_condicao?.nome ?? '',
         imagens: [],
         acessorios: (fig.figurino_acessorio ?? []).map((fa: any) => fa.acessorio),
         valor_diario: lr.anuncio_escola?.valordiarioaluguer ?? 0,
@@ -317,6 +333,13 @@ export async function marcarMovimentoExportado(id: number): Promise<void> {
 // ─── Marketplace ─────────────────────────────────────────────────────────────
 
 function mapAnuncioMarketplace(a: any): AnuncioMarketplace {
+  const estadoBase = a.estado_anuncio?.nome ?? a.situacao ?? '';
+  const estadoNormalizado = typeof estadoBase === 'string' ? estadoBase.trim().toLowerCase() : '';
+
+  const estado = estadoNormalizado === 'reprovado'
+    ? 'Rejeitado'
+    : estadoBase;
+
   return {
     id: a.id,
     titulo: a.titulo ?? '',
@@ -328,9 +351,9 @@ function mapAnuncioMarketplace(a: any): AnuncioMarketplace {
     categoria: a.categoria ?? '',
     tipo: a.tipo_figurino ?? '',
     sexo: a.sexo ?? '',
-    estado: a.situacao ?? a.estado_anuncio?.nome ?? '',
+    estado,
     id_utilizador: a.id_utilizador ?? 0,
-    imagens: [],
+    imagens: Array.isArray(a.imagens) ? a.imagens.filter((img: unknown) => typeof img === 'string') : [],
   };
 }
 
@@ -359,17 +382,11 @@ export async function getMarketplaceGestao(estado?: string): Promise<AnuncioMark
   }
 }
 
-export async function criarAnuncioMarketplace(dados: {
-  titulo: string;
-  descricao: string;
-  tamanho: string;
-  id_categoria?: number | null;
-  id_tipo?: number | null;
-  id_sexo?: number | null;
-}): Promise<any> {
+export async function criarAnuncioMarketplace(dados: FormData): Promise<any> {
   const res = await apiFetch('/marketplace', {
     method: 'POST',
-    body: JSON.stringify(dados),
+    headers: {},
+    body: dados,
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
@@ -386,6 +403,36 @@ export async function aprovarAnuncioMarketplace(id: number, aprovado: boolean, m
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.error ?? 'Erro ao atualizar estado');
+  }
+  return res.json();
+}
+
+export async function ressubmeterAnuncioMarketplace(id: number, dados: FormData): Promise<any> {
+  const res = await apiFetch(`/marketplace/${id}/ressubmeter`, {
+    method: 'POST',
+    headers: {},
+    body: dados,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error ?? 'Erro ao ressubmeter anúncio');
+  }
+  return res.json();
+}
+
+export async function eliminarAnuncioMarketplace(id: number): Promise<void> {
+  const res = await apiFetch(`/marketplace/${id}`, { method: 'DELETE' });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error ?? 'Erro ao remover anúncio');
+  }
+}
+
+export async function continuarAnuncioMarketplace(id: number): Promise<any> {
+  const res = await apiFetch(`/marketplace/${id}/continuar`, { method: 'POST' });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error ?? 'Erro ao renovar anúncio');
   }
   return res.json();
 }

@@ -10,6 +10,7 @@ function perfilToTipo(perfil: string): 'aluno' | 'funcionario' | 'encarregado' {
 
 export async function login(email: string, password: string): Promise<Utilizador | null> {
   try {
+    removeToken();
     const res = await apiFetch('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
@@ -21,7 +22,10 @@ export async function login(email: string, password: string): Promise<Utilizador
     setToken(data.token);
 
     const meRes = await apiFetch('/auth/me');
-    if (!meRes.ok) return null;
+    if (!meRes.ok) {
+      removeToken();
+      return null;
+    }
 
     const user = await meRes.json();
     const utilizador: Utilizador = {
@@ -38,6 +42,7 @@ export async function login(email: string, password: string): Promise<Utilizador
     localStorage.setItem(AUTH_KEY, JSON.stringify(utilizador));
     return utilizador;
   } catch {
+    removeToken();
     return null;
   }
 }

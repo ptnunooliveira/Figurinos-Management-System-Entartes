@@ -11,9 +11,13 @@
  * ------------------------------------------------------------------------
  */
 
+<<<<<<< HEAD
 const { PrismaClient } = require("@prisma/client");
 const { ID_ESTADO_OCORRENCIA } = require("../utils/estadosOcorrencia");
 const prisma = new PrismaClient();
+=======
+const prisma = require("../prisma/client");
+>>>>>>> main
 
 //#region devolucoes
 
@@ -59,12 +63,21 @@ const figurinoTemDanoPorComparacao = async (id_linha_reserva, id_checklist_devol
   });
 
   const itemLevantamento = checklistLevantamento?.checklist_item[0];
-  if (!itemLevantamento) return false;
 
   const itemDevolucao = await prisma.checklist_item.findFirst({
     where: { id_checklist: id_checklist_devolucao, idfigurino },
   });
   if (!itemDevolucao) return false;
+
+  if (!itemLevantamento) {
+    // Sem checklist de levantamento: compara com o estado atual do figurino em BD
+    const figurino = await prisma.figurino.findUnique({
+      where: { id: idfigurino },
+      select: { id_estado_figurino: true },
+    });
+    if (figurino?.id_estado_figurino == null) return false;
+    return (itemDevolucao.id_estado ?? 0) > figurino.id_estado_figurino;
+  }
 
   return (itemDevolucao.id_estado ?? 0) > (itemLevantamento.id_estado ?? 0);
 };

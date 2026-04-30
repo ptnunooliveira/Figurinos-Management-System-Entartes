@@ -1,9 +1,17 @@
 import { useState, useEffect } from "react";
-import { Calendar, Shirt, ShoppingBag, AlertCircle, TrendingUp, FileText } from "lucide-react";
+import { Calendar, Shirt, ShoppingBag, AlertCircle, TrendingUp, FileText, Bell } from "lucide-react";
 import { Link } from "react-router";
 import { getUtilizadorAtual } from "../lib/auth";
 import { getReservas, getMinhasReservas, getOcorrencias, getMinhasOcorrencias, getMarketplace, getMarketplaceGestao, getAnunciosEscola } from "../lib/services";
 import type { LinhaReserva } from "../lib/dados-mock";
+
+interface NotificacaoDashboard {
+  chave: string;
+  mensagem: string;
+  lida: boolean;
+}
+
+const DASHBOARD_NOTIF_KEY = "fighappens_notificacoes_vistas";
 
 export function Dashboard() {
   const utilizadorAtual = getUtilizadorAtual();
@@ -14,6 +22,31 @@ export function Dashboard() {
   const [anunciosPendentes, setAnunciosPendentes] = useState(0);
   const [totalMarketplace, setTotalMarketplace] = useState(0);
   const [proximasReservas, setProximasReservas] = useState<LinhaReserva[]>([]);
+  const [mostrarNotificacoes, setMostrarNotificacoes] = useState(false);
+  const [notificacoes, setNotificacoes] = useState<NotificacaoDashboard[]>([]);
+
+  const obterChavesVistas = (): string[] => {
+    try {
+      const raw = localStorage.getItem(DASHBOARD_NOTIF_KEY);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  };
+
+  const guardarChavesVistas = (chaves: string[]) => {
+    localStorage.setItem(DASHBOARD_NOTIF_KEY, JSON.stringify(chaves));
+  };
+
+  const marcarComoLida = (chave: string) => {
+    const vistas = obterChavesVistas();
+    if (!vistas.includes(chave)) {
+      guardarChavesVistas([...vistas, chave]);
+    }
+    setNotificacoes((prev) => prev.map((n) => (n.chave === chave ? { ...n, lida: true } : n)));
+  };
 
   useEffect(() => {
     getAnunciosEscola().then(anuncios => {
@@ -60,8 +93,43 @@ export function Dashboard() {
       getMarketplace().then(anuncios => {
         setTotalMarketplace(anuncios.length);
       });
+
+      if (utilizadorAtual?.id) {
+        getMarketplaceDoUtilizador(utilizadorAtual.id).then((anuncios) => {
+          const vistas = obterChavesVistas();
+          const notificacoesGeradas = anuncios
+            .map((a) => {
+              const estado = (a.estado || "").toLowerCase();
+              const dataRef = a.data_aprovacao || a.data_anuncio || "";
+              const chave = `${a.id}:${estado}:${dataRef}`;
+
+              if (estado === "aprovado" || estado === "publicado") {
+                return {
+                  chave,
+                  mensagem: `O seu anúncio "${a.titulo}" foi aprovado.`,
+                  lida: vistas.includes(chave),
+                };
+              }
+
+              if (estado === "rejeitado" || estado === "reprovado") {
+                return {
+                  chave,
+                  mensagem: `O seu anúncio "${a.titulo}" foi rejeitado. Tem 3 dias para ressubmeter o anúncio.`,
+                  lida: vistas.includes(chave),
+                };
+              }
+
+              return null;
+            })
+            .filter((n): n is NotificacaoDashboard => n !== null);
+
+          setNotificacoes(notificacoesGeradas);
+        });
+      }
     }
   }, [utilizadorAtual?.tipo]);
+
+  const notificacoesNaoLidas = notificacoes.filter((n) => !n.lida).length;
 
   const estatisticas = [
     {
@@ -98,15 +166,65 @@ export function Dashboard() {
   return (
     <div className="space-y-8">
       {/* Secção de Boas-Vindas */}
-      <div className="bg-gradient-to-r from-fig-purple via-fig-dark to-fig-magenta rounded-2xl p-8 text-white">
-        <h1 className="text-3xl font-bold mb-2">
-          Bem-vindo{utilizadorAtual?.tipo === 'funcionario' && 'a'} ao FigHappens, {utilizadorAtual?.nome.split(' ')[0]}! 👋
-        </h1>
-        {utilizadorAtual?.tipo === 'aluno' && (
-          <p className="text-fig-green-light text-lg">
-            Explore o catálogo e faça as suas reservas de figurinos.
-          </p>
-        )}
+      <div className="bg-gradient-to-r from-fig-purple via-fig-dark to-fig-magenta rounded-2xl p-8 text-white relative">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold mb-2">
+              Bem-vindo{utilizadorAtual?.tipo === 'funcionario' && 'a'} ao FigHappens, {utilizadorAtual?.nome.split(' ')[0]}! 👋
+            </h1>
+            {utilizadorAtual?.tipo === 'aluno' && (
+              <p className="text-fig-green-light text-lg">
+                Explore o catálogo e faça as suas reservas de figurinos.
+              </p>
+            )}
+          </div>
+
+          {utilizadorAtual?.tipo === 'aluno' && (
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setMostrarNotificacoes((v) => !v)}
+                className="relative p-3 rounded-xl bg-white/15 hover:bg-white/25 transition-colors"
+                aria-label="Notificações"
+              >
+                <Bell className="w-6 h-6 text-white" />
+                {notificacoesNaoLidas > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-red-500 text-white text-xs flex items-center justify-center">
+                    {notificacoesNaoLidas}
+                  </span>
+                )}
+              </button>
+
+              {mostrarNotificacoes && (
+                <div className="absolute right-0 mt-2 w-96 max-w-[90vw] bg-white text-gray-900 rounded-xl shadow-xl border z-20">
+                  <div className="p-4 border-b">
+                    <p className="font-semibold">Notificações</p>
+                  </div>
+                  <div className="max-h-72 overflow-y-auto">
+                    {notificacoes.length === 0 ? (
+                      <p className="p-4 text-sm text-gray-500">Sem notificações.</p>
+                    ) : (
+                      notificacoes.map((n) => (
+                        <div key={n.chave} className="p-4 border-b last:border-b-0">
+                          <p className={`text-sm ${n.lida ? "text-gray-500" : "text-gray-900 font-medium"}`}>{n.mensagem}</p>
+                          {!n.lida && (
+                            <button
+                              type="button"
+                              onClick={() => marcarComoLida(n.chave)}
+                              className="mt-2 text-xs text-fig-purple hover:underline"
+                            >
+                              Marcar como lida
+                            </button>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Grelha de Estatísticas */}

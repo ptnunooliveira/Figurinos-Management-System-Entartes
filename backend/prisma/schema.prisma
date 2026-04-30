@@ -61,8 +61,13 @@ model checklist {
   dataassinatura        DateTime?        @db.Date
   id_reserva            Int?
   id_funcionario        Int?
+<<<<<<< HEAD
   assinaturafuncionario String?
   assinaturaencarregado String?
+=======
+  assinaturafuncionario String?          @db.Text
+  assinaturaencarregado String?          @db.Text
+>>>>>>> main
   id_tipo_checklist     Int?
   funcionario           funcionario?     @relation(fields: [id_funcionario], references: [id_utilizador], onDelete: NoAction, onUpdate: NoAction, map: "fk_checklist_funcionario")
   reserva               reserva?         @relation(fields: [id_reserva], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_checklist_reserva")

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Calendar, Clock, CheckCircle, XCircle, AlertCircle, Shirt, ClipboardCheck, PackageOpen, Search, Filter, Ban } from "lucide-react";
+import { Calendar, Clock, CheckCircle, XCircle, AlertCircle, Shirt, ClipboardCheck, PackageOpen, Search, Filter, Ban, CheckCheck } from "lucide-react";
 import { Link } from "react-router";
 import { getUtilizadorAtual } from "../lib/auth";
 import { getReservas, getMinhasReservas, cancelarReserva, atualizarEstadoReserva } from "../lib/services";
@@ -35,7 +35,6 @@ export function Reservas() {
   };
 
   const handleAprovarReserva = async (id: number) => {
-    if (!window.confirm("Aprovar esta reserva?")) return;
     try {
       await atualizarEstadoReserva(id, 2);
       toast.success("Reserva aprovada com sucesso!");
@@ -49,7 +48,7 @@ export function Reservas() {
     if (!window.confirm("Tem a certeza que deseja recusar esta reserva?")) return;
     try {
       await atualizarEstadoReserva(id, 5);
-      toast.success("Reserva recusada.");
+      toast.success("Reserva recusada com sucesso!");
       carregarReservas();
     } catch (err: any) {
       toast.error(err.message || "Erro ao recusar reserva");
@@ -58,7 +57,7 @@ export function Reservas() {
 
   const reservasAtivas = reservas.filter(r =>
     r.estado === "CONFIRMADA" || r.estado === "EM CURSO" ||
-    r.estado === "Aprovada" || r.estado === "Em curso" || r.estado === "PENDENTE" || r.estado === "Pendente"
+    r.estado === "PENDENTE"
   );
 
   const reservasHistorico = reservas.filter(r =>
@@ -84,9 +83,9 @@ export function Reservas() {
 
   const getCorEstado = (estado: string) => {
     const e = estado?.toUpperCase();
-    if (e === "CONFIRMADA" || e === "APROVADA") return "text-green-700 bg-green-100";
+    if (e === "CONFIRMADA") return "text-green-700 bg-green-100";
     if (e === "EM CURSO") return "text-blue-700 bg-blue-100";
-    if (e === "CONCLUIDA" || e === "DEVOLVIDA") return "text-gray-700 bg-gray-100";
+    if (e === "CONCLUIDA") return "text-gray-700 bg-gray-100";
     if (e === "CANCELADA") return "text-red-700 bg-red-100";
     if (e === "PENDENTE") return "text-yellow-700 bg-yellow-100";
     if (e === "ATRASADA") return "text-orange-700 bg-orange-100";
@@ -95,7 +94,7 @@ export function Reservas() {
 
   const getIconeEstado = (estado: string) => {
     const e = estado?.toUpperCase();
-    if (e === "CONFIRMADA" || e === "APROVADA" || e === "CONCLUIDA" || e === "DEVOLVIDA") return CheckCircle;
+    if (e === "CONFIRMADA" || e === "CONCLUIDA") return CheckCircle;
     if (e === "EM CURSO") return Clock;
     if (e === "CANCELADA") return XCircle;
     return AlertCircle;
@@ -259,64 +258,60 @@ export function Reservas() {
               </div>
 
               {/* Ações da Reserva */}
-              {utilizadorAtual?.tipo === 'funcionario' && abaAtiva === "ativas" && (() => {
-                const e = reserva.estado?.toUpperCase();
-                if (e === 'PENDENTE') {
-                  return (
-                    <div className="bg-gray-50 px-6 py-4 flex justify-end gap-3 flex-wrap">
-                      <button
-                        onClick={() => handleAprovarReserva(reserva.id)}
-                        className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                      >
-                        <CheckCircle className="w-4 h-4" />
-                        Aprovar Reserva
-                      </button>
-                      <button
-                        onClick={() => handleRecusarReserva(reserva.id)}
-                        className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-                      >
-                        <XCircle className="w-4 h-4" />
-                        Recusar Reserva
-                      </button>
-                    </div>
-                  );
-                }
-                if (e === 'CONFIRMADA' || e === 'APROVADA') {
-                  return (
-                    <div className="bg-gray-50 px-6 py-4 flex justify-end gap-3 flex-wrap">
-                      <Link
-                        to={`/levantamento/${reserva.id}`}
-                        className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                      >
-                        <ClipboardCheck className="w-4 h-4" />
-                        Processar Levantamento
-                      </Link>
-                    </div>
-                  );
-                }
-                if (e === 'EM CURSO') {
-                  const temLinhaEmCurso = reserva.linhas.some(
-                    l => l.estado?.toUpperCase() === 'EM CURSO'
-                  );
-                  if (!temLinhaEmCurso) return null;
-                  return (
-                    <div className="bg-gray-50 px-6 py-4 flex justify-end gap-3 flex-wrap">
-                      <Link
-                        to={`/devolucao/${reserva.id}`}
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                      >
-                        <PackageOpen className="w-4 h-4" />
-                        Processar Devolução
-                      </Link>
-                    </div>
-                  );
-                }
-                return null;
-              })()}
+              {utilizadorAtual?.tipo === 'funcionario' && abaAtiva === "ativas" && (
+                (() => {
+                  const e = reserva.estado?.toUpperCase();
+                  if (e === 'PENDENTE') {
+                    return (
+                      <div className="bg-gray-50 px-6 py-4 flex justify-end gap-3 flex-wrap">
+                        <button
+                          onClick={() => handleRecusarReserva(reserva.id)}
+                          className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                        >
+                          <Ban className="w-4 h-4" />
+                          Recusar
+                        </button>
+                        <button
+                          onClick={() => handleAprovarReserva(reserva.id)}
+                          className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                        >
+                          <CheckCheck className="w-4 h-4" />
+                          Aprovar
+                        </button>
+                      </div>
+                    );
+                  } else if (e === 'CONFIRMADA') {
+                    return (
+                      <div className="bg-gray-50 px-6 py-4 flex justify-end gap-3 flex-wrap">
+                        <Link
+                          to={`/levantamento/${reserva.id}`}
+                          className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                        >
+                          <ClipboardCheck className="w-4 h-4" />
+                          Processar Levantamento
+                        </Link>
+                      </div>
+                    );
+                  } else if (e === 'EM CURSO') {
+                    return (
+                      <div className="bg-gray-50 px-6 py-4 flex justify-end gap-3 flex-wrap">
+                        <Link
+                          to={`/devolucao/${reserva.id}`}
+                          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                        >
+                          <PackageOpen className="w-4 h-4" />
+                          Processar Devolução
+                        </Link>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()
+              )}
               {utilizadorAtual?.tipo !== 'funcionario' && abaAtiva === "ativas" && (
                 (() => {
                   const e = reserva.estado?.toUpperCase();
-                  const podeCanc = e === 'CONFIRMADA' || e === 'APROVADA' || e === 'PENDENTE';
+                  const podeCanc = e === 'CONFIRMADA' || e === 'PENDENTE';
                   return podeCanc ? (
                     <div className="bg-gray-50 px-6 py-4 flex justify-end">
                       <button

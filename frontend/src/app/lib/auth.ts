@@ -36,6 +36,7 @@ export async function login(email: string, password: string): Promise<Utilizador
       data_registo: '',
       ativo: true,
       tipo: perfilToTipo(user.perfil),
+      perfil: user.perfil,
     };
 
     localStorage.setItem(AUTH_KEY, JSON.stringify(utilizador));

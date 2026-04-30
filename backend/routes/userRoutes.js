@@ -16,8 +16,8 @@ const userController = require('../controllers/userController');
 const authMiddleware = require('../middleware/authMiddleware'); 
 const perfilMiddleware = require("../middleware/perfilMiddleware");
 
-// LISTAR UTILIZADORES (apenas admin)
-router.get("/", authMiddleware, perfilMiddleware('FUNCIONARIO'), userController.getAllUsers);
+// LISTAR UTILIZADORES (funcionario e admin)
+router.get("/", authMiddleware, perfilMiddleware(['FUNCIONARIO', 'ADMIN']), userController.getAllUsers);
 
 // OBTER UTILIZADOR POR ID
 router.get('/:id', authMiddleware, userController.getUserById);

@@ -2,14 +2,14 @@ import { useState, useEffect } from "react";
 import { Search, Filter, Shirt, Plus, Trash2, Eye, Edit, Calendar, X } from "lucide-react";
 import { Link } from "react-router";
 import { getUtilizadorAtual } from "../lib/auth";
-import { getFigurinosRaw, getAnunciosEscola, type FigurinoAPI, type AnuncioEscolaAPI } from "../lib/services";
-import { apiFetch } from "../lib/api";
+import { getFigurinosRaw, getAnunciosEscola, getUtilizadores, criarReserva, desativarFigurino, atualizarFigurino, type FigurinoAPI, type AnuncioEscolaAPI } from "../lib/services";
 import { toast } from "sonner";
 
 export function Figurinos() {
   const utilizadorAtual = getUtilizadorAtual();
   const [figurinos, setFigurinos] = useState<FigurinoAPI[]>([]);
   const [anunciosEscola, setAnunciosEscola] = useState<AnuncioEscolaAPI[]>([]);
+  const [utilizadores, setUtilizadores] = useState<any[]>([]);
   const [termoPesquisa, setTermoPesquisa] = useState("");
   const [categoriaSelecionada, setCategoriaSelecionada] = useState<string>("todas");
   const [tipoSelecionado, setTipoSelecionado] = useState<string>("todos");
@@ -17,18 +17,77 @@ export function Figurinos() {
   const [generoSelecionado, setGeneroSelecionado] = useState<string>("todos");
   const [estadoSelecionado, setEstadoSelecionado] = useState<string>("todos");
   const [mostrarModalReserva, setMostrarModalReserva] = useState(false);
+  const [mostrarModalVer, setMostrarModalVer] = useState(false);
+  const [mostrarModalEditar, setMostrarModalEditar] = useState(false);
   const [figurinoSelecionado, setFigurinoSelecionado] = useState<FigurinoAPI | null>(null);
+  const [figurinoEditando, setFigurinoEditando] = useState<FigurinoAPI | null>(null);
   const [dataInicio, setDataInicio] = useState("");
   const [dataFim, setDataFim] = useState("");
+  const [alunoSelecionado, setAlunoSelecionado] = useState("");
+  const [formEditacao, setFormEditacao] = useState({
+    descricao: "",
+    tamanho: "",
+    localizacao: "",
+  });
 
   useEffect(() => {
     getFigurinosRaw().then(setFigurinos);
     getAnunciosEscola().then(setAnunciosEscola);
-  }, []);
+    if (utilizadorAtual?.tipo === 'funcionario') {
+      getUtilizadores().then(setUtilizadores);
+    }
+  }, [utilizadorAtual?.tipo]);
 
-  const handleRemoverFigurino = (_id: number, descricao: string) => {
-    if (window.confirm(`Tem a certeza que deseja remover o figurino "${descricao}"?`)) {
+  const handleRemoverFigurino = async (id: number, descricao: string) => {
+    if (!window.confirm(`Tem a certeza que deseja remover o figurino "${descricao}"?`)) return;
+    try {
+      await desativarFigurino(id);
       toast.success(`Figurino "${descricao}" removido com sucesso!`);
+      setFigurinos(prev => prev.filter(f => f.id !== id));
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao remover figurino");
+    }
+  };
+
+  const handleAbrirVer = (figurino: FigurinoAPI) => {
+    setFigurinoSelecionado(figurino);
+    setMostrarModalVer(true);
+  };
+
+  const handleFecharVer = () => {
+    setMostrarModalVer(false);
+    setFigurinoSelecionado(null);
+  };
+
+  const handleAbrirEditar = (figurino: FigurinoAPI) => {
+    setFigurinoEditando(figurino);
+    setFormEditacao({
+      descricao: figurino.descricao ?? "",
+      tamanho: figurino.tamanho ?? "",
+      localizacao: figurino.localizacao ?? "",
+    });
+    setMostrarModalEditar(true);
+  };
+
+  const handleFecharEditar = () => {
+    setMostrarModalEditar(false);
+    setFigurinoEditando(null);
+    setFormEditacao({ descricao: "", tamanho: "", localizacao: "" });
+  };
+
+  const handleSubmeterEdicao = async () => {
+    if (!figurinoEditando) return;
+    if (!formEditacao.descricao.trim()) {
+      toast.error("A descrição é obrigatória");
+      return;
+    }
+    try {
+      await atualizarFigurino(figurinoEditando.id, formEditacao);
+      toast.success("Figurino atualizado com sucesso!");
+      getFigurinosRaw().then(setFigurinos);
+      handleFecharEditar();
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao atualizar figurino");
     }
   };
 
@@ -36,6 +95,7 @@ export function Figurinos() {
     setFigurinoSelecionado(figurino);
     setDataInicio("");
     setDataFim("");
+    setAlunoSelecionado("");
     setMostrarModalReserva(true);
   };
 
@@ -44,6 +104,7 @@ export function Figurinos() {
     setFigurinoSelecionado(null);
     setDataInicio("");
     setDataFim("");
+    setAlunoSelecionado("");
   };
 
   const calcularDias = (inicio: string, fim: string): number => {
@@ -55,6 +116,10 @@ export function Figurinos() {
   const handleConfirmarReserva = async () => {
     if (!figurinoSelecionado || !dataInicio || !dataFim) {
       toast.error("Por favor, preencha todas as datas");
+      return;
+    }
+    if (utilizadorAtual?.tipo === 'funcionario' && !alunoSelecionado) {
+      toast.error("Por favor, selecione um aluno");
       return;
     }
     if (new Date(dataFim) < new Date(dataInicio)) {
@@ -75,22 +140,15 @@ export function Figurinos() {
     }
 
     try {
-      const res = await apiFetch('/reservas', {
-        method: 'POST',
-        body: JSON.stringify({
-          linhas: [{ id_anuncio: anuncio.id, datainicio: dataInicio, datafim: dataFim }],
-        }),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        toast.error(err.erro ?? "Erro ao criar reserva");
-        return;
-      }
+      await criarReserva(
+        [{ id_anuncio: anuncio.id, datainicio: dataInicio, datafim: dataFim }],
+        utilizadorAtual?.tipo === 'funcionario' ? parseInt(alunoSelecionado) : undefined
+      );
       const dias = calcularDias(dataInicio, dataFim);
       toast.success(`Reserva criada com sucesso! ${dias} dia${dias > 1 ? 's' : ''}`);
       handleFecharModalReserva();
-    } catch {
-      toast.error("Erro ao criar reserva");
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao criar reserva");
     }
   };
 
@@ -304,11 +362,17 @@ export function Figurinos() {
                   <div className="mt-auto pt-3 border-t">
                     {utilizadorAtual?.tipo === 'funcionario' ? (
                       <div className="flex items-center justify-end gap-4 text-sm">
-                        <button className="flex items-center gap-1.5 text-gray-600 hover:text-gray-900 transition-colors">
+                        <button
+                          onClick={() => handleAbrirVer(figurino)}
+                          className="flex items-center gap-1.5 text-gray-600 hover:text-gray-900 transition-colors"
+                        >
                           <Eye className="w-4 h-4" />
                           Ver
                         </button>
-                        <button className="flex items-center gap-1.5 text-yellow-600 hover:text-yellow-700 transition-colors">
+                        <button
+                          onClick={() => handleAbrirEditar(figurino)}
+                          className="flex items-center gap-1.5 text-yellow-600 hover:text-yellow-700 transition-colors"
+                        >
                           <Edit className="w-4 h-4" />
                           Editar
                         </button>
@@ -321,12 +385,22 @@ export function Figurinos() {
                         </button>
                       </div>
                     ) : (
-                      <button
-                        onClick={() => handleAbrirModalReserva(figurino)}
-                        className="w-full sm:w-auto bg-gradient-to-r from-fig-purple to-fig-magenta hover:shadow-lg text-white py-2 px-6 rounded-lg transition-all"
-                      >
-                        Reservar
-                      </button>
+                      <div className="flex items-center justify-between flex-wrap gap-4">
+                        {(() => {
+                          const anuncio = anunciosEscola.find(a => a.id_figurino === figurino.id);
+                          return (
+                            <div className="text-right">
+                              <p className="text-sm text-gray-600">€ {(anuncio?.valordiarioaluguer ?? 0).toFixed(2)} /dia</p>
+                            </div>
+                          );
+                        })()}
+                        <button
+                          onClick={() => handleAbrirModalReserva(figurino)}
+                          className="bg-gradient-to-r from-fig-purple to-fig-magenta hover:shadow-lg text-white py-2 px-6 rounded-lg transition-all"
+                        >
+                          Reservar
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -369,6 +443,23 @@ export function Figurinos() {
                   )}
                 </div>
               </div>
+
+              {utilizadorAtual?.tipo === 'funcionario' && (
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">Aluno *</label>
+                  <select
+                    value={alunoSelecionado}
+                    onChange={(e) => setAlunoSelecionado(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    required
+                  >
+                    <option value="">Selecione um aluno</option>
+                    {utilizadores.map((u) => (
+                      <option key={u.id} value={u.id}>{u.nome}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               <div className="space-y-4">
                 <h4 className="font-semibold text-gray-900 flex items-center gap-2">
@@ -427,6 +518,127 @@ export function Figurinos() {
                 className="px-6 py-3 bg-gradient-to-r from-fig-purple to-fig-magenta hover:shadow-lg text-white rounded-lg transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Confirmar Reserva
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Ver */}
+      {mostrarModalVer && figurinoSelecionado && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl">
+            <div className="p-6 border-b sticky top-0 bg-white">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold text-gray-900">Detalhes do Figurino</h2>
+                <button onClick={handleFecharVer} className="text-gray-500 hover:text-gray-700">
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="text-sm font-medium text-gray-700">Descrição</label>
+                <p className="mt-1 text-gray-900">{figurinoSelecionado.descricao ?? '—'}</p>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Tamanho</label>
+                  <p className="mt-1 text-gray-900">{figurinoSelecionado.tamanho ?? '—'}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Localização</label>
+                  <p className="mt-1 text-gray-900">{figurinoSelecionado.localizacao ?? '—'}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Categoria</label>
+                  <p className="mt-1 text-gray-900">{figurinoSelecionado.categoria?.nomecategoria ?? '—'}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Tipo</label>
+                  <p className="mt-1 text-gray-900">{figurinoSelecionado.tipo_figurino?.nome ?? '—'}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Sexo</label>
+                  <p className="mt-1 text-gray-900">{figurinoSelecionado.sexo?.nome ?? '—'}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Estado</label>
+                  <p className="mt-1 text-gray-900">{figurinoSelecionado.estado_condicao?.nome ?? '—'}</p>
+                </div>
+              </div>
+            </div>
+            <div className="p-6 border-t bg-gray-50">
+              <button
+                onClick={handleFecharVer}
+                className="w-full px-4 py-2 bg-gray-300 text-gray-900 rounded-lg hover:bg-gray-400 transition-colors font-medium"
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Editar */}
+      {mostrarModalEditar && figurinoEditando && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl">
+            <div className="p-6 border-b sticky top-0 bg-white">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold text-gray-900">Editar Figurino</h2>
+                <button onClick={handleFecharEditar} className="text-gray-500 hover:text-gray-700">
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Descrição *</label>
+                <input
+                  type="text"
+                  value={formEditacao.descricao}
+                  onChange={(e) => setFormEditacao({...formEditacao, descricao: e.target.value})}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Tamanho</label>
+                  <input
+                    type="text"
+                    value={formEditacao.tamanho}
+                    onChange={(e) => setFormEditacao({...formEditacao, tamanho: e.target.value})}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Localização</label>
+                  <input
+                    type="text"
+                    value={formEditacao.localizacao}
+                    onChange={(e) => setFormEditacao({...formEditacao, localizacao: e.target.value})}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="p-6 border-t bg-gray-50 flex justify-end gap-3">
+              <button
+                onClick={handleFecharEditar}
+                className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors font-medium"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSubmeterEdicao}
+                className="px-6 py-2 bg-gradient-to-r from-fig-purple to-fig-magenta hover:shadow-lg text-white rounded-lg transition-all font-medium"
+              >
+                Guardar
               </button>
             </div>
           </div>

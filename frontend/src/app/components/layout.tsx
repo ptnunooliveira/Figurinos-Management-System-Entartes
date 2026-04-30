@@ -10,7 +10,8 @@ import {
   X,
   FileText,
   LogOut,
-  Megaphone
+  Megaphone,
+  AlertTriangle
 } from "lucide-react";
 import { useState } from "react";
 import { getUtilizadorAtual, logout } from "../lib/auth";
@@ -33,6 +34,7 @@ export function Layout() {
     { nome: "Figurinos", href: "/figurinos", icon: Shirt },
     { nome: "Anúncios Escola", href: "/anuncios-escola", icon: Megaphone },
     { nome: "Reservas", href: "/reservas", icon: Calendar },
+    { nome: "Ocorrências", href: "/ocorrencias", icon: AlertTriangle },
     { nome: "Marketplace", href: "/marketplace", icon: ShoppingBag },
     { nome: "Administração", href: "/administracao", icon: Settings },
     { nome: "Faturação", href: "/faturacao", icon: FileText },
@@ -43,6 +45,7 @@ export function Layout() {
     { nome: "Painel", href: "/", icon: Home },
     { nome: "Figurinos Escola", href: "/figurinos", icon: Shirt },
     { nome: "Reservas", href: "/reservas", icon: Calendar },
+    { nome: "Ocorrências", href: "/ocorrencias", icon: AlertTriangle },
     { nome: "Marketplace", href: "/marketplace", icon: ShoppingBag },
     { nome: "Perfil", href: "/perfil", icon: User },
   ];
@@ -124,7 +127,7 @@ export function Layout() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-gray-900 truncate">{nomeUtilizador}</p>
-              <p className="text-xs text-gray-500 capitalize">{utilizadorAtual?.tipo}</p>
+              <p className="text-xs text-gray-500 capitalize">{(utilizadorAtual?.perfil ?? utilizadorAtual?.tipo ?? '').toLowerCase()}</p>
             </div>
           </div>
           <button
@@ -201,7 +204,7 @@ export function Layout() {
                     </div>
                     <div>
                       <p className="font-medium text-gray-900">{nomeUtilizador}</p>
-                      <p className="text-sm text-gray-500 capitalize">{utilizadorAtual?.tipo}</p>
+                      <p className="text-sm text-gray-500 capitalize">{(utilizadorAtual?.perfil ?? utilizadorAtual?.tipo ?? '').toLowerCase()}</p>
                     </div>
                   </div>
                   <button

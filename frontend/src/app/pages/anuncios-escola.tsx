@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
-import { PlusCircle, Search, Filter, Shirt, Euro, Eye, Edit, Trash2 } from "lucide-react";
+import { PlusCircle, Search, Filter, Shirt, Euro, Eye, Edit, Trash2, Calendar, X } from "lucide-react";
 import { getUtilizadorAtual } from "../lib/auth";
-import { getAnunciosEscola, getFigurinosRaw, criarAnuncioEscola, atualizarAnuncioEscola, eliminarAnuncioEscola, type AnuncioEscolaAPI, type FigurinoAPI } from "../lib/services";
+import { getAnunciosEscola, getFigurinosRaw, criarAnuncioEscola, atualizarAnuncioEscola, eliminarAnuncioEscola, criarReserva, getUtilizadores, type AnuncioEscolaAPI, type FigurinoAPI } from "../lib/services";
 import { toast } from "sonner";
 
 export function AnunciosEscola() {
@@ -19,10 +19,19 @@ export function AnunciosEscola() {
   const [valorDiario, setValorDiario] = useState("");
   const [editarAnuncio, setEditarAnuncio] = useState<AnuncioEscolaAPI | null>(null);
   const [valorDiarioEditar, setValorDiarioEditar] = useState("");
+  const [mostrarModalReserva, setMostrarModalReserva] = useState(false);
+  const [anuncioReserva, setAnuncioReserva] = useState<AnuncioEscolaAPI | null>(null);
+  const [dataInicioReserva, setDataInicioReserva] = useState("");
+  const [dataFimReserva, setDataFimReserva] = useState("");
+  const [alunoReserva, setAlunoReserva] = useState("");
+  const [utilizadores, setUtilizadores] = useState<any[]>([]);
 
   useEffect(() => {
     getAnunciosEscola().then(setAnunciosEscola);
     getFigurinosRaw().then(setFigurinos);
+    if (utilizadorAtual?.tipo === 'funcionario') {
+      getUtilizadores().then(setUtilizadores);
+    }
   }, []);
 
   const anunciosFiltrados = anunciosEscola.filter((anuncio) => {
@@ -108,6 +117,53 @@ export function AnunciosEscola() {
       getAnunciosEscola().then(setAnunciosEscola);
     } catch (err: any) {
       toast.error(err.message || "Erro ao atualizar anúncio");
+    }
+  };
+
+  const handleAbrirReserva = (anuncio: AnuncioEscolaAPI) => {
+    setAnuncioReserva(anuncio);
+    setDataInicioReserva("");
+    setDataFimReserva("");
+    setAlunoReserva("");
+    setMostrarModalReserva(true);
+  };
+
+  const handleFecharReserva = () => {
+    setMostrarModalReserva(false);
+    setAnuncioReserva(null);
+    setDataInicioReserva("");
+    setDataFimReserva("");
+    setAlunoReserva("");
+  };
+
+  const handleConfirmarReserva = async () => {
+    if (!anuncioReserva || !dataInicioReserva || !dataFimReserva) {
+      toast.error("Por favor, preencha todas as datas");
+      return;
+    }
+    if (utilizadorAtual?.tipo === 'funcionario' && !alunoReserva) {
+      toast.error("Por favor, selecione um aluno");
+      return;
+    }
+    if (new Date(dataFimReserva) < new Date(dataInicioReserva)) {
+      toast.error("A data de fim deve ser posterior à data de início");
+      return;
+    }
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    if (new Date(dataInicioReserva) < hoje) {
+      toast.error("A data de início não pode ser no passado");
+      return;
+    }
+    try {
+      await criarReserva(
+        [{ id_anuncio: anuncioReserva.id, datainicio: dataInicioReserva, datafim: dataFimReserva }],
+        utilizadorAtual?.tipo === 'funcionario' && alunoReserva ? parseInt(alunoReserva) : undefined
+      );
+      toast.success("Reserva criada com sucesso!");
+      handleFecharReserva();
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao criar reserva");
     }
   };
 
@@ -289,7 +345,7 @@ export function AnunciosEscola() {
 
                   <div className="mt-auto pt-3 border-t">
                     {utilizadorAtual?.tipo === 'funcionario' ? (
-                      <div className="flex items-center justify-end gap-4 text-sm">
+                      <div className="flex items-center justify-end gap-4 text-sm flex-wrap">
                         <button className="flex items-center gap-1.5 text-gray-600 hover:text-gray-900 transition-colors">
                           <Eye className="w-4 h-4" />
                           Ver
@@ -308,9 +364,18 @@ export function AnunciosEscola() {
                           <Trash2 className="w-4 h-4" />
                           Remover
                         </button>
+                        <button
+                          onClick={() => handleAbrirReserva(anuncio)}
+                          className="flex items-center gap-1.5 bg-gradient-to-r from-fig-purple to-fig-magenta hover:shadow-lg text-white py-1.5 px-4 rounded-lg transition-all"
+                        >
+                          Reservar
+                        </button>
                       </div>
                     ) : (
-                      <button className="w-full sm:w-auto bg-gradient-to-r from-fig-purple to-fig-magenta hover:shadow-lg text-white py-2 px-6 rounded-lg transition-all">
+                      <button
+                        onClick={() => handleAbrirReserva(anuncio)}
+                        className="w-full sm:w-auto bg-gradient-to-r from-fig-purple to-fig-magenta hover:shadow-lg text-white py-2 px-6 rounded-lg transition-all"
+                      >
                         Reservar
                       </button>
                     )}
@@ -457,6 +522,98 @@ export function AnunciosEscola() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Reservar */}
+      {mostrarModalReserva && anuncioReserva && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b sticky top-0 bg-white">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold text-gray-900">Reservar Figurino</h2>
+                <button onClick={handleFecharReserva} className="text-gray-500 hover:text-gray-700">
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-6">
+              <div className="flex items-start gap-4 p-4 bg-gradient-to-br from-fig-purple/5 to-fig-magenta/5 rounded-lg">
+                <div className="w-20 h-20 bg-gradient-to-br from-fig-purple/10 via-fig-magenta/10 to-fig-green/10 flex items-center justify-center rounded-lg flex-shrink-0">
+                  <Shirt className="w-10 h-10 text-fig-purple/40" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-gray-900 text-lg mb-1">{anuncioReserva.figurino?.descricao ?? '—'}</h3>
+                  <p className="text-sm text-gray-600">€ {(anuncioReserva.valordiarioaluguer ?? 0).toFixed(2)} /dia</p>
+                </div>
+              </div>
+
+              {utilizadorAtual?.tipo === 'funcionario' && (
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">Aluno *</label>
+                  <select
+                    value={alunoReserva}
+                    onChange={(e) => setAlunoReserva(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    required
+                  >
+                    <option value="">Selecione um aluno</option>
+                    {utilizadores.map((u) => (
+                      <option key={u.id} value={u.id}>{u.nome}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <div className="space-y-4">
+                <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                  <Calendar className="w-5 h-5 text-fig-purple" />
+                  Período da Reserva
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Data de Início *</label>
+                    <input
+                      type="date"
+                      value={dataInicioReserva}
+                      onChange={(e) => setDataInicioReserva(e.target.value)}
+                      min={new Date().toISOString().split('T')[0]}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Data de Fim *</label>
+                    <input
+                      type="date"
+                      value={dataFimReserva}
+                      onChange={(e) => setDataFimReserva(e.target.value)}
+                      min={dataInicioReserva || new Date().toISOString().split('T')[0]}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 border-t bg-gray-50 flex justify-end gap-3">
+              <button
+                onClick={handleFecharReserva}
+                className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors font-medium"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleConfirmarReserva}
+                disabled={!dataInicioReserva || !dataFimReserva || (utilizadorAtual?.tipo === 'funcionario' && !alunoReserva)}
+                className="px-6 py-3 bg-gradient-to-r from-fig-purple to-fig-magenta hover:shadow-lg text-white rounded-lg transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Submeter Pedido
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -12,14 +12,8 @@
  */
 
 const { PrismaClient } = require("@prisma/client");
+const { ID_ESTADO_OCORRENCIA } = require("../utils/estadosOcorrencia");
 const prisma = new PrismaClient();
-
-// Ids dos estados da tabela estado_ocorrencia
-const ID_ESTADO_OCORRENCIA = {
-  AGUARDAR: 1,            // A aguardar
-  RESOLVIDA: 2,           // Resolvida
-  AGUARDAR_ORCAMENTO: 3,  // A aguardar orçamento
-};
 
 //#region devolucoes
 

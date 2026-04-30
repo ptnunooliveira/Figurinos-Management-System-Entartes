@@ -64,7 +64,8 @@ const criarPropostaCobranca = async (req, res) => {
             id_ocorrencia,
             valor,
             dataproposta,
-            id_estadopropostacobranca
+            id_estadopropostacobranca,
+            descricao
         } = req.body;
 
         if (id_ocorrencia === undefined || id_ocorrencia === null || isNaN(parseInt(id_ocorrencia))) {
@@ -85,7 +86,8 @@ const criarPropostaCobranca = async (req, res) => {
             id_ocorrencia: parseInt(id_ocorrencia),
             valor: parseFloat(valor),
             dataproposta: dataproposta ? new Date(dataproposta) : new Date(),
-            id_estadopropostacobranca: idEstadoProposta
+            id_estadopropostacobranca: idEstadoProposta,
+            descricao: typeof descricao === 'string' && descricao.trim() !== '' ? descricao.trim() : null
         };
 
         const proposta = await propostaCobrancaService.criarPropostaCobranca(dadosProposta);

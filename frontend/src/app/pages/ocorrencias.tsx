@@ -4,6 +4,7 @@ import {
   CheckCircle,
   Clock,
   Euro,
+  Eye,
   FileText,
   Hammer,
   PackageX,
@@ -21,6 +22,7 @@ import {
   atualizarEstadoProposta,
   criarPropostaCobranca,
   criarContestacao,
+  criarOrcamento,
   desativarFigurino,
   type OcorrenciaDetalhada,
 } from "../lib/services";
@@ -66,11 +68,21 @@ export function Ocorrencias() {
   const [acaoAtiva, setAcaoAtiva] = useState<AcaoTipo | null>(null);
   const [valorProposto, setValorProposto] = useState("");
   const [descricaoProposta, setDescricaoProposta] = useState("");
+  // Bloqueia clicks repetidos enquanto a submissão está em curso
+  const [submetendoProposta, setSubmetendoProposta] = useState(false);
+
+  // Campos extra para o fluxo de "Registar Orçamento"
+  const [orcamentoFornecedor, setOrcamentoFornecedor] = useState("");
+  const [orcamentoValor, setOrcamentoValor] = useState("");
+  const [orcamentoDescricao, setOrcamentoDescricao] = useState("");
 
   // Modal "Contestar proposta" (aluno)
   const [propostaAContestar, setPropostaAContestar] = useState<number | null>(null);
   const [valorContraproposta, setValorContraproposta] = useState("");
   const [descricaoContestacao, setDescricaoContestacao] = useState("");
+
+  // Modal "Ver detalhes da proposta"
+  const [propostaAVisualizar, setPropostaAVisualizar] = useState<number | null>(null);
 
   const carregar = () => {
     setCarregando(true);
@@ -159,6 +171,9 @@ export function Ocorrencias() {
     setAcaoAtiva(null);
     setValorProposto("");
     setDescricaoProposta("");
+    setOrcamentoFornecedor("");
+    setOrcamentoValor("");
+    setOrcamentoDescricao("");
   };
 
   // === Ações do aluno sobre uma proposta ===
@@ -199,13 +214,14 @@ export function Ocorrencias() {
       return;
     }
     try {
+      // O backend, em transação, marca a proposta como Rejeitada e a ocorrência
+      // como "proposta contestada" — o aluno não precisa (nem pode) chamar
+      // PATCH /propostas-cobranca/:id/estado.
       await criarContestacao({
         id_proposta_cobranca: propostaAContestar,
         descricao: descricaoContestacao.trim(),
         valorcontraproposta: valor,
       });
-      // Marca a proposta como Rejeitada para o funcionário identificar facilmente
-      await atualizarEstadoProposta(propostaAContestar, ESTADO_PROPOSTA.REJEITADA);
       toast.success("Contestação registada");
       fecharContestacao();
       if (selecionada) await recarregarSelecionada(selecionada.id);
@@ -216,19 +232,45 @@ export function Ocorrencias() {
 
   const submeterProposta = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submetendoProposta) return;
     if (!selecionada || !acaoAtiva) return;
     const valor = parseFloat(valorProposto);
     if (isNaN(valor) || valor <= 0) {
-      toast.error("Indique um valor válido.");
+      toast.error("Indique um valor válido para a proposta ao cliente.");
       return;
     }
-    try {
-      await criarPropostaCobranca(selecionada.id, valor);
 
-      // Define o estado final da ocorrência consoante o fluxo
-      const novoEstado =
-        acaoAtiva === "registar_orcamento" ? ESTADO.AGUARDAR : ESTADO.RESOLVIDA;
-      await atualizarEstadoOcorrencia(selecionada.id, novoEstado);
+    // Validação extra para o fluxo de orçamento: o fornecedor é obrigatório
+    if (acaoAtiva === "registar_orcamento") {
+      if (!orcamentoFornecedor.trim()) {
+        toast.error("Indique o fornecedor do orçamento.");
+        return;
+      }
+      const valorOrc = orcamentoValor ? parseFloat(orcamentoValor) : NaN;
+      if (isNaN(valorOrc) || valorOrc <= 0) {
+        toast.error("Indique o valor do orçamento do fornecedor.");
+        return;
+      }
+    }
+
+    setSubmetendoProposta(true);
+    try {
+      // 1. Se for registar orçamento, gravar primeiro os dados do fornecedor
+      if (acaoAtiva === "registar_orcamento") {
+        await criarOrcamento(selecionada.id, {
+          fornecedor: orcamentoFornecedor.trim(),
+          descricao: orcamentoDescricao.trim() || null,
+          valor: parseFloat(orcamentoValor),
+        });
+      }
+
+      // 2. Criar a proposta de cobrança ao cliente (incluindo notas/descrição)
+      await criarPropostaCobranca(selecionada.id, valor, descricaoProposta);
+
+      // 3. Atualizar o estado da ocorrência
+      // Após registar orçamento, volta a "A aguardar" (resposta do cliente).
+      // Nos outros fluxos mantém-se "A aguardar" também.
+      await atualizarEstadoOcorrencia(selecionada.id, ESTADO.AGUARDAR);
 
       toast.success(
         acaoAtiva === "registar_orcamento"
@@ -239,6 +281,8 @@ export function Ocorrencias() {
       await recarregarSelecionada(selecionada.id);
     } catch (err: any) {
       toast.error(err.message || "Erro ao registar proposta");
+    } finally {
+      setSubmetendoProposta(false);
     }
   };
 
@@ -266,6 +310,13 @@ export function Ocorrencias() {
         onDescricaoChange={setDescricaoProposta}
         onCancelarProposta={fecharFormProposta}
         onSubmeterProposta={submeterProposta}
+        submetendoProposta={submetendoProposta}
+        orcamentoFornecedor={orcamentoFornecedor}
+        orcamentoValor={orcamentoValor}
+        orcamentoDescricao={orcamentoDescricao}
+        onOrcamentoFornecedorChange={setOrcamentoFornecedor}
+        onOrcamentoValorChange={setOrcamentoValor}
+        onOrcamentoDescricaoChange={setOrcamentoDescricao}
         propostaAContestar={propostaAContestar}
         valorContraproposta={valorContraproposta}
         descricaoContestacao={descricaoContestacao}
@@ -273,6 +324,9 @@ export function Ocorrencias() {
         onDescricaoContestacaoChange={setDescricaoContestacao}
         onCancelarContestacao={fecharContestacao}
         onSubmeterContestacao={submeterContestacao}
+        propostaAVisualizar={propostaAVisualizar}
+        onAbrirVisualizacao={setPropostaAVisualizar}
+        onFecharVisualizacao={() => setPropostaAVisualizar(null)}
       />
     );
   }
@@ -359,6 +413,13 @@ interface DetalheProps {
   onDescricaoChange: (v: string) => void;
   onCancelarProposta: () => void;
   onSubmeterProposta: (e: React.FormEvent) => void;
+  submetendoProposta: boolean;
+  orcamentoFornecedor: string;
+  orcamentoValor: string;
+  orcamentoDescricao: string;
+  onOrcamentoFornecedorChange: (v: string) => void;
+  onOrcamentoValorChange: (v: string) => void;
+  onOrcamentoDescricaoChange: (v: string) => void;
   propostaAContestar: number | null;
   valorContraproposta: string;
   descricaoContestacao: string;
@@ -366,6 +427,9 @@ interface DetalheProps {
   onDescricaoContestacaoChange: (v: string) => void;
   onCancelarContestacao: () => void;
   onSubmeterContestacao: (e: React.FormEvent) => void;
+  propostaAVisualizar: number | null;
+  onAbrirVisualizacao: (idProposta: number) => void;
+  onFecharVisualizacao: () => void;
 }
 
 function DetalheOcorrencia(props: DetalheProps) {
@@ -389,6 +453,13 @@ function DetalheOcorrencia(props: DetalheProps) {
     onDescricaoChange,
     onCancelarProposta,
     onSubmeterProposta,
+    submetendoProposta,
+    orcamentoFornecedor,
+    orcamentoValor,
+    orcamentoDescricao,
+    onOrcamentoFornecedorChange,
+    onOrcamentoValorChange,
+    onOrcamentoDescricaoChange,
     propostaAContestar,
     valorContraproposta,
     descricaoContestacao,
@@ -396,6 +467,9 @@ function DetalheOcorrencia(props: DetalheProps) {
     onDescricaoContestacaoChange,
     onCancelarContestacao,
     onSubmeterContestacao,
+    propostaAVisualizar,
+    onAbrirVisualizacao,
+    onFecharVisualizacao,
   } = props;
 
   const estadoLower = (o.estado || "").toLowerCase();
@@ -403,6 +477,13 @@ function DetalheOcorrencia(props: DetalheProps) {
   const aguardarOrcamento = estadoLower === "a aguardar orçamento";
   const resolvida = estadoLower === "resolvida";
   const IconeEstado = iconeEstado(o.estado);
+
+  // Existe uma proposta a aguardar resposta do cliente?
+  // (estado != "aceite" e != "rejeitada" → cliente ainda não respondeu)
+  const temPropostaPendente = (o.propostas ?? []).some(p => {
+    const est = (p.estado || "").toLowerCase();
+    return est !== "aceite" && est !== "rejeitada";
+  });
 
   return (
     <div className="space-y-6">
@@ -459,7 +540,10 @@ function DetalheOcorrencia(props: DetalheProps) {
           <div className="space-y-3">
             {o.propostas.map((p) => {
               const estadoLower = (p.estado || "").toLowerCase();
-              const podeAgir = !isFuncionario && estadoLower === "pendente";
+              // O aluno pode aceitar/contestar qualquer proposta que ainda não tenha
+              // resposta final (ou seja, que não esteja "aceite" nem "rejeitada").
+              // O nome do estado em BD pode ser "Criada", "Pendente", etc.
+              const podeAgir = !isFuncionario && estadoLower !== "aceite" && estadoLower !== "rejeitada";
               return (
                 <div key={p.id} className="border rounded-lg p-4">
                   <div className="flex items-center justify-between flex-wrap gap-3 mb-2">
@@ -501,25 +585,34 @@ function DetalheOcorrencia(props: DetalheProps) {
                     </div>
                   )}
 
-                  {/* Ações do aluno */}
-                  {podeAgir && (
-                    <div className="flex gap-2 mt-3 flex-wrap">
-                      <button
-                        onClick={() => onAceitarProposta(p.id)}
-                        className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg transition-colors"
-                      >
-                        <ThumbsUp className="w-4 h-4" />
-                        Aceitar
-                      </button>
-                      <button
-                        onClick={() => onAbrirContestacao(p.id)}
-                        className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg transition-colors"
-                      >
-                        <ThumbsDown className="w-4 h-4" />
-                        Contestar
-                      </button>
-                    </div>
-                  )}
+                  {/* Botão Ver: disponível para qualquer utilizador, em qualquer estado */}
+                  <div className="flex gap-2 mt-3 flex-wrap">
+                    <button
+                      onClick={() => onAbrirVisualizacao(p.id)}
+                      className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm rounded-lg transition-colors"
+                    >
+                      <Eye className="w-4 h-4" />
+                      Ver detalhes
+                    </button>
+                    {podeAgir && (
+                      <>
+                        <button
+                          onClick={() => onAceitarProposta(p.id)}
+                          className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg transition-colors"
+                        >
+                          <ThumbsUp className="w-4 h-4" />
+                          Aceitar
+                        </button>
+                        <button
+                          onClick={() => onAbrirContestacao(p.id)}
+                          className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg transition-colors"
+                        >
+                          <ThumbsDown className="w-4 h-4" />
+                          Contestar
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
               );
             })}
@@ -527,8 +620,8 @@ function DetalheOcorrencia(props: DetalheProps) {
         </div>
       )}
 
-      {/* Ações */}
-      {isFuncionario && !resolvida && (
+      {/* Ações — só visíveis enquanto não existir proposta a aguardar resposta do cliente */}
+      {isFuncionario && !resolvida && !temPropostaPendente && (
         <div className="bg-white rounded-xl shadow-sm p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Ações</h2>
 
@@ -539,28 +632,28 @@ function DetalheOcorrencia(props: DetalheProps) {
                 cor="amber"
                 icone={Clock}
                 titulo="Necessita orçamento"
-                descricao="Marcar a ocorrência como 'A aguardar orçamento'"
+                descricao="A peça precisa de reparação por um fornecedor externo (ex: costureira). Coloca a ocorrência em 'A aguardar orçamento' até o fornecedor responder."
               />
               <BotaoAcao
                 onClick={onItemEmFalta}
                 cor="red"
                 icone={PackageX}
                 titulo="Registar item em falta"
-                descricao="Desativa o figurino e regista proposta de valor"
+                descricao="A peça em falta impede a utilização do figurino. Desativa o figurino do catálogo e abre proposta de valor a cobrar ao cliente. A ocorrência mantém-se 'A aguardar' até o cliente aceitar."
               />
               <BotaoAcao
                 onClick={onAtualizarEspecificacao}
                 cor="blue"
                 icone={Wrench}
                 titulo="Atualizar especificação do figurino"
-                descricao="Regista proposta de valor ao cliente"
+                descricao="O dano não impede a utilização. Mantém o figurino ativo (atualizando a descrição/estado) e abre proposta de valor de penalização ao cliente."
               />
               <BotaoAcao
                 onClick={onAbate}
                 cor="gray"
                 icone={Hammer}
                 titulo="Figurino para abate"
-                descricao="Regista proposta de valor ao cliente"
+                descricao="O figurino está irrecuperável. Marca-o para abate e abre proposta de valor a cobrar ao cliente."
               />
             </div>
           )}
@@ -571,9 +664,22 @@ function DetalheOcorrencia(props: DetalheProps) {
               cor="purple"
               icone={FileText}
               titulo="Registar Orçamento"
-              descricao="Indicar a proposta de valor ao cliente"
+              descricao="Recebeu o orçamento do fornecedor? Registe os dados (fornecedor, valor da reparação) e envie a proposta de valor ao cliente. A ocorrência volta a 'A aguardar' resposta do cliente."
             />
           )}
+        </div>
+      )}
+
+      {/* Aviso quando há proposta a aguardar resposta do cliente */}
+      {isFuncionario && !resolvida && temPropostaPendente && (
+        <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-lg">
+          <div className="flex items-start gap-2">
+            <Clock className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+            <p className="text-sm text-blue-900">
+              Existe uma proposta enviada ao cliente. As próximas ações ficam
+              disponíveis quando o cliente aceitar ou contestar.
+            </p>
+          </div>
         </div>
       )}
 
@@ -652,14 +758,16 @@ function DetalheOcorrencia(props: DetalheProps) {
       {/* Modal proposta valor */}
       {acaoAtiva && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl max-w-md w-full">
+          <div className="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b flex items-start justify-between">
               <div>
                 <h2 className="text-xl font-bold text-gray-900">
                   {TITULOS_ACAO[acaoAtiva]}
                 </h2>
                 <p className="text-sm text-gray-600 mt-1">
-                  Proposta de valor ao cliente — Ocorrência #{o.id}
+                  {acaoAtiva === "registar_orcamento"
+                    ? `Registar orçamento do fornecedor e enviar proposta ao cliente — Ocorrência #${o.id}`
+                    : `Proposta de valor ao cliente — Ocorrência #${o.id}`}
                 </p>
               </div>
               <button
@@ -671,9 +779,69 @@ function DetalheOcorrencia(props: DetalheProps) {
             </div>
 
             <form onSubmit={onSubmeterProposta} className="p-6 space-y-4">
+              {acaoAtiva === "registar_orcamento" && (
+                <div className="space-y-4 pb-4 border-b">
+                  <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">
+                    Dados do orçamento (fornecedor)
+                  </h3>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Fornecedor *
+                    </label>
+                    <input
+                      type="text"
+                      value={orcamentoFornecedor}
+                      onChange={(e) => onOrcamentoFornecedorChange(e.target.value)}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-fig-purple focus:border-transparent"
+                      placeholder="Ex: Costureira Maria, Lavandaria Central"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Valor do orçamento (€) *
+                    </label>
+                    <div className="relative">
+                      <Euro className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={orcamentoValor}
+                        onChange={(e) => onOrcamentoValorChange(e.target.value)}
+                        className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-fig-purple focus:border-transparent"
+                        placeholder="0.00"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Descrição do trabalho (opcional)
+                    </label>
+                    <textarea
+                      value={orcamentoDescricao}
+                      onChange={(e) => onOrcamentoDescricaoChange(e.target.value)}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-fig-purple focus:border-transparent"
+                      rows={2}
+                      placeholder="Ex: Reparar rasgão na manga, substituir botões..."
+                    />
+                  </div>
+                </div>
+              )}
+
+              <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">
+                {acaoAtiva === "registar_orcamento"
+                  ? "Proposta de valor ao cliente"
+                  : "Valor a cobrar"}
+              </h3>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Valor a cobrar (€) *
+                  Valor a cobrar ao cliente (€) *
                 </label>
                 <div className="relative">
                   <Euro className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -692,7 +860,7 @@ function DetalheOcorrencia(props: DetalheProps) {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Descrição (opcional)
+                  Notas para o cliente (opcional)
                 </label>
                 <textarea
                   value={descricaoProposta}
@@ -707,21 +875,135 @@ function DetalheOcorrencia(props: DetalheProps) {
                 <button
                   type="button"
                   onClick={onCancelarProposta}
-                  className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                  disabled={submetendoProposta}
+                  className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-6 py-3 bg-gradient-to-r from-fig-purple to-fig-magenta text-white rounded-lg hover:shadow-lg transition-all"
+                  disabled={submetendoProposta}
+                  className="flex-1 px-6 py-3 bg-gradient-to-r from-fig-purple to-fig-magenta text-white rounded-lg hover:shadow-lg transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  Submeter Proposta
+                  {submetendoProposta ? "A submeter..." : "Submeter Proposta"}
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
+
+      {/* Modal "Ver detalhes da proposta" */}
+      {propostaAVisualizar !== null && (() => {
+        const p = (o.propostas ?? []).find(pp => pp.id === propostaAVisualizar);
+        if (!p) return null;
+        // Encontra o orçamento mais recente associado à ocorrência (se existir)
+        const orcamento = (o.orcamentos ?? [])[0];
+        return (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6 border-b flex items-start justify-between">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">Proposta #{p.id}</h2>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Detalhes da proposta de cobrança
+                  </p>
+                </div>
+                <button
+                  onClick={onFecharVisualizacao}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="p-6 space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-gray-600">Valor a cobrar</p>
+                    <p className="font-semibold text-gray-900 text-lg">€{p.valor.toFixed(2)}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Estado</p>
+                    <p className="font-medium text-gray-900">{p.estado || "—"}</p>
+                  </div>
+                  {p.dataproposta && (
+                    <div className="col-span-2">
+                      <p className="text-sm text-gray-600">Data da proposta</p>
+                      <p className="font-medium text-gray-900">
+                        {new Date(p.dataproposta).toLocaleDateString("pt-PT")}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {p.descricao && (
+                  <div>
+                    <p className="text-sm text-gray-600 mb-1">Notas do funcionário</p>
+                    <p className="text-gray-900 whitespace-pre-wrap bg-gray-50 rounded-lg p-3">
+                      {p.descricao}
+                    </p>
+                  </div>
+                )}
+
+                {orcamento && (
+                  <div className="border-t pt-4">
+                    <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-3">
+                      Orçamento do fornecedor
+                    </h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm text-gray-600">Fornecedor</p>
+                        <p className="font-medium text-gray-900">{orcamento.fornecedor || "—"}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600">Valor do orçamento</p>
+                        <p className="font-medium text-gray-900">€{orcamento.valor.toFixed(2)}</p>
+                      </div>
+                      {orcamento.descricao && (
+                        <div className="col-span-2">
+                          <p className="text-sm text-gray-600">Descrição do trabalho</p>
+                          <p className="text-gray-900 whitespace-pre-wrap bg-gray-50 rounded-lg p-3 mt-1">
+                            {orcamento.descricao}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {p.contestacoes && p.contestacoes.length > 0 && (
+                  <div className="border-t pt-4">
+                    <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-3">
+                      Contestações registadas
+                    </h3>
+                    <div className="space-y-2">
+                      {p.contestacoes.map(c => (
+                        <div key={c.id} className="bg-orange-50 border border-orange-200 rounded p-3 text-sm">
+                          <p className="text-gray-700">{c.descricao}</p>
+                          {c.valorcontraproposta != null && (
+                            <p className="text-orange-800 mt-1">
+                              Valor proposto pelo cliente: €{Number(c.valorcontraproposta).toFixed(2)}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  onClick={onFecharVisualizacao}
+                  className="w-full px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Fechar
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

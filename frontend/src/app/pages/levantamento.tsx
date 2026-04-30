@@ -21,7 +21,7 @@ export function Levantamento() {
   const [checklist, setChecklist] = useState<Array<{
     id: number; nome: string; observacoes: string; verificado: boolean;
   }>>([]);
-  const [estadoFigurino, setEstadoFigurino] = useState("Bom");
+  const [idEstadoFigurinoSel, setIdEstadoFigurinoSel] = useState<number | null>(null);
   const [observacoesGerais, setObservacoesGerais] = useState("");
 
   useEffect(() => {
@@ -41,6 +41,10 @@ export function Levantamento() {
         })));
       }
       setEstadosCondicao(estados);
+      // Inicia no estado mais favorável (ids menores = melhor condição).
+      if (estados.length) {
+        setIdEstadoFigurinoSel(estados[0].id);
+      }
       setCarregando(false);
     });
   }, [id]);
@@ -90,7 +94,11 @@ export function Levantamento() {
 
     const assinaturaFuncionario = assinaturaFuncionarioRef.current?.toDataURL() ?? '';
     const assinaturaCliente = assinaturaClienteRef.current?.toDataURL() ?? '';
-    const estadoId = estadosCondicao.find(e => e.nome.toLowerCase() === estadoFigurino.toLowerCase())?.id ?? 1;
+    const estadoId = idEstadoFigurinoSel ?? estadosCondicao[0]?.id;
+    if (!estadoId) {
+      toast.error("Selecione o estado do figurino");
+      return;
+    }
 
     try {
       await criarChecklist(Number(id), {
@@ -183,14 +191,13 @@ export function Levantamento() {
                 Estado Geral
               </label>
               <select
-                value={estadoFigurino}
-                onChange={(e) => setEstadoFigurino(e.target.value)}
+                value={idEstadoFigurinoSel ?? ""}
+                onChange={(e) => setIdEstadoFigurinoSel(Number(e.target.value))}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               >
-                <option value="Muito Bom">Muito Bom</option>
-                <option value="Bom">Bom</option>
-                <option value="Razoável">Razoável</option>
-                <option value="Mau">Mau</option>
+                {estadosCondicao.map(estado => (
+                  <option key={estado.id} value={estado.id}>{estado.nome}</option>
+                ))}
               </select>
             </div>
 

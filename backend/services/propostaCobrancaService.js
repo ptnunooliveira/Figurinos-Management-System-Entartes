@@ -14,6 +14,7 @@
  */
 
 const { PrismaClient } = require('@prisma/client');
+const { ID_ESTADO_OCORRENCIA } = require('../utils/estadosOcorrencia');
 const prisma = new PrismaClient();
 
 
@@ -86,16 +87,29 @@ const obterPropostaCobranca = async (idProposta) => {
 
 
 // Criar proposta de cobrança
+// Se a ocorrência associada estiver em "proposta contestada" (BPMN: aluno tinha rejeitado a
+// proposta anterior), o reenvio de uma nova proposta volta a colocá-la em "a aguardar"
+// para o aluno reavaliar.
 const criarPropostaCobranca = async (dadosProposta) => {
-    const proposta = await prisma.propostacobranca.create({
-        data: dadosProposta,
-        include: {
-            ocorrencia: true,
-            estadopropostacobranca: true
-        }
-    });
+    return prisma.$transaction(async (tx) => {
+        const proposta = await tx.propostacobranca.create({
+            data: dadosProposta,
+            include: {
+                ocorrencia: true,
+                estadopropostacobranca: true
+            }
+        });
 
-    return proposta;
+        if (proposta.id_ocorrencia && proposta.ocorrencia?.id_estado === ID_ESTADO_OCORRENCIA.PROPOSTA_CONTESTADA) {
+            const ocorrenciaAtualizada = await tx.ocorrencia.update({
+                where: { id: proposta.id_ocorrencia },
+                data: { id_estado: ID_ESTADO_OCORRENCIA.AGUARDAR }
+            });
+            proposta.ocorrencia = ocorrenciaAtualizada;
+        }
+
+        return proposta;
+    });
 };
 
 
@@ -202,9 +216,18 @@ const finalizarPropostaEmContaCorrente = async (idProposta, dadosMovimento) => {
             });
         }
 
+        // BPMN "Encerra ocorrência": ao finalizar com lançamento em conta corrente
+        // (aluno aceitou) marcar a ocorrência como resolvida.
+        const ocorrenciaAtualizada = await tx.ocorrencia.update({
+            where: { id: proposta.id_ocorrencia },
+            data: { id_estado: ID_ESTADO_OCORRENCIA.RESOLVIDA },
+            include: { estado_ocorrencia: true }
+        });
+
         return {
             movimento: novoMovimento,
-            proposta_atualizada: propostaAtualizada
+            proposta_atualizada: propostaAtualizada,
+            ocorrencia_atualizada: ocorrenciaAtualizada
         };
     });
 

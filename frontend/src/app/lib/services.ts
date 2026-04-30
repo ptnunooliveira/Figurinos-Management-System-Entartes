@@ -239,6 +239,32 @@ export async function criarChecklist(idReserva: number, dados: {
   return res.json();
 }
 
+export interface ChecklistAPI {
+  id: number;
+  id_tipo_checklist: number;
+  id_reserva: number;
+  dataassinatura: string | null;
+  tipo_checklist?: { id: number; nome: string | null } | null;
+  checklist_item: Array<{
+    id: number;
+    idfigurino: number;
+    id_estado: number | null;
+    observacoes: string | null;
+    estado_condicao?: { id: number; nome: string | null } | null;
+  }>;
+}
+
+export async function getChecklistsReserva(idReserva: number): Promise<ChecklistAPI[]> {
+  try {
+    const res = await apiFetch(`/reservas/${idReserva}/checklists`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data) ? data : [];
+  } catch {
+    return [];
+  }
+}
+
 // ─── Conta Corrente ──────────────────────────────────────────────────────────
 
 function mapContaCorrente(m: any): ContaCorrente {
@@ -376,9 +402,10 @@ export interface OcorrenciaDetalhada extends Ocorrencia {
     valor: number;
     estado: string;
     dataproposta?: string;
+    descricao?: string | null;
     contestacoes?: { id: number; descricao: string; valorcontraproposta?: number | null; data?: string }[];
   }[];
-  orcamentos?: { id: number; valor: number; fornecedor?: string; aprovado?: boolean | null }[];
+  orcamentos?: { id: number; valor: number; fornecedor?: string; descricao?: string | null; aprovado?: boolean | null }[];
 }
 
 function mapOcorrencia(o: any): OcorrenciaDetalhada {
@@ -404,6 +431,7 @@ function mapOcorrencia(o: any): OcorrenciaDetalhada {
       valor: p.valor ?? 0,
       estado: p.estadopropostacobranca?.nome ?? '',
       dataproposta: p.dataproposta ?? undefined,
+      descricao: p.descricao ?? null,
       contestacoes: (p.contestacao ?? []).map((c: any) => ({
         id: c.id,
         descricao: c.descricao ?? '',
@@ -415,6 +443,7 @@ function mapOcorrencia(o: any): OcorrenciaDetalhada {
       id: or.id,
       valor: or.valor ?? 0,
       fornecedor: or.fornecedor ?? '',
+      descricao: or.descricao ?? null,
       aprovado: or.aprovado,
     })),
   };
@@ -501,10 +530,30 @@ export async function criarOcorrencia(dados: {
   return res.json();
 }
 
-export async function criarPropostaCobranca(idOcorrencia: number, valor: number): Promise<any> {
+export async function criarOrcamento(idOcorrencia: number, dados: {
+  fornecedor: string;
+  descricao?: string | null;
+  valor?: number | null;
+}): Promise<any> {
+  const res = await apiFetch(`/ocorrencias/${idOcorrencia}/orcamentos`, {
+    method: 'POST',
+    body: JSON.stringify(dados),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error ?? err.erro ?? 'Erro ao registar orçamento');
+  }
+  return res.json();
+}
+
+export async function criarPropostaCobranca(idOcorrencia: number, valor: number, descricao?: string | null): Promise<any> {
   const res = await apiFetch('/propostas-cobranca', {
     method: 'POST',
-    body: JSON.stringify({ id_ocorrencia: idOcorrencia, valor }),
+    body: JSON.stringify({
+      id_ocorrencia: idOcorrencia,
+      valor,
+      descricao: descricao && descricao.trim() !== '' ? descricao.trim() : null,
+    }),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));

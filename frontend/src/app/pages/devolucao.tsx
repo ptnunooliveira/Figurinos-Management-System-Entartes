@@ -3,8 +3,8 @@ import { useParams, useNavigate, Link } from "react-router";
 import { ArrowLeft, CheckCircle, AlertTriangle, Plus, X } from "lucide-react";
 import SignatureCanvas from "react-signature-canvas";
 import { getUtilizadorAtual } from "../lib/auth";
-import { getReservaDetalhes, getEstadosCondicao, criarChecklist, criarOcorrencia } from "../lib/services";
-import type { AuxiliarItem } from "../lib/services";
+import { getReservaDetalhes, getEstadosCondicao, criarChecklist, criarOcorrencia, getChecklistsReserva } from "../lib/services";
+import type { AuxiliarItem, ChecklistAPI } from "../lib/services";
 import type { Reserva } from "../lib/dados-mock";
 import { toast } from "sonner";
 
@@ -22,7 +22,9 @@ export function Devolucao() {
     id: number; nome: string;
     observacoes: string; verificado: boolean; temProblema: boolean;
   }>>([]);
-  const [estadoFigurino, setEstadoFigurino] = useState("Bom");
+  const [idEstadoFigurinoSel, setIdEstadoFigurinoSel] = useState<number | null>(null);
+  // id do estado registado na checklist de levantamento, para detetar agravamento
+  const [idEstadoLevantamento, setIdEstadoLevantamento] = useState<number | null>(null);
   const [observacoesGerais, setObservacoesGerais] = useState("");
   const [ocorrencias, setOcorrencias] = useState<Array<{
     id: number;
@@ -42,7 +44,8 @@ export function Devolucao() {
     Promise.all([
       getReservaDetalhes(Number(id)),
       getEstadosCondicao(),
-    ]).then(([r, estados]) => {
+      getChecklistsReserva(Number(id)),
+    ]).then(([r, estados, checklists]) => {
       if (r) {
         setReserva(r);
         const acessorios = r.linhas[0]?.anuncio?.figurino?.acessorios ?? [];
@@ -53,6 +56,15 @@ export function Devolucao() {
           verificado: false,
           temProblema: false,
         })));
+
+        // Estado registado no levantamento (id_tipo_checklist === 1) para o figurino desta linha.
+        // Serve para (a) iniciar o select com esse estado e (b) detetar agravamento.
+        const idFigurino = r.linhas[0]?.anuncio?.figurino?.id;
+        const checklistLevantamento = (checklists as ChecklistAPI[]).find(c => c.id_tipo_checklist === 1);
+        const itemLevantamento = checklistLevantamento?.checklist_item.find(it => it.idfigurino === idFigurino);
+        const idLev = itemLevantamento?.id_estado ?? null;
+        setIdEstadoLevantamento(idLev);
+        setIdEstadoFigurinoSel(idLev ?? estados[0]?.id ?? null);
       }
       setEstadosCondicao(estados);
       setCarregando(false);
@@ -133,7 +145,11 @@ export function Devolucao() {
 
     const assinaturaFuncionario = assinaturaFuncionarioRef.current?.toDataURL() ?? '';
     const assinaturaCliente = assinaturaClienteRef.current?.toDataURL() ?? '';
-    const estadoId = estadosCondicao.find(e => e.nome.toLowerCase() === estadoFigurino.toLowerCase())?.id ?? 1;
+    const estadoId = idEstadoFigurinoSel ?? estadosCondicao[0]?.id;
+    if (!estadoId) {
+      toast.error("Selecione o estado do figurino");
+      return;
+    }
 
     try {
       await criarChecklist(Number(id), {
@@ -241,21 +257,44 @@ export function Devolucao() {
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Estado do Figurino na Devolução</h2>
 
           <div className="space-y-4">
+            {idEstadoLevantamento != null && (
+              <p className="text-sm text-gray-600">
+                Estado registado no levantamento:{" "}
+                <span className="font-medium text-gray-900">
+                  {estadosCondicao.find(e => e.id === idEstadoLevantamento)?.nome ?? "—"}
+                </span>
+              </p>
+            )}
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Estado Geral
               </label>
               <select
-                value={estadoFigurino}
-                onChange={(e) => setEstadoFigurino(e.target.value)}
+                value={idEstadoFigurinoSel ?? ""}
+                onChange={(e) => setIdEstadoFigurinoSel(Number(e.target.value))}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               >
-                <option value="Muito Bom">Muito Bom</option>
-                <option value="Bom">Bom</option>
-                <option value="Razoável">Razoável</option>
-                <option value="Mau">Mau (requer atenção)</option>
+                {estadosCondicao.map(estado => (
+                  <option key={estado.id} value={estado.id}>{estado.nome}</option>
+                ))}
               </select>
             </div>
+
+            {/* Aviso: estado selecionado pior do que o do levantamento → vai gerar ocorrência */}
+            {idEstadoFigurinoSel != null && idEstadoLevantamento != null &&
+              idEstadoFigurinoSel > idEstadoLevantamento && (
+              <div className="bg-orange-50 border-l-4 border-orange-500 p-4 rounded-lg">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="w-5 h-5 text-orange-600 mt-0.5" />
+                  <p className="text-sm text-orange-900">
+                    O estado selecionado é pior do que o registado no levantamento.
+                    Ao gravar, será criada automaticamente uma <strong>ocorrência</strong> para
+                    análise.
+                  </p>
+                </div>
+              </div>
+            )}
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">

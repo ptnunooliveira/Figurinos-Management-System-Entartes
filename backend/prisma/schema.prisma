@@ -240,6 +240,7 @@ model propostacobranca {
   valor                     Float?
   dataproposta              DateTime?               @db.Date
   id_estadopropostacobranca Int?
+  descricao                 String?
   contestacao               contestacao[]
   estadopropostacobranca    estadopropostacobranca? @relation(fields: [id_estadopropostacobranca], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_proposta_estado")
   ocorrencia                ocorrencia?             @relation(fields: [id_ocorrencia], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_proposta_ocorrencia")

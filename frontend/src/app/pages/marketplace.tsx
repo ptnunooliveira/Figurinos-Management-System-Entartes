@@ -7,6 +7,8 @@ import type { AnuncioMarketplace } from "../lib/dados-mock";
 import { toast } from "sonner";
 
 export function Marketplace() {
+  const REQUEST_TIMEOUT_MS = 12000;
+  const MARKETPLACE_INTERESSE_NOTIF_KEY = "fighappens_marketplace_interesses";
   const utilizadorAtual = getUtilizadorAtual();
   const [abaAtiva, setAbaAtiva] = useState<"explorar" | "meusAnuncios">("explorar");
   const [mostrarCriarModal, setMostrarCriarModal] = useState(false);
@@ -29,6 +31,8 @@ export function Marketplace() {
 
   const [todosAnuncios, setTodosAnuncios] = useState<AnuncioMarketplace[]>([]);
   const [meusAnunciosLista, setMeusAnunciosLista] = useState<AnuncioMarketplace[]>([]);
+  const [meusAnunciosCarregados, setMeusAnunciosCarregados] = useState(false);
+  const [aCarregarMeusAnuncios, setACarregarMeusAnuncios] = useState(false);
   const [categoriasLista, setCategoriasLista] = useState<AuxiliarItem[]>([]);
   const [estadosAnuncioLista, setEstadosAnuncioLista] = useState<AuxiliarItem[]>([]);
   const [tiposLista, setTiposLista] = useState<AuxiliarItem[]>([]);
@@ -43,19 +47,81 @@ export function Marketplace() {
     sexo: "",
   });
 
+  const executarComTimeout = async <T,>(promise: Promise<T>, mensagemErro: string): Promise<T> => {
+    let timeoutId: number | undefined;
+
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timeoutId = window.setTimeout(() => {
+        reject(new Error(mensagemErro));
+      }, REQUEST_TIMEOUT_MS);
+    });
+
+    try {
+      return await Promise.race([promise, timeoutPromise]);
+    } finally {
+      if (timeoutId !== undefined) {
+        window.clearTimeout(timeoutId);
+      }
+    }
+  };
+
+  const carregarMeusAnuncios = async (force = false) => {
+    if (!utilizadorAtual?.id || utilizadorAtual?.tipo !== "aluno") return;
+    if (aCarregarMeusAnuncios) return;
+    if (!force && meusAnunciosCarregados) return;
+
+    setACarregarMeusAnuncios(true);
+    try {
+      const anuncios = await executarComTimeout(
+        getMarketplaceDoUtilizador(utilizadorAtual.id),
+        "A carregar os seus anúncios está a demorar. Tente novamente."
+      );
+      setMeusAnunciosLista(anuncios);
+      setMeusAnunciosCarregados(true);
+    } catch (err: any) {
+      toast.error(err?.message || "Erro ao carregar os seus anúncios");
+    } finally {
+      setACarregarMeusAnuncios(false);
+    }
+  };
+
+  const mudarAba = (aba: "explorar" | "meusAnuncios") => {
+    setAbaAtiva(aba);
+    if (aba === "meusAnuncios") {
+      carregarMeusAnuncios();
+    }
+  };
+
   useEffect(() => {
     getCategorias().then(setCategoriasLista);
     getEstadosAnuncio().then(setEstadosAnuncioLista);
     getTiposFigurino().then(setTiposLista);
     getSexos().then(setSexosLista);
-    if (utilizadorAtual?.tipo === 'funcionario') {
-      getMarketplaceGestao().then(setTodosAnuncios);
-    } else {
-      getMarketplace().then(setTodosAnuncios);
-      if (utilizadorAtual?.id) {
-        getMarketplaceDoUtilizador(utilizadorAtual.id).then(setMeusAnunciosLista);
+
+    const carregarMarketplace = async () => {
+      try {
+        if (utilizadorAtual?.tipo === "funcionario") {
+          const anuncios = await executarComTimeout(
+            getMarketplaceGestao(),
+            "A carregar os anúncios de gestão está a demorar. Tente novamente."
+          );
+          setTodosAnuncios(anuncios);
+          return;
+        }
+
+        const anuncios = await executarComTimeout(
+          getMarketplace(),
+          "A carregar os anúncios está a demorar. Tente novamente."
+        );
+        setTodosAnuncios(anuncios);
+      } catch (err: any) {
+        toast.error(err?.message || "Erro ao carregar anúncios");
       }
-    }
+    };
+
+    carregarMarketplace();
+    setMeusAnunciosCarregados(false);
+    setMeusAnunciosLista([]);
   }, [utilizadorAtual?.tipo, utilizadorAtual?.id]);
 
   const meusAnuncios = meusAnunciosLista;
@@ -269,9 +335,7 @@ export function Marketplace() {
       setFormulario({ titulo: "", descricao: "", tamanho: "", categoria: "", tipo: "", sexo: "" });
       setImagensPreview([]);
       setImagensFicheiro([]);
-      if (utilizadorAtual?.id) {
-        getMarketplaceDoUtilizador(utilizadorAtual.id).then(setMeusAnunciosLista);
-      }
+      await carregarMeusAnuncios(true);
     } catch (err: any) {
       toast.error(err.message || "Erro ao criar anúncio");
     }
@@ -303,6 +367,49 @@ export function Marketplace() {
     setAnuncioDetalhe(null);
   };
 
+  const sinalizarInteresse = () => {
+    if (!anuncioDetalhe?.id_utilizador || !utilizadorAtual?.id) {
+      toast.error("Não foi possível sinalizar interesse neste anúncio.");
+      return;
+    }
+
+    if (anuncioDetalhe.id_utilizador === utilizadorAtual.id) {
+      toast.error("Não pode sinalizar interesse no seu próprio anúncio.");
+      return;
+    }
+
+    try {
+      const raw = localStorage.getItem(MARKETPLACE_INTERESSE_NOTIF_KEY);
+      const lista = raw ? JSON.parse(raw) : [];
+      const notificacoes = Array.isArray(lista) ? lista : [];
+
+      const jaExiste = notificacoes.some((n: any) =>
+        Number(n?.idAnuncio) === anuncioDetalhe.id &&
+        Number(n?.idDono) === anuncioDetalhe.id_utilizador &&
+        Number(n?.idInteressado) === utilizadorAtual.id
+      );
+
+      if (!jaExiste) {
+        const mensagem = `O/A utilizador/a ${utilizadorAtual.nome} tem interesse no seu figurino. O email da pessoa é: ${utilizadorAtual.email}.`;
+        notificacoes.push({
+          chave: `interesse:${anuncioDetalhe.id}:${utilizadorAtual.id}`,
+          idAnuncio: anuncioDetalhe.id,
+          idDono: anuncioDetalhe.id_utilizador,
+          idInteressado: utilizadorAtual.id,
+          mensagem,
+          data: new Date().toISOString(),
+        });
+
+        localStorage.setItem(MARKETPLACE_INTERESSE_NOTIF_KEY, JSON.stringify(notificacoes));
+      }
+    } catch {
+      toast.error("Erro ao guardar notificação de interesse.");
+      return;
+    }
+
+    toast.success("Interesse sinalizado com sucesso.");
+  };
+
   const limparFiltros = () => {
     setTermoPesquisa("");
     setCategoriaSelecionada("todas");
@@ -331,12 +438,18 @@ export function Marketplace() {
       fecharConfirmacaoRemocao();
 
       if (utilizadorAtual?.tipo === 'funcionario') {
-        getMarketplaceGestao().then(setTodosAnuncios);
+        const anuncios = await executarComTimeout(
+          getMarketplaceGestao(),
+          "A atualizar anúncios de gestão está a demorar. Tente novamente."
+        );
+        setTodosAnuncios(anuncios);
       } else {
-        getMarketplace().then(setTodosAnuncios);
-        if (utilizadorAtual?.id) {
-          getMarketplaceDoUtilizador(utilizadorAtual.id).then(setMeusAnunciosLista);
-        }
+        const anuncios = await executarComTimeout(
+          getMarketplace(),
+          "A atualizar anúncios está a demorar. Tente novamente."
+        );
+        setTodosAnuncios(anuncios);
+        await carregarMeusAnuncios(true);
       }
     } catch (err: any) {
       toast.error(err.message || "Erro ao remover anúncio");
@@ -360,12 +473,18 @@ export function Marketplace() {
       fecharConfirmacaoRenovacao();
 
       if (utilizadorAtual?.tipo === 'funcionario') {
-        getMarketplaceGestao().then(setTodosAnuncios);
+        const anuncios = await executarComTimeout(
+          getMarketplaceGestao(),
+          "A atualizar anúncios de gestão está a demorar. Tente novamente."
+        );
+        setTodosAnuncios(anuncios);
       } else {
-        getMarketplace().then(setTodosAnuncios);
-        if (utilizadorAtual?.id) {
-          getMarketplaceDoUtilizador(utilizadorAtual.id).then(setMeusAnunciosLista);
-        }
+        const anuncios = await executarComTimeout(
+          getMarketplace(),
+          "A atualizar anúncios está a demorar. Tente novamente."
+        );
+        setTodosAnuncios(anuncios);
+        await carregarMeusAnuncios(true);
       }
     } catch (err: any) {
       toast.error(err.message || "Erro ao renovar anúncio");
@@ -378,7 +497,7 @@ export function Marketplace() {
       <div className="flex items-start justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Marketplace</h1>
-          <p className="text-gray-600">Partilhe ou encontre figurinos na comunidade</p>
+          <p className="text-gray-600">Histórico de anúncios do marketplace</p>
         </div>
         {utilizadorAtual?.tipo === 'aluno' && (
           <button
@@ -395,7 +514,7 @@ export function Marketplace() {
       {utilizadorAtual?.tipo === 'aluno' && (
         <div className="bg-white rounded-xl shadow-sm p-1 inline-flex gap-1">
           <button
-            onClick={() => setAbaAtiva("explorar")}
+            onClick={() => mudarAba("explorar")}
             className={`px-6 py-2 rounded-lg transition-colors ${
               abaAtiva === "explorar"
                 ? "bg-purple-600 text-white"
@@ -406,7 +525,7 @@ export function Marketplace() {
             Explorar ({outrosAnuncios.length})
           </button>
           <button
-            onClick={() => setAbaAtiva("meusAnuncios")}
+            onClick={() => mudarAba("meusAnuncios")}
             className={`px-6 py-2 rounded-lg transition-colors ${
               abaAtiva === "meusAnuncios"
                 ? "bg-purple-600 text-white"
@@ -506,7 +625,7 @@ export function Marketplace() {
 
           {(utilizadorAtual?.tipo === 'funcionario' || abaAtiva === 'meusAnuncios') && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Estado</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Estado Anúncio</label>
               <select
                 value={estadoSelecionado}
                 onChange={(e) => setEstadoSelecionado(e.target.value)}
@@ -808,7 +927,32 @@ export function Marketplace() {
                 <div className="bg-gray-50 rounded-lg p-3"><span className="text-gray-500">Sexo</span><p className="font-medium">{anuncioDetalhe.sexo || "—"}</p></div>
               </div>
 
-              <p className="text-xs text-gray-500">Submetido em {new Date(anuncioDetalhe.data_anuncio).toLocaleDateString('pt-PT')}</p>
+              <div className="flex items-center justify-between gap-3">
+                {utilizadorAtual?.tipo !== "aluno" ? (
+                  <p className="text-xs text-gray-500">Submetido em {new Date(anuncioDetalhe.data_anuncio).toLocaleDateString('pt-PT')}</p>
+                ) : (
+                  <div />
+                )}
+
+                {utilizadorAtual?.tipo === "aluno" && (
+                  <div className="flex items-center gap-2 ml-auto">
+                    <button
+                      type="button"
+                      onClick={sinalizarInteresse}
+                      className="px-4 py-2 rounded-lg bg-gradient-to-r from-fig-green to-emerald-500 hover:shadow-lg text-white transition-all"
+                    >
+                      Sinalizar Interesse
+                    </button>
+                    <button
+                      type="button"
+                      onClick={fecharDetalhes}
+                      className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>

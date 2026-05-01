@@ -57,6 +57,7 @@ const obterResumoAprovacao = (estadoNome) => {
 const mapearAnuncioMarketplace = (anuncio, opcoes = {}) => {
   const resposta = {
     id: anuncio.id,
+    id_utilizador: anuncio.id_utilizador ?? null,
     titulo: anuncio.titulo,
     dataanuncio: formatarData(anuncio.dataanuncio),
     dataaprovacao: formatarData(anuncio.dataaprovacao),
@@ -160,6 +161,7 @@ const obterAnuncioMarketplacePorId = async (id) => {
     where: { id },
     select: {
       id: true,
+      id_utilizador: true,
       titulo: true,
       dataanuncio: true,
       dataaprovacao: true,
@@ -261,6 +263,7 @@ const obterAnunciosMarketplace = async () => {
     orderBy: { id: "desc" },
     select: {
       id: true,
+      id_utilizador: true,
       titulo: true,
       dataanuncio: true,
       dataaprovacao: true,
@@ -324,6 +327,7 @@ const obterAnunciosMarketplaceGestao = async (estadoNome) => {
     orderBy: { id: "desc" },
     select: {
       id: true,
+      id_utilizador: true,
       titulo: true,
       dataanuncio: true,
       dataaprovacao: true,
@@ -373,6 +377,7 @@ const obterAnunciosMarketplacePorUtilizador = async (idUtilizador) => {
     orderBy: { id: "desc" },
     select: {
       id: true,
+      id_utilizador: true,
       titulo: true,
       dataanuncio: true,
       dataaprovacao: true,
@@ -662,6 +667,7 @@ const eliminarAnuncioMarketplace = async (id, idUtilizador) => {
 
   return obterAnuncioMarketplacePorId(id);
 };
+
 
 // EXPORTAR FUNCOES
 module.exports = {

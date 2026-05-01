@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Calendar, Shirt, ShoppingBag, AlertCircle, TrendingUp, FileText, Bell } from "lucide-react";
+import { Calendar, Shirt, ShoppingBag, AlertCircle, TrendingUp, FileText, Bell, Trash2 } from "lucide-react";
 import { Link } from "react-router";
 import { getUtilizadorAtual } from "../lib/auth";
 import { getReservas, getMinhasReservas, getOcorrencias, getMarketplace, getMarketplaceGestao, getAnunciosEscola, getMarketplaceDoUtilizador, getPropostasCobranca } from "../lib/services";
@@ -13,6 +13,8 @@ interface NotificacaoDashboard {
 }
 
 const DASHBOARD_NOTIF_KEY = "fighappens_notificacoes_vistas";
+const MARKETPLACE_INTERESSE_NOTIF_KEY = "fighappens_marketplace_interesses";
+const DASHBOARD_NOTIF_REMOVIDAS_KEY = "fighappens_notificacoes_removidas";
 
 export function Dashboard() {
   const utilizadorAtual = getUtilizadorAtual();
@@ -42,12 +44,69 @@ export function Dashboard() {
     localStorage.setItem(DASHBOARD_NOTIF_KEY, JSON.stringify(chaves));
   };
 
+  const obterChavesRemovidas = (): string[] => {
+    try {
+      const raw = localStorage.getItem(DASHBOARD_NOTIF_REMOVIDAS_KEY);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  };
+
+  const guardarChavesRemovidas = (chaves: string[]) => {
+    localStorage.setItem(DASHBOARD_NOTIF_REMOVIDAS_KEY, JSON.stringify(chaves));
+  };
+
   const marcarComoLida = (chave: string) => {
     const vistas = obterChavesVistas();
     if (!vistas.includes(chave)) {
       guardarChavesVistas([...vistas, chave]);
     }
     setNotificacoes((prev) => prev.map((n) => (n.chave === chave ? { ...n, lida: true } : n)));
+  };
+
+  const eliminarNotificacao = (chave: string) => {
+    const removidas = obterChavesRemovidas();
+    if (!removidas.includes(chave)) {
+      guardarChavesRemovidas([...removidas, chave]);
+    }
+
+    setNotificacoes((prev) => prev.filter((n) => n.chave !== chave));
+
+    try {
+      const raw = localStorage.getItem(MARKETPLACE_INTERESSE_NOTIF_KEY);
+      const parsed = raw ? JSON.parse(raw) : [];
+      const lista = Array.isArray(parsed) ? parsed : [];
+      const atualizada = lista.filter((item: any) => String(item?.chave ?? "") !== chave);
+      localStorage.setItem(MARKETPLACE_INTERESSE_NOTIF_KEY, JSON.stringify(atualizada));
+    } catch {
+      // noop
+    }
+  };
+
+  const obterNotificacoesInteresseMarketplace = (idDono: number): NotificacaoDashboard[] => {
+    try {
+      const raw = localStorage.getItem(MARKETPLACE_INTERESSE_NOTIF_KEY);
+      if (!raw) return [];
+
+      const parsed = JSON.parse(raw);
+      const lista = Array.isArray(parsed) ? parsed : [];
+      const vistas = obterChavesVistas();
+      const removidas = obterChavesRemovidas();
+
+      return lista
+        .filter((item: any) => Number(item?.idDono) === idDono && typeof item?.mensagem === "string")
+        .filter((item: any) => !removidas.includes(String(item.chave ?? `interesse:${item.idAnuncio}:${item.idInteressado}`)))
+        .map((item: any) => ({
+          chave: String(item.chave ?? `interesse:${item.idAnuncio}:${item.idInteressado}`),
+          mensagem: item.mensagem,
+          lida: vistas.includes(String(item.chave ?? `interesse:${item.idAnuncio}:${item.idInteressado}`)),
+        }));
+    } catch {
+      return [];
+    }
   };
 
   useEffect(() => {
@@ -140,8 +199,12 @@ export function Dashboard() {
       });
 
       if (utilizadorAtual?.id) {
+        const notificacoesInteresse = obterNotificacoesInteresseMarketplace(utilizadorAtual.id);
+        setNotificacoes(notificacoesInteresse);
+
         getMarketplaceDoUtilizador(utilizadorAtual.id).then((anuncios) => {
           const vistas = obterChavesVistas();
+          const removidas = obterChavesRemovidas();
           const notificacoesGeradas = anuncios
             .map((a) => {
               const estado = (a.estado || "").toLowerCase();
@@ -166,9 +229,10 @@ export function Dashboard() {
 
               return null;
             })
-            .filter((n): n is NotificacaoDashboard => n !== null);
+            .filter((n): n is NotificacaoDashboard => n !== null)
+            .filter((n) => !removidas.includes(n.chave));
 
-          setNotificacoes(notificacoesGeradas);
+          setNotificacoes([...notificacoesInteresse, ...notificacoesGeradas]);
         });
       }
     }
@@ -251,16 +315,29 @@ export function Dashboard() {
                     ) : (
                       notificacoes.map((n) => (
                         <div key={n.chave} className="p-4 border-b last:border-b-0">
-                          <p className={`text-sm ${n.lida ? "text-gray-500" : "text-gray-900 font-medium"}`}>{n.mensagem}</p>
-                          {!n.lida && (
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className={`text-sm ${n.lida ? "text-gray-500" : "text-gray-900 font-medium"}`}>{n.mensagem}</p>
+                              {!n.lida && (
+                                <button
+                                  type="button"
+                                  onClick={() => marcarComoLida(n.chave)}
+                                  className="mt-2 text-xs text-fig-purple hover:underline"
+                                >
+                                  Marcar como lida
+                                </button>
+                              )}
+                            </div>
                             <button
                               type="button"
-                              onClick={() => marcarComoLida(n.chave)}
-                              className="mt-2 text-xs text-fig-purple hover:underline"
+                              onClick={() => eliminarNotificacao(n.chave)}
+                              className="mt-1 text-gray-400 hover:text-red-600 transition-colors"
+                              aria-label="Eliminar notificação"
+                              title="Eliminar notificação"
                             >
-                              Marcar como lida
+                              <Trash2 className="w-4 h-4" />
                             </button>
-                          )}
+                          </div>
                         </div>
                       ))
                     )}

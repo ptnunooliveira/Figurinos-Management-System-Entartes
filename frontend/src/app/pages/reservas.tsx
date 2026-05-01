@@ -283,6 +283,20 @@ export function Reservas() {
                   } else if (e === 'CONFIRMADA') {
                     return (
                       <div className="bg-gray-50 px-6 py-4 flex justify-end gap-3 flex-wrap">
+                        <button
+                          onClick={() => {
+                            if (window.confirm("O figurino não está conforme? Tem a certeza que deseja cancelar o pedido?")) {
+                              atualizarEstadoReserva(reserva.id, 5)
+                                .then(() => { toast.success("Reserva cancelada!"); carregarReservas(); })
+                                .catch((err) => toast.error(err.message));
+                            }
+                          }}
+                          className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                          title="Cancelar caso artigo não conforme"
+                        >
+                          <Ban className="w-4 h-4" />
+                          Cancelar
+                        </button>
                         <Link
                           to={`/levantamento/${reserva.id}`}
                           className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"

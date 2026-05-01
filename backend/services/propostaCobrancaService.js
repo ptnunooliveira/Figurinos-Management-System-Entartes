@@ -13,9 +13,8 @@
  * ------------------------------------------------------------
  */
 
-const { PrismaClient } = require('@prisma/client');
 const { ID_ESTADO_OCORRENCIA } = require('../utils/estadosOcorrencia');
-const prisma = new PrismaClient();
+const prisma = require('../prisma/client');
 
 
 // Obter todas as propostas de cobrança
@@ -235,10 +234,126 @@ const finalizarPropostaEmContaCorrente = async (idProposta, dadosMovimento) => {
 };
 
 
+// Funcionário aceita a contraproposta do aluno: cria proposta já aceite,
+// lança em conta corrente e resolve a ocorrência numa única transação.
+const resolverComContraproposta = async (idOcorrencia, valor) => {
+    const ocorrencia = await prisma.ocorrencia.findUnique({
+        where: { id: idOcorrencia },
+        include: {
+            linha_reserva: {
+                include: { reserva: true }
+            }
+        }
+    });
+
+    if (!ocorrencia) {
+        const err = new Error('Ocorrência não encontrada.');
+        err.statusCode = 404;
+        throw err;
+    }
+
+    const idUtilizador = ocorrencia.linha_reserva?.reserva?.id_utilizador ?? null;
+
+    return prisma.$transaction(async (tx) => {
+        const proposta = await tx.propostacobranca.create({
+            data: {
+                id_ocorrencia: idOcorrencia,
+                valor,
+                dataproposta: new Date(),
+                id_estadopropostacobranca: 2, // ACEITE
+                descricao: 'Valor acordado com o aluno após contestação.'
+            }
+        });
+
+        await tx.conta_corrente.create({
+            data: {
+                valor,
+                exportadofaturacao: false,
+                dataexportacao: null,
+                id_utilizador: idUtilizador,
+                id_ocorrencia: idOcorrencia,
+                id_linha_reserva: ocorrencia.id_linha_reserva ?? null
+            }
+        });
+
+        const ocorrenciaAtualizada = await tx.ocorrencia.update({
+            where: { id: idOcorrencia },
+            data: { id_estado: ID_ESTADO_OCORRENCIA.RESOLVIDA },
+            include: { estado_ocorrencia: true }
+        });
+
+        return { proposta, ocorrencia_atualizada: ocorrenciaAtualizada };
+    });
+};
+
+
+// Aluno aceita a proposta: lança em conta corrente e resolve a ocorrência.
+const aceitarPropostaAluno = async (idProposta, idUtilizador) => {
+    const proposta = await prisma.propostacobranca.findUnique({
+        where: { id: idProposta },
+        include: {
+            ocorrencia: {
+                include: {
+                    linha_reserva: {
+                        include: { reserva: true }
+                    }
+                }
+            }
+        }
+    });
+
+    if (!proposta) {
+        const err = new Error('Proposta não encontrada.');
+        err.statusCode = 404;
+        throw err;
+    }
+
+    const idDono = proposta.ocorrencia?.linha_reserva?.reserva?.id_utilizador;
+    if (idDono !== idUtilizador) {
+        const err = new Error('Não autorizado.');
+        err.statusCode = 403;
+        throw err;
+    }
+
+    return prisma.$transaction(async (tx) => {
+        const propostaAtualizada = await tx.propostacobranca.update({
+            where: { id: idProposta },
+            data: { id_estadopropostacobranca: 2 }, // ACEITE
+            include: { estadopropostacobranca: true }
+        });
+
+        const novoMovimento = await tx.conta_corrente.create({
+            data: {
+                valor: proposta.valor,
+                exportadofaturacao: false,
+                dataexportacao: null,
+                id_utilizador: idUtilizador,
+                id_ocorrencia: proposta.id_ocorrencia,
+                id_linha_reserva: proposta.ocorrencia?.id_linha_reserva ?? null
+            }
+        });
+
+        const ocorrenciaAtualizada = await tx.ocorrencia.update({
+            where: { id: proposta.id_ocorrencia },
+            data: { id_estado: ID_ESTADO_OCORRENCIA.RESOLVIDA },
+            include: { estado_ocorrencia: true }
+        });
+
+        return {
+            proposta_atualizada: propostaAtualizada,
+            movimento: novoMovimento,
+            ocorrencia_atualizada: ocorrenciaAtualizada
+        };
+    });
+};
+
+
 module.exports = {
     obterTodasPropostasCobranca,
     obterPropostaCobranca,
     criarPropostaCobranca,
     atualizarEstadoPropostaCobranca,
-    finalizarPropostaEmContaCorrente
+    finalizarPropostaEmContaCorrente,
+    aceitarPropostaAluno,
+    resolverComContraproposta
 };

@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { PlusCircle, Search, Filter, Shirt, Euro, Eye, Edit, Trash2, Calendar, X } from "lucide-react";
 import { getUtilizadorAtual } from "../lib/auth";
-import { getAnunciosEscola, getFigurinosRaw, criarAnuncioEscola, atualizarAnuncioEscola, eliminarAnuncioEscola, criarReserva, getUtilizadores, type AnuncioEscolaAPI, type FigurinoAPI } from "../lib/services";
+import { getAnunciosEscola, getFigurinosRaw, criarAnuncioEscola, atualizarAnuncioEscola, eliminarAnuncioEscola, type AnuncioEscolaAPI, type FigurinoAPI } from "../lib/services";
+import { useCart } from "./CartContext";
 import { toast } from "sonner";
 
 export function AnunciosEscola() {
@@ -23,15 +24,11 @@ export function AnunciosEscola() {
   const [anuncioReserva, setAnuncioReserva] = useState<AnuncioEscolaAPI | null>(null);
   const [dataInicioReserva, setDataInicioReserva] = useState("");
   const [dataFimReserva, setDataFimReserva] = useState("");
-  const [alunoReserva, setAlunoReserva] = useState("");
-  const [utilizadores, setUtilizadores] = useState<any[]>([]);
+  const { adicionarAoCarrinho } = useCart();
 
   useEffect(() => {
     getAnunciosEscola().then(setAnunciosEscola);
     getFigurinosRaw().then(setFigurinos);
-    if (utilizadorAtual?.tipo === 'funcionario') {
-      getUtilizadores().then(setUtilizadores);
-    }
   }, []);
 
   const anunciosFiltrados = anunciosEscola.filter((anuncio) => {
@@ -124,7 +121,6 @@ export function AnunciosEscola() {
     setAnuncioReserva(anuncio);
     setDataInicioReserva("");
     setDataFimReserva("");
-    setAlunoReserva("");
     setMostrarModalReserva(true);
   };
 
@@ -133,16 +129,11 @@ export function AnunciosEscola() {
     setAnuncioReserva(null);
     setDataInicioReserva("");
     setDataFimReserva("");
-    setAlunoReserva("");
   };
 
   const handleConfirmarReserva = async () => {
     if (!anuncioReserva || !dataInicioReserva || !dataFimReserva) {
       toast.error("Por favor, preencha todas as datas");
-      return;
-    }
-    if (utilizadorAtual?.tipo === 'funcionario' && !alunoReserva) {
-      toast.error("Por favor, selecione um aluno");
       return;
     }
     if (new Date(dataFimReserva) < new Date(dataInicioReserva)) {
@@ -155,16 +146,16 @@ export function AnunciosEscola() {
       toast.error("A data de início não pode ser no passado");
       return;
     }
-    try {
-      await criarReserva(
-        [{ id_anuncio: anuncioReserva.id, datainicio: dataInicioReserva, datafim: dataFimReserva }],
-        utilizadorAtual?.tipo === 'funcionario' && alunoReserva ? parseInt(alunoReserva) : undefined
-      );
-      toast.success("Reserva criada com sucesso!");
-      handleFecharReserva();
-    } catch (err: any) {
-      toast.error(err.message || "Erro ao criar reserva");
-    }
+
+    adicionarAoCarrinho({
+      id_anuncio: anuncioReserva.id,
+      figurino_nome: anuncioReserva.figurino?.descricao ?? "Figurino",
+      datainicio: dataInicioReserva,
+      datafim: dataFimReserva,
+    });
+
+    toast.success("Adicionado ao carrinho com sucesso!");
+    handleFecharReserva();
   };
 
   const figurinoObj = figurinos.find((f) => f.id === parseInt(figurinoSelecionado));
@@ -550,23 +541,6 @@ export function AnunciosEscola() {
                 </div>
               </div>
 
-              {utilizadorAtual?.tipo === 'funcionario' && (
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">Aluno *</label>
-                  <select
-                    value={alunoReserva}
-                    onChange={(e) => setAlunoReserva(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    required
-                  >
-                    <option value="">Selecione um aluno</option>
-                    {utilizadores.map((u) => (
-                      <option key={u.id} value={u.id}>{u.nome}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
               <div className="space-y-4">
                 <h4 className="font-semibold text-gray-900 flex items-center gap-2">
                   <Calendar className="w-5 h-5 text-fig-purple" />
@@ -608,10 +582,10 @@ export function AnunciosEscola() {
               </button>
               <button
                 onClick={handleConfirmarReserva}
-                disabled={!dataInicioReserva || !dataFimReserva || (utilizadorAtual?.tipo === 'funcionario' && !alunoReserva)}
+                disabled={!dataInicioReserva || !dataFimReserva}
                 className="px-6 py-3 bg-gradient-to-r from-fig-purple to-fig-magenta hover:shadow-lg text-white rounded-lg transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Submeter Pedido
+                Adicionar ao Carrinho
               </button>
             </div>
           </div>

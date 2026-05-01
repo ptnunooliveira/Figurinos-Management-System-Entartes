@@ -34,4 +34,10 @@ router.patch('/:id/estado', authMiddleware, perfilMiddleware('FUNCIONARIO'), pro
 // POST /api/propostas-cobranca/:id/finalizar-conta-corrente
 router.post('/:id/finalizar-conta-corrente', authMiddleware, perfilMiddleware('FUNCIONARIO'), propostaCobrancaController.finalizarPropostaEmContaCorrente);
 
+// POST /api/propostas-cobranca/:id/aceitar (aluno aceita a proposta)
+router.post('/:id/aceitar', authMiddleware, propostaCobrancaController.aceitarPropostaAluno);
+
+// POST /api/propostas-cobranca/ocorrencia/:idOcorrencia/resolver-contraproposta (funcionário aceita valor do aluno)
+router.post('/ocorrencia/:idOcorrencia/resolver-contraproposta', authMiddleware, perfilMiddleware('FUNCIONARIO'), propostaCobrancaController.resolverComContraproposta);
+
 module.exports = router;

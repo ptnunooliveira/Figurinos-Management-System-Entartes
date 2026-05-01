@@ -23,6 +23,7 @@ export function Levantamento() {
   }>>([]);
   const [idEstadoFigurinoSel, setIdEstadoFigurinoSel] = useState<number | null>(null);
   const [observacoesGerais, setObservacoesGerais] = useState("");
+  const [linhaSelecionadaId, setLinhaSelecionadaId] = useState<number | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -30,26 +31,37 @@ export function Levantamento() {
       getReservaDetalhes(Number(id)),
       getEstadosCondicao(),
     ]).then(([r, estados]) => {
-      if (r) {
+      if (r && r.linhas.length > 0) {
         setReserva(r);
-        const acessorios = r.linhas[0]?.anuncio?.figurino?.acessorios ?? [];
-        setChecklist(acessorios.map((acc, idx) => ({
-          id: idx + 1,
-          nome: acc.nome,
-          observacoes: "",
-          verificado: false,
-        })));
+        setLinhaSelecionadaId(r.linhas[0].id);
       }
       setEstadosCondicao(estados);
-      // Inicia no estado mais favorável (ids menores = melhor condição).
-      if (estados.length) {
-        setIdEstadoFigurinoSel(estados[0].id);
-      }
       setCarregando(false);
     });
   }, [id]);
 
-  const linhaReserva = reserva?.linhas[0];
+  // Atualiza os detalhes exibidos sempre que a linha selecionada muda
+  useEffect(() => {
+    if (!reserva || !linhaSelecionadaId) return;
+    
+    const linha = reserva.linhas.find(l => l.id === linhaSelecionadaId);
+    if (!linha) return;
+
+    const acessorios = linha.anuncio?.figurino?.acessorios ?? [];
+    setChecklist(acessorios.map((acc, idx) => ({
+      id: idx + 1,
+      nome: acc.nome,
+      observacoes: "",
+      verificado: false,
+    })));
+
+    if (estadosCondicao.length > 0) {
+      setIdEstadoFigurinoSel(estadosCondicao[0].id);
+    }
+    setObservacoesGerais("");
+  }, [linhaSelecionadaId, reserva, estadosCondicao]);
+
+  const linhaReserva = reserva?.linhas.find(l => l.id === linhaSelecionadaId);
   const figurino = linhaReserva?.anuncio.figurino;
 
   const toggleVerificado = (id: number) => {
@@ -105,12 +117,12 @@ export function Levantamento() {
         id_tipo_checklist: 1,
         assinaturaFuncionario,
         assinaturaEncarregado: assinaturaCliente,
-        itens: reserva.linhas.map(linha => ({
-          id_linha_reserva: linha.id,
-          idfigurino: linha.anuncio.figurino.id,
+        itens: [{
+          id_linha_reserva: linhaReserva!.id,
+          idfigurino: linhaReserva!.anuncio.figurino.id,
           id_estado: estadoId,
           observacoes: observacoesGerais || undefined,
-        })),
+        }],
       });
       toast.success("Levantamento registado com sucesso!");
       setTimeout(() => navigate("/reservas"), 1500);
@@ -151,6 +163,24 @@ export function Levantamento() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Seletor de Item da Reserva */}
+        {reserva && reserva.linhas.length > 1 && (
+          <div className="bg-white rounded-xl shadow-sm p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Selecione o Item a Levantar</h2>
+            <select
+              value={linhaSelecionadaId ?? ""}
+              onChange={(e) => setLinhaSelecionadaId(Number(e.target.value))}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            >
+              {reserva.linhas.map(linha => (
+                <option key={linha.id} value={linha.id}>
+                  {linha.anuncio.figurino.nome} (De {new Date(linha.data_inicio).toLocaleDateString('pt-PT')} a {new Date(linha.data_fim).toLocaleDateString('pt-PT')}) - {linha.estado}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
         {/* Informação do Figurino */}
         <div className="bg-white rounded-xl shadow-sm p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Informação do Figurino</h2>

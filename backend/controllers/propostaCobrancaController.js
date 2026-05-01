@@ -174,10 +174,60 @@ const finalizarPropostaEmContaCorrente = async (req, res) => {
 };
 
 
+// Funcionário aceita a contraproposta do aluno e resolve a ocorrência
+const resolverComContraproposta = async (req, res) => {
+    try {
+        const idOcorrencia = parseInt(req.params.idOcorrencia);
+        const { valor } = req.body;
+
+        if (isNaN(idOcorrencia)) {
+            return res.status(400).json({ erro: 'ID da ocorrência inválido.' });
+        }
+        if (valor === undefined || isNaN(parseFloat(valor))) {
+            return res.status(400).json({ erro: "O campo 'valor' é obrigatório e tem de ser numérico." });
+        }
+
+        const resultado = await propostaCobrancaService.resolverComContraproposta(
+            idOcorrencia, parseFloat(valor)
+        );
+        return res.status(200).json(resultado);
+    } catch (erro) {
+        console.error('Erro ao resolver com contraproposta:', erro);
+        if (erro.statusCode) return res.status(erro.statusCode).json({ erro: erro.message });
+        return res.status(500).json({ erro: 'Erro interno do servidor.' });
+    }
+};
+
+
+// Aluno aceita a proposta de cobrança
+const aceitarPropostaAluno = async (req, res) => {
+    try {
+        const idProposta = parseInt(req.params.id);
+        if (isNaN(idProposta)) {
+            return res.status(400).json({ erro: 'O ID da proposta de cobrança tem que ser numérico.' });
+        }
+        const idUtilizador = req.user?.id;
+        if (!idUtilizador) {
+            return res.status(401).json({ erro: 'Utilizador não identificado.' });
+        }
+        const resultado = await propostaCobrancaService.aceitarPropostaAluno(idProposta, idUtilizador);
+        return res.status(200).json(resultado);
+    } catch (erro) {
+        console.error('Erro ao aceitar proposta:', erro);
+        if (erro.statusCode) {
+            return res.status(erro.statusCode).json({ erro: erro.message });
+        }
+        return res.status(500).json({ erro: 'Erro interno do servidor.' });
+    }
+};
+
+
 module.exports = {
     obterTodasPropostasCobranca,
     obterPropostaCobranca,
     criarPropostaCobranca,
     atualizarEstadoPropostaCobranca,
-    finalizarPropostaEmContaCorrente
+    finalizarPropostaEmContaCorrente,
+    aceitarPropostaAluno,
+    resolverComContraproposta
 };

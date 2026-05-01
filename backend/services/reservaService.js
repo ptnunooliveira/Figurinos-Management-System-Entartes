@@ -161,12 +161,13 @@ const obterDetalhesReserva = async (idReserva) => {
 };
 
 
-const verificarDisponibilidade = async (idAnuncio, dataInicioPedida, dataFimPedida) => {
+// Foi adicionado o parâmetro "tx" (transaction) com valor por defeito "prisma" para manter compatibilidade
+const verificarDisponibilidade = async (idAnuncio, dataInicioPedida, dataFimPedida, tx = prisma) => {
 
     const inicio = new Date(dataInicioPedida);
     const fim = new Date(dataFimPedida);
 
-    const conflito = await prisma.linha_reserva.findFirst({
+    const conflito = await tx.linha_reserva.findFirst({
         where: {
             id_anuncio: idAnuncio,
             datainicio: { lte: fim },
@@ -187,49 +188,103 @@ const verificarDisponibilidade = async (idAnuncio, dataInicioPedida, dataFimPedi
 // Função que cria nova reserva juntamente com as linhas_reserva - não aceita reservas vazias
 const criarReserva = async (idUtilizador, idFuncionario, dadosBody) => {
 
-    // Estado inicial da reserva, bem como da linha da reserva como 'PENDENTE'
-    const ID_ESTADO_RESERVA = 1;
-    const ID_ESTADO_LINHA_RESERVA = 1;
+    // Compatibilidade: garante que funciona quer o frontend envie { linhas: [...] } ou um array direto [...]
+    const linhasArray = Array.isArray(dadosBody) ? dadosBody : dadosBody.linhas;
 
-    for(const linha of dadosBody.linhas){
+    if (!linhasArray || !Array.isArray(linhasArray) || linhasArray.length === 0) {
+        const erro = new Error("O carrinho de reservas está vazio ou num formato inválido.");
+        erro.status = 400;
+        throw erro;
+    }
 
-        const ocupado = await verificarDisponibilidade(linha.id_anuncio, linha.datainicio, linha.datafim);
+    // Estado inicial por defeito é 'PENDENTE'
+    let ID_ESTADO_RESERVA = 1;
+    let ID_ESTADO_LINHA_RESERVA = 1;
 
-        if(ocupado){
+    // BPMN PN01: Se a reserva for efetuada presencialmente por um funcionário, salta a aprovação
+    if (idFuncionario) {
+        ID_ESTADO_RESERVA = 2; // CONFIRMADA
+        ID_ESTADO_LINHA_RESERVA = 2; // CONFIRMADA
+    }
 
-            const erro = new Error(`O anúncio com o ID ${linha.id_anuncio} já se encontra reservado para as datas selecionadas.`);
-            erro.status = 409;
+    // 1. Verificar conflitos de datas internamente no array do carrinho
+    for (let i = 0; i < linhasArray.length; i++) {
+        const linhaAtual = linhasArray[i];
+        const inicioAtual = new Date(linhaAtual.datainicio);
+        const fimAtual = new Date(linhaAtual.datafim);
+
+        if (inicioAtual > fimAtual) {
+            const erro = new Error(`A data de início não pode ser posterior à data de fim para o anúncio ${linhaAtual.id_anuncio}.`);
+            erro.status = 400;
             throw erro;
+        }
+
+        for (let j = i + 1; j < linhasArray.length; j++) {
+            const outraLinha = linhasArray[j];
+            if (linhaAtual.id_anuncio === outraLinha.id_anuncio) {
+                const inicioOutra = new Date(outraLinha.datainicio);
+                const fimOutra = new Date(outraLinha.datafim);
+
+                // Se o mesmo anúncio estiver em conflito de datas no próprio pedido do carrinho
+                if (inicioAtual <= fimOutra && fimAtual >= inicioOutra) {
+                    const erro = new Error(`Conflito no carrinho: O anúncio com o ID ${linhaAtual.id_anuncio} tem datas sobrepostas no mesmo pedido.`);
+                    erro.status = 409;
+                    throw erro;
+                }
+            }
         }
     }
 
-    const novaReserva = await prisma.reserva.create({
+    // 2. Usar prisma.$transaction garante que a validação na BD e a inserção
+    // do carrinho ocorrem de forma atómica e isolada (evita Race Conditions)
+    const novaReserva = await prisma.$transaction(async (tx) => {
 
-        data: {
+        const linhasComPreco = [];
 
-            id_utilizador: idUtilizador,
-            id_funcionario: idFuncionario,
-            datareserva: new Date(),
-            id_estado: ID_ESTADO_RESERVA,
+        for(const linha of linhasArray){
+            const ocupado = await verificarDisponibilidade(linha.id_anuncio, linha.datainicio, linha.datafim, tx);
 
-            linha_reserva: {
-
-                create: dadosBody.linhas.map((linha) => {
-
-                    return {
-
-                        id_anuncio: linha.id_anuncio,
-                        datainicio: new Date(linha.datainicio),
-                        datafim: new Date(linha.datafim),
-                        id_estado_linha_reserva: ID_ESTADO_LINHA_RESERVA
-                    };
-                })
+            if(ocupado){
+                const erro = new Error(`O anúncio com o ID ${linha.id_anuncio} já se encontra reservado para as datas selecionadas.`);
+                erro.status = 409;
+                throw erro;
             }
-        },
 
-        include: {
-            linha_reserva: true
+            // Obter os detalhes do anúncio para "congelar" o preço no momento da reserva (valordiarioaluguer)
+            const anuncio = await tx.anuncio_escola.findUnique({
+                where: { id: linha.id_anuncio }
+            });
+
+            if (!anuncio) {
+                const erro = new Error(`O anúncio com o ID ${linha.id_anuncio} não foi encontrado.`);
+                erro.status = 404;
+                throw erro;
+            }
+
+            linhasComPreco.push({
+                id_anuncio: linha.id_anuncio,
+                datainicio: new Date(linha.datainicio),
+                datafim: new Date(linha.datafim),
+                valordiario: anuncio.valordiarioaluguer || 0, // Congela o preço ao valor da data da reserva
+                id_estado_linha_reserva: ID_ESTADO_LINHA_RESERVA
+            });
         }
+
+        return await tx.reserva.create({
+            data: {
+                id_utilizador: idUtilizador,
+                id_funcionario: idFuncionario,
+                datareserva: new Date(),
+                id_estado: ID_ESTADO_RESERVA,
+
+                linha_reserva: {
+                    create: linhasComPreco
+                }
+            },
+            include: {
+                linha_reserva: true
+            }
+        });
     });
 
     return novaReserva;

@@ -11,9 +11,11 @@ import { Devolucao } from "./pages/devolucao";
 import { Marketplace } from "./pages/marketplace";
 import { Perfil } from "./pages/perfil";
 import { Administracao } from "./pages/administracao";
+import { AnunciosMarketplace } from "./pages/anuncios-marketplace";
 import { Ocorrencias } from "./pages/ocorrencias";
 import { Faturacao } from "./pages/faturacao";
 import { NaoEncontrado } from "./pages/nao-encontrado";
+import { Carrinho } from "./pages/Carrinho";
 import { isAuthenticated, getUtilizadorAtual } from "./lib/auth";
 
 // Componente de proteção de rota
@@ -48,6 +50,10 @@ export const router = createBrowserRouter([
       { 
         index: true, 
         element: <Dashboard />,
+      },
+      { 
+        path: "carrinho", 
+        element: <Carrinho />,
       },
       { 
         path: "figurinos", 
@@ -90,6 +96,14 @@ export const router = createBrowserRouter([
         element: (
           <FuncionarioRoute>
             <Administracao />
+          </FuncionarioRoute>
+        ),
+      },
+      {
+        path: "anuncios-marketplace",
+        element: (
+          <FuncionarioRoute>
+            <AnunciosMarketplace />
           </FuncionarioRoute>
         ),
       },

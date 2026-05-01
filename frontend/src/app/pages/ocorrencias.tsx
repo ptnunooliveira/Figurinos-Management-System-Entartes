@@ -50,15 +50,13 @@ const ESTADO = {
 
 type AcaoTipo =
   | "registar_orcamento"
-  | "item_em_falta"
   | "atualizar_especificacao"
   | "abate";
 
 const TITULOS_ACAO: Record<AcaoTipo, string> = {
   registar_orcamento: "Registar Orçamento",
-  item_em_falta: "Registar item em falta",
   atualizar_especificacao: "Atualizar especificação do figurino",
-  abate: "Figurino para abate",
+  abate: "Registar baixa do figurino",
 };
 
 export function Ocorrencias() {
@@ -158,24 +156,6 @@ export function Ocorrencias() {
     }
   };
 
-  const handleItemEmFalta = async () => {
-    if (!selecionada?.figurino_id) {
-      toast.error("Esta ocorrência não tem figurino associado.");
-      return;
-    }
-    if (!window.confirm(
-      "Figurino removido. Verifique a possibilidade de criar figurino sem o item em falta."
-    )) return;
-    try {
-      await desativarFigurino(selecionada.figurino_id);
-      toast.success("Figurino desativado");
-      // Abre formulário de proposta de valor ao cliente
-      setAcaoAtiva("item_em_falta");
-    } catch (err: any) {
-      toast.error(err.message || "Erro ao desativar figurino");
-    }
-  };
-
   const handleAtualizarEspecificacao = () => {
     if (!selecionada) return;
     // Pré-preenche o formulário de edição do figurino com os valores atuais
@@ -222,8 +202,19 @@ export function Ocorrencias() {
     }
   };
 
-  const handleAbate = () => {
-    setAcaoAtiva("abate");
+  const handleAbate = async () => {
+    if (!selecionada?.figurino_id) {
+      toast.error("Esta ocorrência não tem figurino associado.");
+      return;
+    }
+    if (!window.confirm("A peça impede a utilização do figurino? O figurino será desativado do catálogo e ficará inativo.")) return;
+    try {
+      await desativarFigurino(selecionada.figurino_id);
+      toast.success("Figurino desativado (Baixa registada)");
+      setAcaoAtiva("abate");
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao desativar figurino");
+    }
   };
 
   const handleRegistarOrcamento = () => {
@@ -380,10 +371,11 @@ export function Ocorrencias() {
         isFuncionario={isFuncionario}
         onVoltar={() => setSelecionada(null)}
         onNecessitaOrcamento={handleNecessitaOrcamento}
-        onItemEmFalta={handleItemEmFalta}
         onAtualizarEspecificacao={handleAtualizarEspecificacao}
         onAbate={handleAbate}
         onRegistarOrcamento={handleRegistarOrcamento}
+        onAceitarContraproposta={handleAceitarContraproposta}
+        onContrapor={handleContrapor}
         onAceitarProposta={handleAceitarProposta}
         onAbrirContestacao={abrirContestacao}
         corEstado={corEstado}
@@ -496,10 +488,11 @@ interface DetalheProps {
   isFuncionario: boolean;
   onVoltar: () => void;
   onNecessitaOrcamento: () => void;
-  onItemEmFalta: () => void;
   onAtualizarEspecificacao: () => void;
   onAbate: () => void;
   onRegistarOrcamento: () => void;
+  onAceitarContraproposta: (valor: number) => void;
+  onContrapor: () => void;
   onAceitarProposta: (idProposta: number) => void;
   onAbrirContestacao: (idProposta: number) => void;
   corEstado: (estado: string) => string;
@@ -549,10 +542,11 @@ function DetalheOcorrencia(props: DetalheProps) {
     isFuncionario,
     onVoltar,
     onNecessitaOrcamento,
-    onItemEmFalta,
     onAtualizarEspecificacao,
     onAbate,
     onRegistarOrcamento,
+    onAceitarContraproposta,
+    onContrapor,
     onAceitarProposta,
     onAbrirContestacao,
     corEstado,
@@ -760,34 +754,27 @@ function DetalheOcorrencia(props: DetalheProps) {
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Ações</h2>
 
           {aguardar && !acaoAtiva && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <BotaoAcao
                 onClick={onNecessitaOrcamento}
                 cor="amber"
                 icone={Clock}
                 titulo="Necessita orçamento"
-                descricao="A peça precisa de reparação por um fornecedor externo (ex: costureira). Coloca a ocorrência em 'A aguardar orçamento' até o fornecedor responder."
-              />
-              <BotaoAcao
-                onClick={onItemEmFalta}
-                cor="red"
-                icone={PackageX}
-                titulo="Registar item em falta"
-                descricao="A peça em falta impede a utilização do figurino. Desativa o figurino do catálogo e abre proposta de valor a cobrar ao cliente. A ocorrência mantém-se 'A aguardar' até o cliente aceitar."
+                descricao="A peça precisa de reparação externa. Coloca a ocorrência em 'A aguardar orçamento'."
               />
               <BotaoAcao
                 onClick={onAtualizarEspecificacao}
                 cor="blue"
                 icone={Wrench}
-                titulo="Atualizar especificação do figurino"
-                descricao="O dano não impede a utilização. Mantém o figurino ativo (atualizando a descrição/estado) e abre proposta de valor de penalização ao cliente."
+                titulo="Atualizar especificação"
+                descricao="O dano/falta NÃO impede a utilização. Mantém o figurino ativo e envia proposta de penalização."
               />
               <BotaoAcao
                 onClick={onAbate}
-                cor="gray"
-                icone={Hammer}
-                titulo="Figurino para abate"
-                descricao="O figurino está irrecuperável. Marca-o para abate e abre proposta de valor a cobrar ao cliente."
+                cor="red"
+                icone={PackageX}
+                titulo="Registar baixa"
+                descricao="O dano/falta IMPEDE a utilização. Desativa o figurino do catálogo e envia proposta de cobrança."
               />
             </div>
           )}
@@ -796,7 +783,7 @@ function DetalheOcorrencia(props: DetalheProps) {
             <div className="space-y-3">
               {valorContrapropostaAluno != null && (
                 <BotaoAcao
-                  onClick={() => onAceitarContraproposta(valorContrapropostaAluno)}
+                onClick={() => onAceitarContraproposta(Number(valorContrapropostaAluno))}
                   cor="green"
                   icone={ThumbsUp}
                   titulo={`Aceitar contraproposta do aluno (€${Number(valorContrapropostaAluno).toFixed(2)})`}

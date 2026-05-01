@@ -14,6 +14,7 @@ import { Administracao } from "./pages/administracao";
 import { Ocorrencias } from "./pages/ocorrencias";
 import { Faturacao } from "./pages/faturacao";
 import { NaoEncontrado } from "./pages/nao-encontrado";
+import { Carrinho } from "./pages/Carrinho";
 import { isAuthenticated, getUtilizadorAtual } from "./lib/auth";
 
 // Componente de proteção de rota
@@ -48,6 +49,10 @@ export const router = createBrowserRouter([
       { 
         index: true, 
         element: <Dashboard />,
+      },
+      { 
+        path: "carrinho", 
+        element: <Carrinho />,
       },
       { 
         path: "figurinos", 

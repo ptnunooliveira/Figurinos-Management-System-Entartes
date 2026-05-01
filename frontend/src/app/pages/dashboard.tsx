@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Calendar, Shirt, ShoppingBag, AlertCircle, TrendingUp, FileText, Bell } from "lucide-react";
+import { Calendar, Shirt, ShoppingBag, AlertCircle, TrendingUp, FileText, Bell, ShoppingCart } from "lucide-react";
 import { Link } from "react-router";
 import { getUtilizadorAtual } from "../lib/auth";
 import { getReservas, getMinhasReservas, getOcorrencias, getMinhasOcorrencias, getMarketplace, getMarketplaceGestao, getMarketplaceDoUtilizador, getAnunciosEscola } from "../lib/services";
@@ -346,7 +346,7 @@ export function Dashboard() {
       {utilizadorAtual?.tipo === 'aluno' && (
         <div className="bg-white rounded-xl shadow-sm p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Ações Rápidas</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <Link
               to="/figurinos"
               className="flex items-center gap-3 p-4 border-2 border-gray-200 rounded-lg hover:border-purple-300 hover:bg-purple-50 transition-colors"
@@ -375,6 +375,16 @@ export function Dashboard() {
               <div>
                 <p className="font-medium text-gray-900">Marketplace</p>
                 <p className="text-sm text-gray-500">Anunciar figurino</p>
+              </div>
+            </Link>
+            <Link
+              to="/carrinho"
+              className="flex items-center gap-3 p-4 border-2 border-gray-200 rounded-lg hover:border-purple-300 hover:bg-purple-50 transition-colors"
+            >
+              <ShoppingCart className="w-6 h-6 text-purple-600" />
+              <div>
+                <p className="font-medium text-gray-900">Carrinho</p>
+                <p className="text-sm text-gray-500">Finalizar as suas reservas</p>
               </div>
             </Link>
           </div>

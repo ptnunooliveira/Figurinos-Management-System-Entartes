@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from "react-router";
 import { ArrowLeft, CheckCircle, AlertTriangle } from "lucide-react";
 import SignatureCanvas from "react-signature-canvas";
 import { getUtilizadorAtual } from "../lib/auth";
-import { getReservaDetalhes, getEstadosCondicao, criarChecklist, getChecklistsReserva } from "../lib/services";
+import { getReservaDetalhes, getEstadosCondicao, criarChecklist, getChecklistsReserva, criarOcorrencia } from "../lib/services";
 import type { AuxiliarItem, ChecklistAPI } from "../lib/services";
 import type { Reserva } from "../lib/dados-mock";
 import { toast } from "sonner";
@@ -28,6 +28,8 @@ export function Devolucao() {
   const [idEstadoLevantamento, setIdEstadoLevantamento] = useState<number | null>(null);
   const [observacoesGerais, setObservacoesGerais] = useState("");
   const [ocorrenciaAlerta, setOcorrenciaAlerta] = useState<{ id: number } | null>(null);
+  const [checklistsData, setChecklistsData] = useState<ChecklistAPI[]>([]);
+  const [linhaSelecionadaId, setLinhaSelecionadaId] = useState<number | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -38,27 +40,13 @@ export function Devolucao() {
       getChecklistsReserva(Number(id)),
     ])
       .then(([r, estados, checklists]) => {
-        if (r) {
+        if (r && r.linhas.length > 0) {
           setReserva(r);
-
-          const acessorios = r.linhas[0]?.anuncio?.figurino?.acessorios ?? [];
-          setChecklist(acessorios.map((acc, idx) => ({
-            id: idx + 1,
-            nome: acc.nome,
-            verificado: false,
-            temProblema: false,
-          })));
-
-          const idFigurino = r.linhas[0]?.anuncio?.figurino?.id;
-          const checklistLevantamento = (checklists as ChecklistAPI[]).find(c => c.id_tipo_checklist === 1);
-          const itemLevantamento = checklistLevantamento?.checklist_item.find(it => it.idfigurino === idFigurino);
-          const idLev = itemLevantamento?.id_estado ?? null;
-
-          setIdEstadoLevantamento(idLev);
-          setIdEstadoFigurinoSel(idLev ?? estados[0]?.id ?? null);
+          setLinhaSelecionadaId(r.linhas[0].id);
         }
 
         setEstadosCondicao(estados);
+        setChecklistsData(checklists as ChecklistAPI[]);
       })
       .catch(() => {
         toast.error("Erro ao carregar dados da reserva");
@@ -68,7 +56,32 @@ export function Devolucao() {
       });
   }, [id]);
 
-  const linhaReserva = reserva?.linhas[0];
+  useEffect(() => {
+    if (!reserva || !linhaSelecionadaId) return;
+    
+    const linha = reserva.linhas.find(l => l.id === linhaSelecionadaId);
+    if (!linha) return;
+
+    const acessorios = linha.anuncio?.figurino?.acessorios ?? [];
+    setChecklist(acessorios.map((acc, idx) => ({
+      id: idx + 1,
+      nome: acc.nome,
+      verificado: false,
+      temProblema: false,
+    })));
+
+    const idFigurino = linha.anuncio?.figurino?.id;
+    const checklistLevantamento = checklistsData.find(c => c.id_tipo_checklist === 1);
+    const itemLevantamento = checklistLevantamento?.checklist_item.find(it => it.idfigurino === idFigurino);
+    const idLev = itemLevantamento?.id_estado ?? null;
+
+    setIdEstadoLevantamento(idLev);
+    setIdEstadoFigurinoSel(idLev ?? estadosCondicao[0]?.id ?? null);
+    setObservacoesGerais("");
+    setOcorrenciaAlerta(null); // Reseta alerta se trocar de peça
+  }, [linhaSelecionadaId, reserva, checklistsData, estadosCondicao]);
+
+  const linhaReserva = reserva?.linhas.find(l => l.id === linhaSelecionadaId);
   const figurino = linhaReserva?.anuncio.figurino;
   const estadoInicialNome = idEstadoLevantamento
     ? estadosCondicao.find(e => e.id === idEstadoLevantamento)?.nome ?? figurino?.estado ?? "-"
@@ -119,20 +132,31 @@ export function Devolucao() {
         id_tipo_checklist: 2,
         assinaturaFuncionario,
         assinaturaEncarregado: assinaturaCliente,
-        itens: reserva.linhas.map(linha => ({
-          id_linha_reserva: linha.id,
-          idfigurino: linha.anuncio.figurino.id,
+        itens: [{
+          id_linha_reserva: linhaReserva!.id,
+          idfigurino: linhaReserva!.anuncio.figurino.id,
           id_estado: estadoId,
           observacoes: observacoesGerais || undefined,
-        })),
+        }],
       });
 
-      const ocorrenciaGerada = Array.isArray(result?.ocorrencias) ? result.ocorrencias[0] : null;
+      let ocorrenciaGerada = Array.isArray(result?.ocorrencias) ? result.ocorrencias[0] : null;
+
+      // Verifica se existem acessórios assinalados com problema
+      const problemasAcessorios = checklist.filter(i => i.temProblema);
+      if (!ocorrenciaGerada && problemasAcessorios.length > 0) {
+        const desc = "Problema com acessórios: " + problemasAcessorios.map(p => p.nome).join(", ");
+        ocorrenciaGerada = await criarOcorrencia({
+          id_linha_reserva: linhaReserva!.id,
+          descricao: desc
+        });
+      }
+
       if (ocorrenciaGerada) {
         setOcorrenciaAlerta({ id: ocorrenciaGerada.id });
-        toast.success("Devolucao registada com ocorrencia automatica");
+        toast.success("Devolução registada com ocorrência associada.");
       } else {
-        toast.success("Devolucao registada");
+        toast.success("Devolução registada com sucesso.");
         setTimeout(() => navigate("/reservas"), 1500);
       }
     } catch (err: any) {
@@ -194,6 +218,24 @@ export function Devolucao() {
 
       {!ocorrenciaAlerta && (
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Seletor de Item da Reserva */}
+          {reserva && reserva.linhas.length > 1 && (
+            <div className="bg-white rounded-xl shadow-sm p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Selecione o Item a Devolver</h2>
+              <select
+                value={linhaSelecionadaId ?? ""}
+                onChange={(e) => setLinhaSelecionadaId(Number(e.target.value))}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              >
+                {reserva.linhas.map(linha => (
+                  <option key={linha.id} value={linha.id}>
+                    {linha.anuncio.figurino.nome} (De {new Date(linha.data_inicio).toLocaleDateString('pt-PT')} a {new Date(linha.data_fim).toLocaleDateString('pt-PT')}) - {linha.estado}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <div className="bg-white rounded-xl shadow-sm p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Informacao do Figurino</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

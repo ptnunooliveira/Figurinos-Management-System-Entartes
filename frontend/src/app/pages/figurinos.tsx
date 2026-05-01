@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Search, Filter, Shirt, Plus, Trash2, Eye, Edit, Calendar, X } from "lucide-react";
 import { Link } from "react-router";
 import { getUtilizadorAtual } from "../lib/auth";
-import { getFigurinosRaw, getAnunciosEscola, desativarFigurino, atualizarFigurino, type FigurinoAPI, type AnuncioEscolaAPI } from "../lib/services";
+import { getFigurinosRaw, getAnunciosEscola, desativarFigurino, atualizarFigurino, criarAcessorio, type FigurinoAPI, type AnuncioEscolaAPI } from "../lib/services";
 import { useCart } from "./CartContext";
 import { toast } from "sonner";
 
@@ -19,6 +19,8 @@ export function Figurinos() {
   const [mostrarModalReserva, setMostrarModalReserva] = useState(false);
   const [mostrarModalVer, setMostrarModalVer] = useState(false);
   const [mostrarModalEditar, setMostrarModalEditar] = useState(false);
+  const [mostrarModalAcessorio, setMostrarModalAcessorio] = useState(false);
+  const [nomeNovoAcessorio, setNomeNovoAcessorio] = useState("");
   const [figurinoSelecionado, setFigurinoSelecionado] = useState<FigurinoAPI | null>(null);
   const [figurinoEditando, setFigurinoEditando] = useState<FigurinoAPI | null>(null);
   const [dataInicio, setDataInicio] = useState("");
@@ -34,6 +36,18 @@ export function Figurinos() {
     getFigurinosRaw().then(setFigurinos);
     getAnunciosEscola().then(setAnunciosEscola);
   }, [utilizadorAtual?.tipo]);
+
+  const handleCriarAcessorio = async () => {
+    if (!nomeNovoAcessorio.trim()) return;
+    try {
+      await criarAcessorio(nomeNovoAcessorio.trim());
+      toast.success(`Acessório "${nomeNovoAcessorio.trim()}" criado com sucesso!`);
+      setNomeNovoAcessorio("");
+      setMostrarModalAcessorio(false);
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao criar acessório");
+    }
+  };
 
   const handleRemoverFigurino = async (id: number, descricao: string) => {
     if (!window.confirm(`Tem a certeza que deseja remover o figurino "${descricao}"?`)) return;
@@ -184,14 +198,23 @@ export function Figurinos() {
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Catálogo de Figurinos</h1>
           <p className="text-gray-600">Explore a nossa coleção completa de figurinos disponíveis</p>
         </div>
-        {utilizadorAtual?.tipo === 'funcionario' && (
-          <Link
-            to="/figurinos/criar"
-            className="flex items-center gap-2 bg-gradient-to-r from-fig-purple to-fig-magenta text-white px-6 py-3 rounded-lg hover:shadow-lg transition-all"
-          >
-            <Plus className="w-5 h-5" />
-            Criar Figurino
-          </Link>
+        {(utilizadorAtual?.tipo === 'funcionario' || utilizadorAtual?.perfil === 'ADMIN') && (
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setMostrarModalAcessorio(true)}
+              className="flex items-center gap-2 border border-purple-600 text-purple-600 hover:bg-purple-50 px-6 py-3 rounded-lg transition-colors"
+            >
+              <Plus className="w-5 h-5" />
+              Criar Acessório
+            </button>
+            <Link
+              to="/figurinos/criar"
+              className="flex items-center gap-2 bg-gradient-to-r from-fig-purple to-fig-magenta text-white px-6 py-3 rounded-lg hover:shadow-lg transition-all"
+            >
+              <Plus className="w-5 h-5" />
+              Criar Figurino
+            </Link>
+          </div>
         )}
       </div>
 
@@ -349,7 +372,7 @@ export function Figurinos() {
                   )}
 
                   <div className="mt-auto pt-3 border-t">
-                    {utilizadorAtual?.tipo === 'funcionario' ? (
+                    {utilizadorAtual?.tipo === 'funcionario' || utilizadorAtual?.perfil === 'ADMIN' ? (
                       <div className="flex items-center justify-end gap-4 text-sm">
                         <button
                           onClick={() => handleAbrirVer(figurino)}
@@ -612,6 +635,47 @@ export function Figurinos() {
               >
                 Guardar
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {mostrarModalAcessorio && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-sm w-full">
+            <div className="p-6 border-b flex items-center justify-between">
+              <h2 className="text-xl font-bold text-gray-900">Criar Acessório</h2>
+              <button onClick={() => { setMostrarModalAcessorio(false); setNomeNovoAcessorio(""); }} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nome do Acessório</label>
+                <input
+                  type="text"
+                  value={nomeNovoAcessorio}
+                  onChange={(e) => setNomeNovoAcessorio(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleCriarAcessorio()}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  placeholder="Ex: Chapéu, Luvas, Cinto..."
+                  autoFocus
+                />
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => { setMostrarModalAcessorio(false); setNomeNovoAcessorio(""); }}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleCriarAcessorio}
+                  className="flex-1 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+                >
+                  Criar
+                </button>
+              </div>
             </div>
           </div>
         </div>

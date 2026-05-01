@@ -35,13 +35,14 @@ const getUserById = async (req, res) => {
 const updateUser = async (req, res) => {
     try {
         const { id } = req.params;
-        const { nome, email, password, ativo } = req.body;
+        const { nome, email, password, ativo, contacto } = req.body;
 
         const updatedUser = await userService.updateUser(id, {
             nome,
             email,
             password,
-            ativo
+            ativo,
+            contacto
         });
 
         return res.status(200).json({

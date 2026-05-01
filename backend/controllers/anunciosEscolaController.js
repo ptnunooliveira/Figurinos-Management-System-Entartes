@@ -95,6 +95,9 @@ const eliminarAnuncioEscola = async (req, res) => {
 
     } catch (erro) {
         console.error('Erro no controller de anúncios da escola:', erro);
+        if (erro.code === 'HAS_RESERVAS') {
+            return res.status(409).json({ erro: erro.message });
+        }
         return res.status(500).json({ erro: 'Ocorreu um erro ao eliminar o anúncio da escola.' });
     }
 };

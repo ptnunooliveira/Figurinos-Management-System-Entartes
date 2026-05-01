@@ -15,7 +15,7 @@ export function Reservas() {
   const [estadoSelecionado, setEstadoSelecionado] = useState<string>("todos");
 
   const carregarReservas = () => {
-    const fn = utilizadorAtual?.tipo === 'funcionario' ? getReservas : getMinhasReservas;
+    const fn = utilizadorAtual?.tipo === 'funcionario' || utilizadorAtual?.perfil === 'ADMIN' ? getReservas : getMinhasReservas;
     fn().then(setReservas);
   };
 
@@ -105,7 +105,7 @@ export function Reservas() {
       {/* Cabeçalho */}
       <div>
         <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          {utilizadorAtual?.tipo === 'funcionario' ? 'Gestão de Reservas' : 'Minhas Reservas'}
+          {utilizadorAtual?.tipo === 'funcionario' || utilizadorAtual?.perfil === 'ADMIN' ? 'Gestão de Reservas' : 'Minhas Reservas'}
         </h1>
         <p className="text-gray-600">Gerencie as reservas de figurinos</p>
       </div>
@@ -258,7 +258,7 @@ export function Reservas() {
               </div>
 
               {/* Ações da Reserva */}
-              {utilizadorAtual?.tipo === 'funcionario' && abaAtiva === "ativas" && (
+              {utilizadorAtual?.tipo === 'funcionario' || utilizadorAtual?.perfil === 'ADMIN' && abaAtiva === "ativas" && (
                 (() => {
                   const e = reserva.estado?.toUpperCase();
                   if (e === 'PENDENTE') {
@@ -322,7 +322,7 @@ export function Reservas() {
                   return null;
                 })()
               )}
-              {utilizadorAtual?.tipo !== 'funcionario' && abaAtiva === "ativas" && (
+              {utilizadorAtual?.tipo !== 'funcionario' && utilizadorAtual?.perfil !== 'ADMIN' && abaAtiva === "ativas" && (
                 (() => {
                   const e = reserva.estado?.toUpperCase();
                   const podeCanc = e === 'CONFIRMADA' || e === 'PENDENTE';
@@ -349,12 +349,12 @@ export function Reservas() {
             </h3>
             <p className="text-gray-600 mb-6">
               {abaAtiva === "ativas"
-                ? utilizadorAtual?.tipo === 'funcionario'
+                ? utilizadorAtual?.tipo === 'funcionario' || utilizadorAtual?.perfil === 'ADMIN'
                   ? "Não há reservas ativas no momento."
                   : "Ainda não tem reservas ativas. Explore o catálogo!"
                 : "Ainda não há histórico de reservas."}
             </p>
-            {abaAtiva === "ativas" && utilizadorAtual?.tipo !== 'funcionario' && (
+            {abaAtiva === "ativas" && utilizadorAtual?.tipo !== 'funcionario' && utilizadorAtual?.perfil !== 'ADMIN' && (
               <Link
                 to="/figurinos"
                 className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg transition-colors inline-block"

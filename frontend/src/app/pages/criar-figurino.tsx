@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Upload, X, Plus, Save, ArrowLeft } from "lucide-react";
 import { Link, useNavigate } from "react-router";
 import {
-  getCategorias, getTiposFigurino, getSexos, getEstadosCondicao, getAcessorios,
+  getCategorias, getTiposFigurino, getSexos, getEstadosCondicao, getAcessorios, criarAcessorio,
   type AuxiliarItem,
 } from "../lib/services";
 import { apiFetch } from "../lib/api";
@@ -70,12 +70,17 @@ export function CriarFigurino() {
     );
   };
 
-  const adicionarNovoAcessorio = () => {
-    if (novoAcessorio.trim()) {
-      // Em produção, isto criaria um novo acessório na base de dados
-      toast.success(`Acessório "${novoAcessorio}" adicionado`);
+  const adicionarNovoAcessorio = async () => {
+    if (!novoAcessorio.trim()) return;
+    try {
+      const criado = await criarAcessorio(novoAcessorio.trim());
+      setAcessorios(prev => [...prev, criado]);
+      setAcessoriosSelecionados(prev => [...prev, criado.id]);
+      toast.success(`Acessório "${criado.nome}" criado e selecionado!`);
       setNovoAcessorio("");
       setMostrarNovoAcessorio(false);
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao criar acessório");
     }
   };
 

@@ -156,6 +156,18 @@ export const getSexos = () => getAuxiliar('/pesquisa/sexos');
 export const getEstadosCondicao = () => getAuxiliar('/pesquisa/estados-condicao');
 export const getAcessorios = () => getAuxiliar('/pesquisa/acessorios');
 
+export async function criarAcessorio(nome: string): Promise<AuxiliarItem> {
+  const res = await apiFetch('/pesquisa/acessorios', {
+    method: 'POST',
+    body: JSON.stringify({ nome }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error ?? err.erro ?? 'Erro ao criar acessório');
+  }
+  return res.json();
+}
+
 // ─── Reservas ───────────────────────────────────────────────────────────────
 
 function mapLinhaReserva(lr: any): LinhaReserva {
@@ -824,7 +836,7 @@ export async function getUtilizadores(): Promise<any[]> {
 }
 
 export async function updateUser(id: number, dados: { nome?: string; email?: string; contacto?: string }): Promise<any> {
-  const res = await apiFetch(`/utilizadores/${id}`, {
+  const res = await apiFetch(`/users/${id}`, {
     method: 'PUT',
     body: JSON.stringify(dados),
   });

@@ -2,7 +2,11 @@ import { useState, useEffect } from "react";
 import { Search, Filter, Shirt, Plus, Trash2, Eye, Edit, Calendar, X } from "lucide-react";
 import { Link } from "react-router";
 import { getUtilizadorAtual } from "../lib/auth";
-import { getFigurinosRaw, getAnunciosEscola, desativarFigurino, atualizarFigurino, type FigurinoAPI, type AnuncioEscolaAPI } from "../lib/services";
+import {
+  getFigurinosRaw, getAnunciosEscola, eliminarFigurino, atualizarFigurino,
+  getCategorias, getTiposFigurino, getSexos, getEstadosCondicao, getAcessorios,
+  type FigurinoAPI, type AnuncioEscolaAPI, type AuxiliarItem,
+} from "../lib/services";
 import { useCart } from "./CartContext";
 import { toast } from "sonner";
 
@@ -10,6 +14,11 @@ export function Figurinos() {
   const utilizadorAtual = getUtilizadorAtual();
   const [figurinos, setFigurinos] = useState<FigurinoAPI[]>([]);
   const [anunciosEscola, setAnunciosEscola] = useState<AnuncioEscolaAPI[]>([]);
+  const [categorias, setCategorias] = useState<AuxiliarItem[]>([]);
+  const [tipos, setTipos] = useState<AuxiliarItem[]>([]);
+  const [sexos, setSexos] = useState<AuxiliarItem[]>([]);
+  const [estadosCondicao, setEstadosCondicao] = useState<AuxiliarItem[]>([]);
+  const [acessorios, setAcessorios] = useState<AuxiliarItem[]>([]);
   const [termoPesquisa, setTermoPesquisa] = useState("");
   const [categoriaSelecionada, setCategoriaSelecionada] = useState<string>("todas");
   const [tipoSelecionado, setTipoSelecionado] = useState<string>("todos");
@@ -24,10 +33,16 @@ export function Figurinos() {
   const [dataInicio, setDataInicio] = useState("");
   const [dataFim, setDataFim] = useState("");
   const [formEditacao, setFormEditacao] = useState({
+    titulo: "",
     descricao: "",
     tamanho: "",
     localizacao: "",
+    categoria: "",
+    tipo: "",
+    sexo: "",
+    estado: "",
   });
+  const [acessoriosEditacao, setAcessoriosEditacao] = useState<number[]>([]);
   const { adicionarAoCarrinho } = useCart();
 
   useEffect(() => {
@@ -35,10 +50,18 @@ export function Figurinos() {
     getAnunciosEscola().then(setAnunciosEscola);
   }, [utilizadorAtual?.tipo]);
 
+  useEffect(() => {
+    getCategorias().then(setCategorias);
+    getTiposFigurino().then(setTipos);
+    getSexos().then(setSexos);
+    getEstadosCondicao().then(setEstadosCondicao);
+    getAcessorios().then(setAcessorios);
+  }, []);
+
   const handleRemoverFigurino = async (id: number, descricao: string) => {
     if (!window.confirm(`Tem a certeza que deseja remover o figurino "${descricao}"?`)) return;
     try {
-      await desativarFigurino(id);
+      await eliminarFigurino(id);
       toast.success(`Figurino "${descricao}" removido com sucesso!`);
       setFigurinos(prev => prev.filter(f => f.id !== id));
     } catch (err: any) {
@@ -59,29 +82,56 @@ export function Figurinos() {
   const handleAbrirEditar = (figurino: FigurinoAPI) => {
     setFigurinoEditando(figurino);
     setFormEditacao({
+      titulo: figurino.titulo ?? "",
       descricao: figurino.descricao ?? "",
       tamanho: figurino.tamanho ?? "",
       localizacao: figurino.localizacao ?? "",
+      categoria: figurino.categoria?.id ? String(figurino.categoria.id) : "",
+      tipo: figurino.tipo_figurino?.id ? String(figurino.tipo_figurino.id) : "",
+      sexo: figurino.sexo?.id ? String(figurino.sexo.id) : "",
+      estado: figurino.estado_condicao?.id ? String(figurino.estado_condicao.id) : "",
     });
+    setAcessoriosEditacao(figurino.figurino_acessorio.map((fa) => fa.id_acessorio));
     setMostrarModalEditar(true);
   };
 
   const handleFecharEditar = () => {
     setMostrarModalEditar(false);
     setFigurinoEditando(null);
-    setFormEditacao({ descricao: "", tamanho: "", localizacao: "" });
+    setFormEditacao({ titulo: "", descricao: "", tamanho: "", localizacao: "", categoria: "", tipo: "", sexo: "", estado: "" });
+    setAcessoriosEditacao([]);
+  };
+
+  const toggleAcessorioEdicao = (idAcessorio: number) => {
+    setAcessoriosEditacao(prev =>
+      prev.includes(idAcessorio)
+        ? prev.filter(id => id !== idAcessorio)
+        : [...prev, idAcessorio]
+    );
   };
 
   const handleSubmeterEdicao = async () => {
     if (!figurinoEditando) return;
-    if (!formEditacao.descricao.trim()) {
-      toast.error("A descrição é obrigatória");
+    if (!formEditacao.titulo.trim() || !formEditacao.descricao.trim()) {
+      toast.error("O título e a descrição são obrigatórios");
       return;
     }
     try {
-      await atualizarFigurino(figurinoEditando.id, formEditacao);
+      await atualizarFigurino(figurinoEditando.id, {
+        titulo: formEditacao.titulo.trim(),
+        descricao: formEditacao.descricao.trim(),
+        tamanho: formEditacao.tamanho || null,
+        localizacao: formEditacao.localizacao || null,
+        id_categoria: formEditacao.categoria ? parseInt(formEditacao.categoria) : null,
+        id_tipo: formEditacao.tipo ? parseInt(formEditacao.tipo) : null,
+        id_sexo: formEditacao.sexo ? parseInt(formEditacao.sexo) : null,
+        id_estado_figurino: formEditacao.estado ? parseInt(formEditacao.estado) : null,
+        id_acessorios: acessoriosEditacao,
+        substituir_acessorios: true,
+      });
       toast.success("Figurino atualizado com sucesso!");
-      getFigurinosRaw().then(setFigurinos);
+      const figurinosAtualizados = await getFigurinosRaw();
+      setFigurinos(figurinosAtualizados);
       handleFecharEditar();
     } catch (err: any) {
       toast.error(err.message || "Erro ao atualizar figurino");
@@ -132,7 +182,7 @@ export function Figurinos() {
 
     adicionarAoCarrinho({
       id_anuncio: anuncio.id,
-      figurino_nome: figurinoSelecionado.descricao ?? "Figurino",
+      figurino_nome: figurinoSelecionado.titulo ?? figurinoSelecionado.descricao ?? "Figurino",
       datainicio: dataInicio,
       datafim: dataFim,
     });
@@ -147,10 +197,12 @@ export function Figurinos() {
     const tamanho = figurino.tamanho ?? '';
     const sexo = figurino.sexo?.nome ?? '';
     const estado = figurino.estado_condicao?.nome ?? '';
+    const titulo = figurino.titulo ?? '';
     const descricao = figurino.descricao ?? '';
     const acessorios = figurino.figurino_acessorio.map((fa) => fa.acessorio.nome);
 
     const correspondePesquisa =
+      titulo.toLowerCase().includes(termoPesquisa.toLowerCase()) ||
       descricao.toLowerCase().includes(termoPesquisa.toLowerCase()) ||
       categoria.toLowerCase().includes(termoPesquisa.toLowerCase()) ||
       tipo.toLowerCase().includes(termoPesquisa.toLowerCase()) ||
@@ -303,7 +355,7 @@ export function Figurinos() {
               <div className="flex-1 p-5 sm:py-5 sm:pr-5 sm:pl-0">
                 <div className="flex flex-col h-full">
                   <div className="mb-3">
-                    <h3 className="font-semibold text-gray-900 text-lg mb-1">{figurino.descricao ?? '—'}</h3>
+                    <h3 className="font-semibold text-gray-900 text-lg mb-1">{figurino.titulo ?? figurino.descricao ?? '—'}</h3>
                     <p className="text-sm text-gray-500">{figurino.localizacao ?? ''}</p>
                   </div>
 
@@ -366,7 +418,7 @@ export function Figurinos() {
                           Editar
                         </button>
                         <button
-                          onClick={() => handleRemoverFigurino(figurino.id, figurino.descricao ?? '')}
+                          onClick={() => handleRemoverFigurino(figurino.id, figurino.titulo ?? figurino.descricao ?? '')}
                           className="flex items-center gap-1.5 text-red-600 hover:text-red-700 transition-colors"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -426,7 +478,7 @@ export function Figurinos() {
                   <Shirt className="w-10 h-10 text-fig-purple/40" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-semibold text-gray-900 text-lg mb-1">{figurinoSelecionado.descricao ?? '—'}</h3>
+                  <h3 className="font-semibold text-gray-900 text-lg mb-1">{figurinoSelecionado.titulo ?? figurinoSelecionado.descricao ?? '—'}</h3>
                   {figurinoSelecionado.categoria && (
                     <p className="text-sm text-gray-600 mb-1">{figurinoSelecionado.categoria.nomecategoria}</p>
                   )}
@@ -499,7 +551,7 @@ export function Figurinos() {
       {/* Modal Ver */}
       {mostrarModalVer && figurinoSelecionado && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b sticky top-0 bg-white">
               <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold text-gray-900">Detalhes do Figurino</h2>
@@ -510,8 +562,12 @@ export function Figurinos() {
             </div>
             <div className="p-6 space-y-4">
               <div>
+                <label className="text-sm font-medium text-gray-700">Título</label>
+                <p className="mt-1 text-gray-900">{figurinoSelecionado.titulo ?? '—'}</p>
+              </div>
+              <div>
                 <label className="text-sm font-medium text-gray-700">Descrição</label>
-                <p className="mt-1 text-gray-900">{figurinoSelecionado.descricao ?? '—'}</p>
+                <p className="mt-1 text-gray-900 whitespace-pre-wrap">{figurinoSelecionado.descricao ?? '—'}</p>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -543,6 +599,20 @@ export function Figurinos() {
                   <p className="mt-1 text-gray-900">{figurinoSelecionado.estado_condicao?.nome ?? '—'}</p>
                 </div>
               </div>
+              <div>
+                <label className="text-sm font-medium text-gray-700">Acessórios incluídos</label>
+                {figurinoSelecionado.figurino_acessorio.length > 0 ? (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {figurinoSelecionado.figurino_acessorio.map((fa) => (
+                      <span key={fa.id_acessorio} className="px-3 py-1 bg-fig-green/10 text-fig-green text-sm rounded-full">
+                        {fa.acessorio.nome}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="mt-1 text-gray-900">—</p>
+                )}
+              </div>
             </div>
             <div className="p-6 border-t bg-gray-50">
               <button
@@ -559,7 +629,7 @@ export function Figurinos() {
       {/* Modal Editar */}
       {mostrarModalEditar && figurinoEditando && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b sticky top-0 bg-white">
               <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold text-gray-900">Editar Figurino</h2>
@@ -570,11 +640,20 @@ export function Figurinos() {
             </div>
             <div className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Descrição *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Título *</label>
                 <input
                   type="text"
+                  value={formEditacao.titulo}
+                  onChange={(e) => setFormEditacao({...formEditacao, titulo: e.target.value})}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Descrição *</label>
+                <textarea
                   value={formEditacao.descricao}
                   onChange={(e) => setFormEditacao({...formEditacao, descricao: e.target.value})}
+                  rows={4}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 />
               </div>
@@ -597,6 +676,87 @@ export function Figurinos() {
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   />
                 </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Categoria</label>
+                  <select
+                    value={formEditacao.categoria}
+                    onChange={(e) => setFormEditacao({...formEditacao, categoria: e.target.value})}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  >
+                    <option value="">Sem categoria</option>
+                    {categorias.map((categoria) => (
+                      <option key={categoria.id} value={categoria.id}>{categoria.nome}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Tipo</label>
+                  <select
+                    value={formEditacao.tipo}
+                    onChange={(e) => setFormEditacao({...formEditacao, tipo: e.target.value})}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  >
+                    <option value="">Sem tipo</option>
+                    {tipos.map((tipo) => (
+                      <option key={tipo.id} value={tipo.id}>{tipo.nome}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Género</label>
+                  <select
+                    value={formEditacao.sexo}
+                    onChange={(e) => setFormEditacao({...formEditacao, sexo: e.target.value})}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  >
+                    <option value="">Sem género</option>
+                    {sexos.map((sexo) => (
+                      <option key={sexo.id} value={sexo.id}>{sexo.nome}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Estado do Figurino</label>
+                  <select
+                    value={formEditacao.estado}
+                    onChange={(e) => setFormEditacao({...formEditacao, estado: e.target.value})}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  >
+                    <option value="">Sem estado</option>
+                    {estadosCondicao.map((estado) => (
+                      <option key={estado.id} value={estado.id}>{estado.nome}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Acessórios incluídos</label>
+                {acessorios.length === 0 ? (
+                  <p className="text-sm text-gray-400 italic">Nenhum acessório disponível</p>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {acessorios.map((acessorio) => (
+                      <label
+                        key={acessorio.id}
+                        className={`flex items-center gap-2 p-3 border-2 rounded-lg cursor-pointer transition-colors ${
+                          acessoriosEditacao.includes(acessorio.id)
+                            ? 'border-purple-500 bg-purple-50'
+                            : 'border-gray-200 hover:border-purple-300'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={acessoriosEditacao.includes(acessorio.id)}
+                          onChange={() => toggleAcessorioEdicao(acessorio.id)}
+                          className="w-4 h-4 text-purple-600 rounded focus:ring-purple-500"
+                        />
+                        <span className="text-sm text-gray-900">{acessorio.nome}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
             <div className="p-6 border-t bg-gray-50 flex justify-end gap-3">

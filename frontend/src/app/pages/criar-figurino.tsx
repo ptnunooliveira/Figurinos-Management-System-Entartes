@@ -3,6 +3,7 @@ import { Upload, X, Plus, Save, ArrowLeft } from "lucide-react";
 import { Link, useNavigate } from "react-router";
 import {
   getCategorias, getTiposFigurino, getSexos, getEstadosCondicao, getAcessorios,
+  criarAcessorio,
   type AuxiliarItem,
 } from "../lib/services";
 import { apiFetch } from "../lib/api";
@@ -14,6 +15,8 @@ export function CriarFigurino() {
   const [acessoriosSelecionados, setAcessoriosSelecionados] = useState<number[]>([]);
   const [novoAcessorio, setNovoAcessorio] = useState("");
   const [mostrarNovoAcessorio, setMostrarNovoAcessorio] = useState(false);
+  const [aCriarAcessorio, setACriarAcessorio] = useState(false);
+  const [aGuardar, setAGuardar] = useState(false);
 
   const [categorias, setCategorias] = useState<AuxiliarItem[]>([]);
   const [tipos, setTipos] = useState<AuxiliarItem[]>([]);
@@ -38,7 +41,6 @@ export function CriarFigurino() {
     tipo: "",
     sexo: "",
     estado: "",
-    valor_diario: "",
   });
 
   const handleImagemUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -70,34 +72,61 @@ export function CriarFigurino() {
     );
   };
 
-  const adicionarNovoAcessorio = () => {
-    if (novoAcessorio.trim()) {
-      // Em produção, isto criaria um novo acessório na base de dados
-      toast.success(`Acessório "${novoAcessorio}" adicionado`);
+  const adicionarNovoAcessorio = async () => {
+    const nome = novoAcessorio.trim().replace(/\s+/g, " ");
+    if (!nome || aCriarAcessorio) return;
+
+    const existente = acessorios.find(
+      (acessorio) => acessorio.nome.trim().toLowerCase() === nome.toLowerCase()
+    );
+
+    if (existente) {
+      setAcessoriosSelecionados(prev => prev.includes(existente.id) ? prev : [...prev, existente.id]);
       setNovoAcessorio("");
       setMostrarNovoAcessorio(false);
+      toast.info(`O acessório "${existente.nome}" já existia e foi selecionado.`);
+      return;
+    }
+
+    setACriarAcessorio(true);
+    try {
+      const novo = await criarAcessorio(nome);
+      setAcessorios(prev => [...prev, novo].sort((a, b) => a.nome.localeCompare(b.nome)));
+      setAcessoriosSelecionados(prev => prev.includes(novo.id) ? prev : [...prev, novo.id]);
+      setNovoAcessorio("");
+      setMostrarNovoAcessorio(false);
+      toast.success(`Acessório "${novo.nome}" criado e selecionado.`);
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao criar acessório");
+    } finally {
+      setACriarAcessorio(false);
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formulario.nome || !formulario.categoria) {
+    if (aGuardar) return;
+
+    if (!formulario.nome || !formulario.descricao || !formulario.categoria) {
       toast.error("Por favor, preencha todos os campos obrigatórios");
       return;
     }
 
+    setAGuardar(true);
     try {
       const res = await apiFetch('/figurinos', {
         method: 'POST',
         body: JSON.stringify({
-          descricao: formulario.nome,
+          titulo: formulario.nome.trim(),
+          descricao: formulario.descricao.trim(),
           tamanho: formulario.tamanho || null,
           localizacao: formulario.localizacao || null,
           id_categoria: formulario.categoria ? parseInt(formulario.categoria) : null,
           id_tipo: formulario.tipo ? parseInt(formulario.tipo) : null,
           id_sexo: formulario.sexo ? parseInt(formulario.sexo) : null,
           id_estado_figurino: formulario.estado ? parseInt(formulario.estado) : null,
+          id_acessorios: acessoriosSelecionados,
         }),
       });
 
@@ -109,8 +138,10 @@ export function CriarFigurino() {
 
       toast.success("Figurino criado com sucesso!");
       setTimeout(() => navigate("/figurinos"), 1000);
-    } catch {
-      toast.error("Erro de ligação ao servidor");
+    } catch (err: any) {
+      toast.error(err.message || "Erro de ligação ao servidor");
+    } finally {
+      setAGuardar(false);
     }
   };
 
@@ -174,7 +205,7 @@ export function CriarFigurino() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Nome do Figurino *
+                Título do Figurino *
               </label>
               <input
                 type="text"
@@ -302,19 +333,6 @@ export function CriarFigurino() {
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Valor Diário de Aluguer (€)
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                value={formulario.valor_diario}
-                onChange={(e) => setFormulario({...formulario, valor_diario: e.target.value})}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                placeholder="Ex: 5.00"
-              />
-            </div>
           </div>
         </div>
 
@@ -340,14 +358,20 @@ export function CriarFigurino() {
                 onChange={(e) => setNovoAcessorio(e.target.value)}
                 className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 placeholder="Nome do novo acessório"
-                onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), adicionarNovoAcessorio())}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    void adicionarNovoAcessorio();
+                  }
+                }}
               />
               <button
                 type="button"
-                onClick={adicionarNovoAcessorio}
-                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                onClick={() => void adicionarNovoAcessorio()}
+                disabled={aCriarAcessorio || !novoAcessorio.trim()}
+                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Adicionar
+                {aCriarAcessorio ? "A adicionar..." : "Adicionar"}
               </button>
             </div>
           )}
@@ -394,10 +418,11 @@ export function CriarFigurino() {
           </Link>
           <button
             type="submit"
-            className="flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+            disabled={aGuardar}
+            className="flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Save className="w-5 h-5" />
-            Guardar Figurino
+            {aGuardar ? "A guardar..." : "Guardar Figurino"}
           </button>
         </div>
       </form>

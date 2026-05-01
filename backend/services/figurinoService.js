@@ -135,6 +135,54 @@ const construirWhereFigurinos = (filtros = {}) => {
 
 const validarId = (id) => Number.isInteger(id) && id > 0;
 
+const obterTitulosFigurinos = async (client, ids) => {
+    const idsUnicos = [...new Set(ids.filter(validarId))];
+
+    if (idsUnicos.length === 0) {
+        return new Map();
+    }
+
+    const placeholders = idsUnicos.map((id) => Number(id)).join(',');
+    const titulos = await client.$queryRawUnsafe(
+        `SELECT id, titulo FROM figurino WHERE id IN (${placeholders})`
+    );
+
+    return new Map(titulos.map((item) => [Number(item.id), item.titulo]));
+};
+
+const anexarTitulosFigurinos = async (figurinos, client = prisma) => {
+    const lista = Array.isArray(figurinos) ? figurinos : [figurinos];
+    const titulos = await obterTitulosFigurinos(client, lista.map((figurino) => figurino?.id));
+    const comTitulos = lista.map((figurino) => ({
+        ...figurino,
+        titulo: titulos.get(figurino.id) ?? figurino.titulo ?? null
+    }));
+
+    return Array.isArray(figurinos) ? comTitulos : comTitulos[0];
+};
+
+const escaparLiteralSql = (valor) => {
+    if (valor === null || valor === undefined) {
+        return 'NULL';
+    }
+
+    return `'${String(valor).replace(/'/g, "''")}'`;
+};
+
+const atualizarTituloFigurino = async (client, idFigurino, titulo) => {
+    await client.$executeRawUnsafe(
+        `UPDATE figurino SET titulo = ${escaparLiteralSql(titulo)} WHERE id = ${Number(idFigurino)}`
+    );
+};
+
+const obterProximoIdFigurino = async () => {
+    const max = await prisma.figurino.aggregate({
+        _max: { id: true }
+    });
+
+    return (max._max.id || 0) + 1;
+};
+
 // Adicionado Nelson em 20-04-2026: associa um acessorio a um figurino na tabela figurino_acessorio.
 const associarAcessorio = async (idFigurino, idAcessorio) => {
     if (!validarId(idFigurino) || !validarId(idAcessorio)) {
@@ -168,12 +216,10 @@ const associarAcessorio = async (idFigurino, idAcessorio) => {
     }
 
     // Adicionado Nelson em 20-04-2026: impede duplicados antes do create para devolver uma mensagem clara.
-    const associacaoExistente = await prisma.figurino_acessorio.findUnique({
+    const associacaoExistente = await prisma.figurino_acessorio.findFirst({
         where: {
-            id_figurino_id_acessorio: {
-                id_figurino: idFigurino,
-                id_acessorio: idAcessorio
-            }
+            id_figurino: idFigurino,
+            id_acessorio: idAcessorio
         }
     });
 
@@ -188,10 +234,6 @@ const associarAcessorio = async (idFigurino, idAcessorio) => {
         data: {
             id_figurino: idFigurino,
             id_acessorio: idAcessorio
-        },
-        include: {
-            figurino: true,
-            acessorio: true
         }
     });
 };
@@ -218,7 +260,7 @@ const obterTodosFigurinos = async (filtros = {}) => {
         }
     });
 
-    return figurinos;
+    return anexarTitulosFigurinos(figurinos);
 };
 
 
@@ -248,7 +290,11 @@ const obterFigurino = async (idFigurino) => {
         }
     });
 
-    return figurino;
+    if (!figurino) {
+        return null;
+    }
+
+    return anexarTitulosFigurinos(figurino);
 };
 
 
@@ -256,14 +302,66 @@ const obterFigurino = async (idFigurino) => {
 // Criar um novo figurino
 // ------------------------------------------------------------
 const criarFigurino = async (dadosFigurino) => {
-    const novoFigurino = await prisma.figurino.create({
-        data: dadosFigurino,
-        include: {
-            categoria: true,
-            tipo_figurino: true,
-            sexo: true,
-            estado_condicao: true
+    const { id_acessorios = [], titulo, ...dadosBaseFigurino } = dadosFigurino;
+    const novoId = await obterProximoIdFigurino();
+
+    const novoFigurino = await prisma.$transaction(async (tx) => {
+        if (id_acessorios.length > 0) {
+            const totalAcessorios = await tx.acessorio.count({
+                where: {
+                    id: {
+                        in: id_acessorios
+                    }
+                }
+            });
+
+            if (totalAcessorios !== id_acessorios.length) {
+                const error = new Error("Um ou mais acessorios selecionados nao existem.");
+                error.code = "ACESSORIO_NOT_FOUND";
+                throw error;
+            }
         }
+
+        const figurinoCriado = await tx.figurino.create({
+            data: {
+                id: novoId,
+                ...dadosBaseFigurino
+            }
+        });
+
+        if (titulo !== undefined) {
+            await atualizarTituloFigurino(tx, figurinoCriado.id, titulo);
+        }
+
+        if (id_acessorios.length > 0) {
+            await tx.figurino_acessorio.createMany({
+                data: id_acessorios.map((idAcessorio) => ({
+                    id_figurino: figurinoCriado.id,
+                    id_acessorio: idAcessorio
+                })),
+                skipDuplicates: true
+            });
+        }
+
+        const figurinoCompleto = await tx.figurino.findUnique({
+            where: { id: figurinoCriado.id },
+            include: {
+                categoria: true,
+                tipo_figurino: true,
+                sexo: true,
+                estado_condicao: true,
+                figurino_acessorio: {
+                    include: {
+                        acessorio: true
+                    }
+                }
+            }
+        });
+
+        return {
+            ...figurinoCompleto,
+            titulo: titulo ?? null
+        };
     });
 
     return novoFigurino;
@@ -274,17 +372,75 @@ const criarFigurino = async (dadosFigurino) => {
 // Atualizar um figurino existente
 // ------------------------------------------------------------
 const atualizarFigurino = async (idFigurino, dadosFigurino) => {
-    const figurinoAtualizado = await prisma.figurino.update({
-        where: {
-            id: idFigurino
-        },
-        data: dadosFigurino,
-        include: {
-            categoria: true,
-            tipo_figurino: true,
-            sexo: true,
-            estado_condicao: true
+    const { titulo, id_acessorios, substituir_acessorios, ...dadosBaseFigurino } = dadosFigurino;
+    const deveSubstituirAcessorios = substituir_acessorios === true || id_acessorios !== undefined;
+
+    const figurinoAtualizado = await prisma.$transaction(async (tx) => {
+        if (id_acessorios !== undefined && id_acessorios.length > 0) {
+            const totalAcessorios = await tx.acessorio.count({
+                where: {
+                    id: {
+                        in: id_acessorios
+                    }
+                }
+            });
+
+            if (totalAcessorios !== id_acessorios.length) {
+                const error = new Error("Um ou mais acessorios selecionados nao existem.");
+                error.code = "ACESSORIO_NOT_FOUND";
+                throw error;
+            }
         }
+
+        if (Object.keys(dadosBaseFigurino).length > 0) {
+            await tx.figurino.update({
+                where: {
+                    id: idFigurino
+                },
+                data: dadosBaseFigurino
+            });
+        }
+
+        if (titulo !== undefined) {
+            await atualizarTituloFigurino(tx, idFigurino, titulo);
+        }
+
+        if (deveSubstituirAcessorios) {
+            await tx.figurino_acessorio.deleteMany({
+                where: {
+                    id_figurino: idFigurino
+                }
+            });
+
+            if ((id_acessorios ?? []).length > 0) {
+                await tx.figurino_acessorio.createMany({
+                    data: id_acessorios.map((idAcessorio) => ({
+                        id_figurino: idFigurino,
+                        id_acessorio: idAcessorio
+                    })),
+                    skipDuplicates: true
+                });
+            }
+        }
+
+        const atualizado = await tx.figurino.findUnique({
+            where: {
+                id: idFigurino
+            },
+            include: {
+                categoria: true,
+                tipo_figurino: true,
+                sexo: true,
+                estado_condicao: true,
+                figurino_acessorio: {
+                    include: {
+                        acessorio: true
+                    }
+                }
+            }
+        });
+
+        return anexarTitulosFigurinos(atualizado, tx);
     });
 
     return figurinoAtualizado;
@@ -341,6 +497,8 @@ const obterHistoricoFigurino = async (idFigurino) => {
         return null;
     }
 
+    const figurinoComTitulo = await anexarTitulosFigurinos(figurino);
+
     const historico = figurino.anuncio_escola.flatMap(anuncio =>
         anuncio.linha_reserva.map(linha => ({
             id_linha_reserva: linha.id,
@@ -360,6 +518,7 @@ const obterHistoricoFigurino = async (idFigurino) => {
     return {
         figurino: {
             id: figurino.id,
+            titulo: figurinoComTitulo.titulo,
             descricao: figurino.descricao,
             tamanho: figurino.tamanho,
             localizacao: figurino.localizacao,
@@ -475,12 +634,57 @@ const desativarFigurino = async (idFigurino) => {
     }
 };
 
+const eliminarFigurino = async (idFigurino) => {
+    try {
+        return await prisma.$transaction(async (tx) => {
+            const figurino = await tx.figurino.findUnique({
+                where: { id: idFigurino },
+                select: { id: true }
+            });
+
+            if (!figurino) {
+                const erro = new Error("Figurino não encontrado.");
+                erro.status = 404;
+                throw erro;
+            }
+
+            const [totalAnuncios, totalChecklists] = await Promise.all([
+                tx.anuncio_escola.count({ where: { id_figurino: idFigurino } }),
+                tx.checklist_item.count({ where: { idfigurino: idFigurino } })
+            ]);
+
+            if (totalAnuncios > 0 || totalChecklists > 0) {
+                const erro = new Error(
+                    "Não é possível apagar este figurino da base de dados porque já tem anúncios, reservas ou checklists associados."
+                );
+                erro.status = 409;
+                throw erro;
+            }
+
+            await tx.figurino_acessorio.deleteMany({
+                where: { id_figurino: idFigurino }
+            });
+
+            await tx.figurino.delete({
+                where: { id: idFigurino }
+            });
+
+            return { id: idFigurino, eliminado: true };
+        });
+    } catch (error) {
+        console.error("Erro no service eliminarFigurino:", error);
+        throw error;
+    }
+};
+
 module.exports = {
+    associarAcessorio,
     obterTodosFigurinos,
     obterFigurino,
     criarFigurino,
     atualizarFigurino,
     obterHistoricoFigurino,
     obterDisponibilidadeFigurino,
-    desativarFigurino
+    desativarFigurino,
+    eliminarFigurino
 };

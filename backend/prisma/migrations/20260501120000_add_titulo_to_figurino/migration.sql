@@ -1,0 +1,2 @@
+ALTER TABLE "figurino"
+ADD COLUMN IF NOT EXISTS "titulo" VARCHAR(255);

@@ -10,6 +10,7 @@ export interface AcessorioAPI {
 
 export interface FigurinoAPI {
   id: number;
+  titulo?: string | null;
   descricao: string | null;
   tamanho: string | null;
   localizacao: string | null;
@@ -34,7 +35,7 @@ export interface AnuncioEscolaAPI {
 export function mapFigurino(f: FigurinoAPI): Figurino {
   return {
     id: f.id,
-    nome: f.descricao ?? '',
+    nome: f.titulo ?? f.descricao ?? '',
     descricao: f.descricao ?? '',
     tamanho: f.tamanho ?? '',
     localizacao: f.localizacao ?? '',
@@ -80,9 +81,28 @@ export async function desativarFigurino(id: number): Promise<void> {
   }
 }
 
+export async function eliminarFigurino(id: number): Promise<void> {
+  const res = await apiFetch(`/figurinos/${id}`, { method: 'DELETE' });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.erro ?? err.error ?? 'Erro ao eliminar figurino');
+  }
+}
+
 export async function atualizarFigurino(
   id: number,
-  dados: { descricao?: string; tamanho?: string; localizacao?: string; id_estado_figurino?: number | null },
+  dados: {
+    titulo?: string;
+    descricao?: string;
+    tamanho?: string | null;
+    localizacao?: string | null;
+    id_categoria?: number | null;
+    id_tipo?: number | null;
+    id_sexo?: number | null;
+    id_estado_figurino?: number | null;
+    id_acessorios?: number[];
+    substituir_acessorios?: boolean;
+  },
 ): Promise<FigurinoAPI> {
   const res = await apiFetch(`/figurinos/${id}`, {
     method: 'PUT',
@@ -155,6 +175,30 @@ export const getTiposFigurino = () => getAuxiliar('/pesquisa/tipos-figurino');
 export const getSexos = () => getAuxiliar('/pesquisa/sexos');
 export const getEstadosCondicao = () => getAuxiliar('/pesquisa/estados-condicao');
 export const getAcessorios = () => getAuxiliar('/pesquisa/acessorios');
+
+export async function criarAcessorio(nome: string): Promise<AuxiliarItem> {
+  const res = await apiFetch('/pesquisa/acessorios', {
+    method: 'POST',
+    body: JSON.stringify({ nome }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.erro ?? err.error ?? 'Erro ao criar acessório');
+  }
+  return res.json();
+}
+
+export async function associarAcessorioFigurino(idFigurino: number, idAcessorio: number): Promise<any> {
+  const res = await apiFetch(`/figurinos/${idFigurino}/acessorios`, {
+    method: 'POST',
+    body: JSON.stringify({ id_acessorio: idAcessorio }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.erro ?? err.error ?? err.message ?? 'Erro ao associar acessório');
+  }
+  return res.json();
+}
 
 // ─── Reservas ───────────────────────────────────────────────────────────────
 

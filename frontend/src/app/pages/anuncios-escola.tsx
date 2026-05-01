@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { PlusCircle, Search, Filter, Shirt, Euro, Eye, Edit, Trash2, Calendar, X } from "lucide-react";
+import { PlusCircle, Search, Filter, Shirt, Euro, Edit, Trash2, Calendar, X } from "lucide-react";
 import { getUtilizadorAtual } from "../lib/auth";
 import { getAnunciosEscola, getFigurinosRaw, criarAnuncioEscola, atualizarAnuncioEscola, eliminarAnuncioEscola, type AnuncioEscolaAPI, type FigurinoAPI } from "../lib/services";
 import { useCart } from "./CartContext";
@@ -337,10 +337,6 @@ export function AnunciosEscola() {
                   <div className="mt-auto pt-3 border-t">
                     {utilizadorAtual?.tipo === 'funcionario' ? (
                       <div className="flex items-center justify-end gap-4 text-sm flex-wrap">
-                        <button className="flex items-center gap-1.5 text-gray-600 hover:text-gray-900 transition-colors">
-                          <Eye className="w-4 h-4" />
-                          Ver
-                        </button>
                         <button
                           className="flex items-center gap-1.5 text-yellow-600 hover:text-yellow-700 transition-colors"
                           onClick={() => { setEditarAnuncio(anuncio); setValorDiarioEditar(String(anuncio.valordiarioaluguer ?? '')); }}

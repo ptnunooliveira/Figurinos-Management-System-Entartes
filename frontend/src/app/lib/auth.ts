@@ -33,7 +33,7 @@ export async function login(email: string, password: string): Promise<Utilizador
       nome: user.nome,
       email: user.email,
       contacto: user.contacto ?? '',
-      data_registo: user.data_registo ?? '',
+      data_registo: user.data_registo ? new Date(user.data_registo).toISOString() : '',
       ativo: true,
       tipo: perfilToTipo(user.perfil),
       perfil: user.perfil,

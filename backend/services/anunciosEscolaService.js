@@ -89,9 +89,13 @@ const atualizarAnuncioEscola = async (id, dados) => {
 };
 
 const eliminarAnuncioEscola = async (id) => {
-    return await prisma.anuncio_escola.delete({
-        where: { id },
-    });
+    const linhasCount = await prisma.linha_reserva.count({ where: { id_anuncio: id } });
+    if (linhasCount > 0) {
+        const err = new Error('Este anúncio tem reservas associadas e não pode ser eliminado.');
+        err.code = 'HAS_RESERVAS';
+        throw err;
+    }
+    return await prisma.anuncio_escola.delete({ where: { id } });
 };
 
 module.exports = {

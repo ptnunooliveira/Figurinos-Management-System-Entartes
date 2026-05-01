@@ -35,14 +35,14 @@ const perfilMiddleware = require('../middleware/perfilMiddleware.js');
 ////////////////////////////// ROTAS DA RESERVA /////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////
 
-router.get('/', authMiddleware, perfilMiddleware('FUNCIONARIO'), reservaController.obterTodasReservas);
+router.get('/', authMiddleware, perfilMiddleware(['FUNCIONARIO', 'ADMIN']), reservaController.obterTodasReservas);
 router.get('/mine', authMiddleware, perfilMiddleware('ALUNO'), reservaController.obterReservasDoUtilizador);
-router.get('/aluno/:id', authMiddleware, perfilMiddleware('FUNCIONARIO'), reservaController.obterReservasDoAluno);
+router.get('/aluno/:id', authMiddleware, perfilMiddleware(['FUNCIONARIO', 'ADMIN']), reservaController.obterReservasDoAluno);
 router.get('/:id', authMiddleware, reservaController.obterDetalhesReserva);
 
 router.post('/', authMiddleware, perfilMiddleware(["FUNCIONARIO", "ALUNO"]), reservaController.criarReserva);
 
-router.patch('/:id/estado', authMiddleware, perfilMiddleware('FUNCIONARIO'), reservaController.atualizarEstadoReserva);
+router.patch('/:id/estado', authMiddleware, perfilMiddleware(['FUNCIONARIO', 'ADMIN']), reservaController.atualizarEstadoReserva);
 router.patch('/mine/:id/cancelar', authMiddleware, perfilMiddleware('ALUNO'), reservaController.cancelarReserva);
 
 

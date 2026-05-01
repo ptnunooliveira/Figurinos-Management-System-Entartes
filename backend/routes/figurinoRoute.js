@@ -35,18 +35,18 @@ router.get('/:id/historico', authMiddleware, perfilMiddleware('FUNCIONARIO'), fi
 router.get('/:id/disponibilidade', authMiddleware, figurinoController.obterDisponibilidadeFigurino);
 
 // POST /api/figurinos
-router.post('/', authMiddleware, perfilMiddleware('FUNCIONARIO'), figurinoController.criarFigurino);
+router.post('/', authMiddleware, perfilMiddleware(['FUNCIONARIO', 'ADMIN']), figurinoController.criarFigurino);
 
 // POST /api/figurinos/:id/acessorios
 router.post('/:id/acessorios', authMiddleware, perfilMiddleware(['FUNCIONARIO', 'ADMIN']), figurinoController.associarAcessorio);
 
 // PUT /api/figurinos/:id
-router.put('/:id', authMiddleware, perfilMiddleware('FUNCIONARIO'), figurinoController.atualizarFigurino);
+router.put('/:id', authMiddleware, perfilMiddleware(['FUNCIONARIO', 'ADMIN']), figurinoController.atualizarFigurino);
 
 // DELETE /api/figurinos/:id
 router.delete('/:id', authMiddleware, perfilMiddleware(['FUNCIONARIO', 'ADMIN']), figurinoController.eliminarFigurino);
 
 // PATCH /api/figurinos/:id/desativar
-router.patch('/:id/desativar', authMiddleware, perfilMiddleware('FUNCIONARIO'), figurinoController.desativarFigurino);
+router.patch('/:id/desativar', authMiddleware, perfilMiddleware(['FUNCIONARIO', 'ADMIN']), figurinoController.desativarFigurino);
 
 module.exports = router;

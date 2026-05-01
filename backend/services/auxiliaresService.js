@@ -246,8 +246,11 @@ const criarAcessorio = async (nome) => {
     throw err;
   }
 
+  const novoId = await obterProximoIdAuxiliar("acessorio");
+
   return prisma.acessorio.create({
     data: {
+      id: novoId,
       nome,
     },
   });

@@ -159,6 +159,7 @@ model estadopropostacobranca {
 
 model figurino {
   id                 Int                  @id @default(autoincrement())
+  titulo             String?              @db.VarChar(255)
   descricao          String?
   tamanho            String?              @db.VarChar(50)
   localizacao        String?              @db.VarChar(255)

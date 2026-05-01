@@ -139,7 +139,6 @@ export function Marketplace() {
   const estadosPublicados = ["aprovado", "publicado"];
   const normalizarEstado = (estado: string) => estado.trim().toLowerCase();
   const outrosAnuncios = todosAnuncios.filter(a =>
-    a.id_utilizador !== utilizadorAtual?.id &&
     estadosPublicados.includes((a.estado || "").trim().toLowerCase())
   );
 
@@ -405,7 +404,8 @@ export function Marketplace() {
       );
 
       if (!jaExiste) {
-        const mensagem = `O/A utilizador/a ${utilizadorAtual.nome} tem interesse no seu figurino. O email da pessoa é: ${utilizadorAtual.email}.`;
+        const contacto = utilizadorAtual.contacto || "não indicado";
+        const mensagem = `O/A utilizador/a ${utilizadorAtual.nome} tem interesse no seu figurino. O email da pessoa é: ${utilizadorAtual.email} e o seu contacto: ${contacto}.`;
         notificacoes.push({
           chave: `interesse:${anuncioDetalhe.id}:${utilizadorAtual.id}`,
           idAnuncio: anuncioDetalhe.id,
@@ -423,6 +423,7 @@ export function Marketplace() {
     }
 
     toast.success("Interesse sinalizado com sucesso.");
+    fecharDetalhes();
   };
 
   const limparFiltros = () => {
@@ -489,11 +490,10 @@ export function Marketplace() {
     try {
       await aprovarAnuncioMarketplace(id, true);
       toast.success("Anúncio aprovado com sucesso!");
-      const anuncios = await executarComTimeout(
-        getMarketplaceGestao(),
-        "A atualizar anúncios de gestão está a demorar. Tente novamente."
-      );
-      setTodosAnuncios(anuncios);
+      setTimeout(() => {
+        fecharDetalhes();
+        window.location.reload();
+      }, 800);
     } catch (err: any) {
       toast.error(err?.message || "Erro ao aprovar anúncio");
     }
@@ -511,11 +511,10 @@ export function Marketplace() {
       await aprovarAnuncioMarketplace(anuncioParaRejeitar.id, false, motivo);
       toast.success("Anúncio rejeitado");
       fecharModalRejeicao();
-      const anuncios = await executarComTimeout(
-        getMarketplaceGestao(),
-        "A atualizar anúncios de gestão está a demorar. Tente novamente."
-      );
-      setTodosAnuncios(anuncios);
+      setTimeout(() => {
+        fecharDetalhes();
+        window.location.reload();
+      }, 800);
     } catch (err: any) {
       toast.error(err?.message || "Erro ao rejeitar anúncio");
     }
@@ -812,7 +811,9 @@ export function Marketplace() {
                       {(abaAtiva === "meusAnuncios" || isStaff) && formatarDataPT(anuncio.data_anuncio) && (
                         <p>Submetido em {formatarDataPT(anuncio.data_anuncio)}</p>
                       )}
-                      <p>{linhaDataEstado}</p>
+                      {!(normalizarEstado(estadoAnuncio) === "submetido" || normalizarEstado(estadoAnuncio) === "pendente") && (
+                        <p>{linhaDataEstado}</p>
+                      )}
                     </div>
 
                     {/* Motivo de rejeição (se existir) */}
@@ -834,24 +835,12 @@ export function Marketplace() {
                           Ver Detalhes
                         </button>
                       ) : isStaff && abaAtiva === "pendentes" ? (
-                        <div className="flex gap-2 flex-wrap">
+                        <div className="flex items-center justify-end gap-2">
                           <button
                             onClick={() => abrirDetalhes(anuncio)}
-                            className="w-full sm:w-auto bg-gradient-to-r from-fig-purple to-fig-magenta hover:shadow-lg text-white py-2 px-6 rounded-lg transition-all"
+                            className="w-auto bg-gradient-to-r from-fig-purple to-fig-magenta hover:shadow-lg text-white py-2 px-6 rounded-lg transition-all"
                           >
                             Ver Detalhes
-                          </button>
-                          <button
-                            onClick={() => aprovarAnuncioPendente(anuncio.id)}
-                            className="w-full sm:w-auto bg-gradient-to-r from-fig-green to-emerald-500 hover:shadow-lg text-white py-2 px-6 rounded-lg transition-all"
-                          >
-                            Aprovar
-                          </button>
-                          <button
-                            onClick={() => abrirModalRejeicao(anuncio)}
-                            className="w-full sm:w-auto border border-red-300 text-red-700 py-2 px-6 rounded-lg hover:bg-red-50 transition-colors"
-                          >
-                            Rejeitar
                           </button>
                         </div>
                       ) : (() => {
@@ -1044,7 +1033,24 @@ export function Marketplace() {
 
               <div className="flex items-center justify-between gap-3">
                 <div />
-                {utilizadorAtual?.tipo === "aluno" && (
+                {isStaff && abaAtiva === "pendentes" ? (
+                  <div className="flex items-center gap-2 ml-auto">
+                    <button
+                      type="button"
+                      onClick={() => aprovarAnuncioPendente(anuncioDetalhe.id)}
+                      className="px-4 py-2 rounded-lg bg-gradient-to-r from-fig-green to-emerald-500 hover:shadow-lg text-white transition-all"
+                    >
+                      Aprovar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => abrirModalRejeicao(anuncioDetalhe)}
+                      className="px-4 py-2 rounded-lg border border-red-300 text-red-700 hover:bg-red-50 transition-colors"
+                    >
+                      Rejeitar
+                    </button>
+                  </div>
+                ) : utilizadorAtual?.tipo === "aluno" ? (
                   <div className="flex items-center gap-2 ml-auto">
                     <button
                       type="button"
@@ -1061,7 +1067,7 @@ export function Marketplace() {
                       Cancelar
                     </button>
                   </div>
-                )}
+                ) : null}
               </div>
             </div>
           </div>

@@ -15,6 +15,8 @@ export function Perfil() {
     return <div className="text-gray-500">Não autenticado.</div>;
   }
 
+  const dataRegistoValida = utilizadorAtual.data_registo && !Number.isNaN(new Date(utilizadorAtual.data_registo).getTime());
+
   const handleGuardar = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -67,10 +69,12 @@ export function Perfil() {
                 <div className="flex-1 min-w-0">
                   <p className="text-xs text-gray-500">Membro desde</p>
                   <p className="text-sm text-gray-900">
-                    {new Date(utilizadorAtual.data_registo).toLocaleDateString('pt-PT', { 
-                      year: 'numeric', 
-                      month: 'long' 
-                    })}
+                    {dataRegistoValida
+                      ? new Date(utilizadorAtual.data_registo).toLocaleDateString('pt-PT', {
+                          year: 'numeric',
+                          month: 'long'
+                        })
+                      : "—"}
                   </p>
                 </div>
               </div>

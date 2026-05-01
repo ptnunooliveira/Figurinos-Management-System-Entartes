@@ -135,6 +135,8 @@ const getMe = async (userId) => {
         id: user.id,
         nome: user.nome,
         email: user.email,
+        contacto: user.contacto,
+        data_registo: user.data_registo,
         perfil: user.perfil
     };
 };

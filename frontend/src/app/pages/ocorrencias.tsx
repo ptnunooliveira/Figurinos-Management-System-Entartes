@@ -19,7 +19,8 @@ import {
   getMinhasOcorrencias,
   getOcorrencia,
   atualizarEstadoOcorrencia,
-  atualizarEstadoProposta,
+  aceitarProposta,
+  resolverComContraproposta,
   criarPropostaCobranca,
   criarContestacao,
   criarOrcamento,
@@ -31,13 +32,6 @@ import {
 } from "../lib/services";
 import { getUtilizadorAtual } from "../lib/auth";
 import { toast } from "sonner";
-
-// Ids da tabela estadopropostacobranca
-const ESTADO_PROPOSTA = {
-  PENDENTE: 1,
-  ACEITE: 2,
-  REJEITADA: 3,
-} as const;
 
 // Ids da tabela estado_ocorrencia (sincronizados com a BD)
 const ESTADO = {
@@ -221,16 +215,16 @@ export function Ocorrencias() {
     setAcaoAtiva("registar_orcamento");
   };
 
-  // Funcionário aceita o valor da contraproposta do aluno: cria nova proposta
-  // com esse valor e a ocorrência transita automaticamente para AGUARDAR_ALUNO.
+  // Funcionário aceita o valor da contraproposta do aluno: resolve a ocorrência
+  // diretamente (cria proposta ACEITE + conta corrente + ocorrência RESOLVIDA).
   const handleAceitarContraproposta = async (valor: number) => {
     if (!selecionada) return;
     if (submetendoProposta) return;
-    if (!window.confirm(`Aceitar a contraproposta do aluno (€${valor.toFixed(2)}) e enviar nova proposta?`)) return;
+    if (!window.confirm(`Aceitar a contraproposta do aluno (€${valor.toFixed(2)}) e resolver a ocorrência?`)) return;
     setSubmetendoProposta(true);
     try {
-      await criarPropostaCobranca(selecionada.id, valor, "Proposta com o valor sugerido pelo aluno na contestação.");
-      toast.success("Contraproposta aceite. Nova proposta enviada ao aluno.");
+      await resolverComContraproposta(selecionada.id, valor);
+      toast.success("Contraproposta aceite. Ocorrência resolvida.");
       await recarregarSelecionada(selecionada.id);
     } catch (err: any) {
       toast.error(err.message || "Erro ao aceitar contraproposta");
@@ -258,7 +252,7 @@ export function Ocorrencias() {
   const handleAceitarProposta = async (idProposta: number) => {
     if (!window.confirm("Confirma que aceita esta proposta de cobrança?")) return;
     try {
-      await atualizarEstadoProposta(idProposta, ESTADO_PROPOSTA.ACEITE);
+      await aceitarProposta(idProposta);
       toast.success("Proposta aceite. Será adicionada à sua conta corrente.");
       if (selecionada) await recarregarSelecionada(selecionada.id);
     } catch (err: any) {
@@ -341,12 +335,9 @@ export function Ocorrencias() {
         });
       }
 
-      // 2. Criar a proposta de cobrança ao cliente (incluindo notas/descrição)
+      // 2. Criar a proposta de cobrança ao cliente (o backend transita automaticamente
+      // a ocorrência para "A aguardar resposta do aluno" na mesma transação).
       await criarPropostaCobranca(selecionada.id, valor, descricaoProposta);
-
-      // 3. Atualizar o estado da ocorrência → "A aguardar resposta do aluno"
-      // (em qualquer dos fluxos a proposta foi enviada ao aluno).
-      await atualizarEstadoOcorrencia(selecionada.id, ESTADO.AGUARDAR_ALUNO);
 
       toast.success(
         acaoAtiva === "registar_orcamento"
@@ -599,19 +590,28 @@ function DetalheOcorrencia(props: DetalheProps) {
   const resolvida = estadoLower === "resolvida";
   const IconeEstado = iconeEstado(o.estado);
 
-  // Última contestação registada (a mais recente nas propostas), para "Aceitar contraproposta"
+  // Última contestação registada: ordena pela proposta mais recente (id desc),
+  // depois pelo id da contestação (desc) para desempatar.
   const contestacoesOrdenadas = (o.propostas ?? [])
     .flatMap(p => (p.contestacoes ?? []).map(c => ({ ...c, idProposta: p.id })))
-    .sort((a, b) => (b.data || '').localeCompare(a.data || ''));
+    .sort((a, b) => {
+      if (b.idProposta !== a.idProposta) return b.idProposta - a.idProposta;
+      return b.id - a.id;
+    });
   const ultimaContestacao = contestacoesOrdenadas[0];
   const valorContrapropostaAluno = ultimaContestacao?.valorcontraproposta ?? null;
 
-  // Existe uma proposta a aguardar resposta do cliente?
-  // (estado != "aceite" e != "rejeitada" → cliente ainda não respondeu)
-  const temPropostaPendente = (o.propostas ?? []).some(p => {
+  // Propostas ordenadas da mais recente para a mais antiga
+  const propostasOrdenadas = [...(o.propostas ?? [])].sort((a, b) => b.id - a.id);
+
+  // ID da proposta mais recente que ainda não tem resposta final (para o aluno agir)
+  const ultimaPropostaPendenteId = propostasOrdenadas.find(p => {
     const est = (p.estado || "").toLowerCase();
     return est !== "aceite" && est !== "rejeitada";
-  });
+  })?.id ?? null;
+
+  // Existe uma proposta a aguardar resposta do cliente?
+  const temPropostaPendente = ultimaPropostaPendenteId !== null;
 
   return (
     <div className="space-y-6">
@@ -667,11 +667,10 @@ function DetalheOcorrencia(props: DetalheProps) {
           </h2>
           <div className="space-y-3">
             {o.propostas.map((p) => {
-              const estadoLower = (p.estado || "").toLowerCase();
-              // O aluno pode aceitar/contestar qualquer proposta que ainda não tenha
-              // resposta final (ou seja, que não esteja "aceite" nem "rejeitada").
-              // O nome do estado em BD pode ser "Criada", "Pendente", etc.
-              const podeAgir = !isFuncionario && estadoLower !== "aceite" && estadoLower !== "rejeitada";
+              // O aluno só pode agir na proposta mais recente pendente,
+              // e apenas enquanto a ocorrência não estiver "contestada pelo aluno"
+              // (nesse caso já contestou e aguarda resposta do funcionário).
+              const podeAgir = !isFuncionario && p.id === ultimaPropostaPendenteId && !contestadaPeloAluno;
               return (
                 <div key={p.id} className="border rounded-lg p-4">
                   <div className="flex items-center justify-between flex-wrap gap-3 mb-2">
@@ -690,6 +689,10 @@ function DetalheOcorrencia(props: DetalheProps) {
                       {p.estado || "—"}
                     </span>
                   </div>
+
+                  {p.descricao && (
+                    <p className="text-sm text-gray-700 mb-2 italic">{p.descricao}</p>
+                  )}
 
                   {/* Contestações já registadas */}
                   {p.contestacoes && p.contestacoes.length > 0 && (
@@ -748,8 +751,9 @@ function DetalheOcorrencia(props: DetalheProps) {
         </div>
       )}
 
-      {/* Ações — só visíveis enquanto não existir proposta a aguardar resposta do cliente */}
-      {isFuncionario && !resolvida && !temPropostaPendente && (
+      {/* Ações — ocultas quando há proposta pendente, exceto se a ocorrência está contestada
+          (nesse caso o funcionário deve sempre poder aceitar a contraproposta ou propor novo valor) */}
+      {isFuncionario && !resolvida && (!temPropostaPendente || contestadaPeloAluno) && (
         <div className="bg-white rounded-xl shadow-sm p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Ações</h2>
 
@@ -780,22 +784,22 @@ function DetalheOcorrencia(props: DetalheProps) {
           )}
 
           {contestadaPeloAluno && !acaoAtiva && (
-            <div className="space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {valorContrapropostaAluno != null && (
                 <BotaoAcao
-                onClick={() => onAceitarContraproposta(Number(valorContrapropostaAluno))}
+                  onClick={() => onAceitarContraproposta(Number(valorContrapropostaAluno))}
                   cor="green"
                   icone={ThumbsUp}
-                  titulo={`Aceitar contraproposta do aluno (€${Number(valorContrapropostaAluno).toFixed(2)})`}
-                  descricao="Aceita o valor proposto pelo aluno e envia uma nova proposta com esse valor. A ocorrência volta a 'A aguardar resposta do aluno'."
+                  titulo={`Aceitar proposta do aluno — €${Number(valorContrapropostaAluno).toFixed(2)}`}
+                  descricao="Concorda com o valor sugerido pelo aluno. A ocorrência fica resolvida e o montante é lançado em conta corrente."
                 />
               )}
               <BotaoAcao
                 onClick={onContrapor}
                 cor="purple"
-                icone={Wrench}
-                titulo="Contrapropor com novo valor"
-                descricao="Envia ao aluno uma nova proposta com um valor à sua escolha. A ocorrência volta a 'A aguardar resposta do aluno'."
+                icone={Euro}
+                titulo="Enviar nova proposta de valor"
+                descricao="Não aceita o valor do aluno. Indique um novo montante — a ocorrência fica 'A aguardar resposta do aluno'."
               />
             </div>
           )}
@@ -812,8 +816,8 @@ function DetalheOcorrencia(props: DetalheProps) {
         </div>
       )}
 
-      {/* Aviso quando há proposta a aguardar resposta do cliente */}
-      {isFuncionario && !resolvida && temPropostaPendente && (
+      {/* Aviso quando há proposta a aguardar resposta do cliente (não mostrar no estado "contestada") */}
+      {isFuncionario && !resolvida && temPropostaPendente && !contestadaPeloAluno && (
         <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-lg">
           <div className="flex items-start gap-2">
             <Clock className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
@@ -1176,7 +1180,7 @@ function DetalheOcorrencia(props: DetalheProps) {
                   </div>
                 )}
 
-                {orcamento && (
+                {orcamento && isFuncionario && (
                   <div className="border-t pt-4">
                     <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-3">
                       Orçamento do fornecedor

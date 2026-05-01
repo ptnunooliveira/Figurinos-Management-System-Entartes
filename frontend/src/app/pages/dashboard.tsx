@@ -64,7 +64,7 @@ export function Dashboard() {
       getOcorrencias().then(ocs => {
         setOcorrenciasPendentes(ocs.filter(o => {
           const e = o.estado?.toLowerCase();
-          return e === 'a aguardar' || e === 'a aguardar orçamento';
+          return e === 'a aguardar' || e === 'a aguardar orçamento' || e === 'contestada pelo aluno';
         }).length);
       });
       getMarketplaceGestao().then(anuncios => {
@@ -87,7 +87,7 @@ export function Dashboard() {
       getMinhasOcorrencias().then(ocs => {
         setOcorrenciasPendentes(ocs.filter(o => {
           const e = o.estado?.toLowerCase();
-          return e === 'a aguardar' || e === 'a aguardar orçamento';
+          return e === 'a aguardar' || e === 'a aguardar orçamento' || e === 'contestada pelo aluno' || e === 'a aguardar resposta do aluno';
         }).length);
       });
       getMarketplace().then(anuncios => {
@@ -251,95 +251,94 @@ export function Dashboard() {
         })}
       </div>
 
-      {/* Próximas Reservas ou Alertas */}
-      <div className="grid grid-cols-1 gap-6">
-        <div className="bg-white rounded-xl shadow-sm p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-semibold text-gray-900">
-              {utilizadorAtual?.tipo === 'funcionario' ? 'Alertas' : 'Próximas Reservas'}
-            </h2>
-            {utilizadorAtual?.tipo === 'funcionario' ? (
-              <AlertCircle className="w-5 h-5 text-orange-500" />
-            ) : (
-              <Calendar className="w-5 h-5 text-gray-400" />
-            )}
-          </div>
-          <div className="space-y-4">
-            {utilizadorAtual?.tipo === 'funcionario' ? (
-              <>
-                {anunciosPendentes > 0 && (
-                  <Link
-                    to="/administracao"
-                    className="block p-4 bg-yellow-50 border-l-4 border-yellow-500 rounded hover:bg-yellow-100 transition-colors"
-                  >
-                    <div className="flex items-start gap-3">
-                      <ShoppingBag className="w-5 h-5 text-yellow-600 mt-0.5" />
-                      <div>
-                        <p className="text-sm font-medium text-yellow-900">
-                          {anunciosPendentes} anúncio{anunciosPendentes !== 1 ? 's' : ''} pendente{anunciosPendentes !== 1 ? 's' : ''}
-                        </p>
-                        <p className="text-xs text-yellow-700">Clique para aprovar ou rejeitar</p>
-                      </div>
-                    </div>
-                  </Link>
-                )}
-                {ocorrenciasPendentes > 0 && (
-                  <Link
-                    to="/ocorrencias"
-                    className="block p-4 bg-orange-50 border-l-4 border-orange-500 rounded hover:bg-orange-100 transition-colors"
-                  >
-                    <div className="flex items-start gap-3">
-                      <AlertCircle className="w-5 h-5 text-orange-600 mt-0.5" />
-                      <div>
-                        <p className="text-sm font-medium text-orange-900">
-                          {ocorrenciasPendentes} ocorrência{ocorrenciasPendentes !== 1 ? 's' : ''} em análise
-                        </p>
-                        <p className="text-xs text-orange-700">Requer atenção</p>
-                      </div>
-                    </div>
-                  </Link>
-                )}
-                {anunciosPendentes === 0 && ocorrenciasPendentes === 0 && (
-                  <div className="text-center py-8 text-gray-500">
-                    <AlertCircle className="w-12 h-12 mx-auto mb-3 text-green-300" />
-                    <p className="text-sm">Tudo em ordem! 🎉</p>
-                  </div>
-                )}
-              </>
-            ) : (
-              <>
-                {proximasReservas.length > 0 ? (
-                  proximasReservas.map((linha) => (
-                    <div key={linha.id} className="flex items-start gap-4 pb-4 border-b last:border-b-0 last:pb-0">
-                      <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <Shirt className="w-6 h-6 text-purple-600" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-gray-900 truncate">
-                          {linha.anuncio.figurino.nome}
-                        </p>
-                        <p className="text-sm text-gray-600">
-                          {new Date(linha.data_inicio).toLocaleDateString('pt-PT')} - {new Date(linha.data_fim).toLocaleDateString('pt-PT')}
-                        </p>
-                        <p className="text-sm text-purple-600 mt-1">
-                          €{linha.valor_diario}/dia
-                        </p>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-8 text-gray-500">
-                    <Calendar className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                    <p className="text-sm">Nenhuma reserva próxima</p>
-                    <Link to="/figurinos" className="text-purple-600 hover:text-purple-700 text-sm mt-2 inline-block">
-                      Ver figurinos disponíveis
-                    </Link>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
+      {/* Alertas (funcionário) ou Próximas Reservas (aluno) */}
+      <div className="bg-white rounded-xl shadow-sm p-6">
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-lg font-semibold text-gray-900">
+            {utilizadorAtual?.tipo === 'funcionario' ? 'Alertas' : 'Próximas Reservas'}
+          </h2>
+          {utilizadorAtual?.tipo === 'funcionario'
+            ? <AlertCircle className="w-5 h-5 text-orange-500" />
+            : <Calendar className="w-5 h-5 text-gray-400" />
+          }
         </div>
+
+        {utilizadorAtual?.tipo === 'funcionario' ? (
+          <div className="space-y-3">
+            {anunciosPendentes > 0 && (
+              <Link
+                to="/anuncios-marketplace"
+                className="flex items-center gap-4 p-4 bg-amber-50 border border-amber-200 rounded-xl hover:bg-amber-100 transition-colors group"
+              >
+                <div className="w-10 h-10 bg-amber-100 group-hover:bg-amber-200 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors">
+                  <ShoppingBag className="w-5 h-5 text-amber-600" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-amber-900">
+                    {anunciosPendentes} anúncio{anunciosPendentes !== 1 ? 's' : ''} pendente{anunciosPendentes !== 1 ? 's' : ''} de aprovação
+                  </p>
+                  <p className="text-xs text-amber-700 mt-0.5">Clique para aprovar ou rejeitar</p>
+                </div>
+                <span className="text-amber-400 group-hover:text-amber-600 transition-colors">→</span>
+              </Link>
+            )}
+            {ocorrenciasPendentes > 0 && (
+              <Link
+                to="/ocorrencias"
+                className="flex items-center gap-4 p-4 bg-orange-50 border border-orange-200 rounded-xl hover:bg-orange-100 transition-colors group"
+              >
+                <div className="w-10 h-10 bg-orange-100 group-hover:bg-orange-200 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors">
+                  <AlertCircle className="w-5 h-5 text-orange-600" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-orange-900">
+                    {ocorrenciasPendentes} ocorrência{ocorrenciasPendentes !== 1 ? 's' : ''} a aguardar ação
+                  </p>
+                  <p className="text-xs text-orange-700 mt-0.5">Inclui ocorrências pendentes e contestadas</p>
+                </div>
+                <span className="text-orange-400 group-hover:text-orange-600 transition-colors">→</span>
+              </Link>
+            )}
+            {anunciosPendentes === 0 && ocorrenciasPendentes === 0 && (
+              <div className="text-center py-10 text-gray-500">
+                <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <TrendingUp className="w-7 h-7 text-green-500" />
+                </div>
+                <p className="font-medium text-gray-700">Tudo em ordem</p>
+                <p className="text-sm text-gray-400 mt-1">Sem alertas pendentes</p>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {proximasReservas.length > 0 ? (
+              proximasReservas.map((linha) => (
+                <div key={linha.id} className="flex items-start gap-4 pb-4 border-b last:border-b-0 last:pb-0">
+                  <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <Shirt className="w-6 h-6 text-purple-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-gray-900 truncate">{linha.anuncio.figurino.nome}</p>
+                    <p className="text-sm text-gray-600">
+                      {new Date(linha.data_inicio).toLocaleDateString('pt-PT')} — {new Date(linha.data_fim).toLocaleDateString('pt-PT')}
+                    </p>
+                    <p className="text-sm text-purple-600 mt-0.5">€{linha.valor_diario}/dia</p>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-10 text-gray-500">
+                <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <Calendar className="w-7 h-7 text-gray-400" />
+                </div>
+                <p className="font-medium text-gray-700">Nenhuma reserva próxima</p>
+                <Link to="/figurinos" className="text-fig-purple hover:text-fig-magenta text-sm mt-2 inline-block transition-colors">
+                  Explorar figurinos disponíveis →
+                </Link>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Ações Rápidas */}

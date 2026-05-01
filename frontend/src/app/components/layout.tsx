@@ -12,7 +12,8 @@ import {
   LogOut,
   Megaphone,
   AlertTriangle,
-  ShoppingCart
+  ShoppingCart,
+  Store
 } from "lucide-react";
 import { useState } from "react";
 import { getUtilizadorAtual, logout } from "../lib/auth";
@@ -40,9 +41,10 @@ export function Layout() {
     { nome: "Reservas", href: "/reservas", icon: Calendar },
     { nome: "Ocorrências", href: "/ocorrencias", icon: AlertTriangle },
     { nome: "Marketplace", href: "/marketplace", icon: ShoppingBag },
-    { nome: "Administração", href: "/administracao", icon: Settings },
+    { nome: "Gestão Marketplace", href: "/anuncios-marketplace", icon: Store },
     { nome: "Faturação", href: "/faturacao", icon: FileText },
     { nome: "Perfil", href: "/perfil", icon: User },
+    { nome: "Administração", href: "/administracao", icon: Settings },
   ];
 
   const navegacaoAluno = [

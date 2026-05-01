@@ -59,7 +59,11 @@ export function Marketplace() {
   }, [utilizadorAtual?.tipo, utilizadorAtual?.id]);
 
   const meusAnuncios = meusAnunciosLista;
-  const outrosAnuncios = todosAnuncios.filter(a => a.id_utilizador !== utilizadorAtual?.id);
+  const estadosPublicados = ["aprovado", "publicado"];
+  const outrosAnuncios = todosAnuncios.filter(a =>
+    a.id_utilizador !== utilizadorAtual?.id &&
+    estadosPublicados.includes((a.estado || "").trim().toLowerCase())
+  );
 
   const anunciosAMostrar = utilizadorAtual?.tipo === 'funcionario'
     ? todosAnuncios

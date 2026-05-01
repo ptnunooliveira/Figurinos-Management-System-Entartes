@@ -2,14 +2,14 @@ import { useState, useEffect } from "react";
 import { Search, Filter, Shirt, Plus, Trash2, Eye, Edit, Calendar, X } from "lucide-react";
 import { Link } from "react-router";
 import { getUtilizadorAtual } from "../lib/auth";
-import { getFigurinosRaw, getAnunciosEscola, getUtilizadores, criarReserva, desativarFigurino, atualizarFigurino, type FigurinoAPI, type AnuncioEscolaAPI } from "../lib/services";
+import { getFigurinosRaw, getAnunciosEscola, desativarFigurino, atualizarFigurino, type FigurinoAPI, type AnuncioEscolaAPI } from "../lib/services";
+import { useCart } from "./CartContext";
 import { toast } from "sonner";
 
 export function Figurinos() {
   const utilizadorAtual = getUtilizadorAtual();
   const [figurinos, setFigurinos] = useState<FigurinoAPI[]>([]);
   const [anunciosEscola, setAnunciosEscola] = useState<AnuncioEscolaAPI[]>([]);
-  const [utilizadores, setUtilizadores] = useState<any[]>([]);
   const [termoPesquisa, setTermoPesquisa] = useState("");
   const [categoriaSelecionada, setCategoriaSelecionada] = useState<string>("todas");
   const [tipoSelecionado, setTipoSelecionado] = useState<string>("todos");
@@ -23,19 +23,16 @@ export function Figurinos() {
   const [figurinoEditando, setFigurinoEditando] = useState<FigurinoAPI | null>(null);
   const [dataInicio, setDataInicio] = useState("");
   const [dataFim, setDataFim] = useState("");
-  const [alunoSelecionado, setAlunoSelecionado] = useState("");
   const [formEditacao, setFormEditacao] = useState({
     descricao: "",
     tamanho: "",
     localizacao: "",
   });
+  const { adicionarAoCarrinho } = useCart();
 
   useEffect(() => {
     getFigurinosRaw().then(setFigurinos);
     getAnunciosEscola().then(setAnunciosEscola);
-    if (utilizadorAtual?.tipo === 'funcionario') {
-      getUtilizadores().then(setUtilizadores);
-    }
   }, [utilizadorAtual?.tipo]);
 
   const handleRemoverFigurino = async (id: number, descricao: string) => {
@@ -95,7 +92,6 @@ export function Figurinos() {
     setFigurinoSelecionado(figurino);
     setDataInicio("");
     setDataFim("");
-    setAlunoSelecionado("");
     setMostrarModalReserva(true);
   };
 
@@ -104,7 +100,6 @@ export function Figurinos() {
     setFigurinoSelecionado(null);
     setDataInicio("");
     setDataFim("");
-    setAlunoSelecionado("");
   };
 
   const calcularDias = (inicio: string, fim: string): number => {
@@ -116,10 +111,6 @@ export function Figurinos() {
   const handleConfirmarReserva = async () => {
     if (!figurinoSelecionado || !dataInicio || !dataFim) {
       toast.error("Por favor, preencha todas as datas");
-      return;
-    }
-    if (utilizadorAtual?.tipo === 'funcionario' && !alunoSelecionado) {
-      toast.error("Por favor, selecione um aluno");
       return;
     }
     if (new Date(dataFim) < new Date(dataInicio)) {
@@ -139,17 +130,15 @@ export function Figurinos() {
       return;
     }
 
-    try {
-      await criarReserva(
-        [{ id_anuncio: anuncio.id, datainicio: dataInicio, datafim: dataFim }],
-        utilizadorAtual?.tipo === 'funcionario' ? parseInt(alunoSelecionado) : undefined
-      );
-      const dias = calcularDias(dataInicio, dataFim);
-      toast.success(`Reserva criada com sucesso! ${dias} dia${dias > 1 ? 's' : ''}`);
-      handleFecharModalReserva();
-    } catch (err: any) {
-      toast.error(err.message || "Erro ao criar reserva");
-    }
+    adicionarAoCarrinho({
+      id_anuncio: anuncio.id,
+      figurino_nome: figurinoSelecionado.descricao ?? "Figurino",
+      datainicio: dataInicio,
+      datafim: dataFim,
+    });
+
+    toast.success("Adicionado ao carrinho com sucesso!");
+    handleFecharModalReserva();
   };
 
   const figurinosFiltrados = figurinos.filter((figurino) => {
@@ -444,23 +433,6 @@ export function Figurinos() {
                 </div>
               </div>
 
-              {utilizadorAtual?.tipo === 'funcionario' && (
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">Aluno *</label>
-                  <select
-                    value={alunoSelecionado}
-                    onChange={(e) => setAlunoSelecionado(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    required
-                  >
-                    <option value="">Selecione um aluno</option>
-                    {utilizadores.map((u) => (
-                      <option key={u.id} value={u.id}>{u.nome}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
               <div className="space-y-4">
                 <h4 className="font-semibold text-gray-900 flex items-center gap-2">
                   <Calendar className="w-5 h-5 text-fig-purple" />
@@ -517,7 +489,7 @@ export function Figurinos() {
                 disabled={!dataInicio || !dataFim}
                 className="px-6 py-3 bg-gradient-to-r from-fig-purple to-fig-magenta hover:shadow-lg text-white rounded-lg transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Confirmar Reserva
+                Adicionar ao Carrinho
               </button>
             </div>
           </div>

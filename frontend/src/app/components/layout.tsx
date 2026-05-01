@@ -11,16 +11,21 @@ import {
   FileText,
   LogOut,
   Megaphone,
-  AlertTriangle
+  AlertTriangle,
+  ShoppingCart,
+  Store
 } from "lucide-react";
 import { useState } from "react";
 import { getUtilizadorAtual, logout } from "../lib/auth";
+// @ts-expect-error - Ignora o aviso do TypeScript caso este não reconheça extensões .png
 import figLogo from "../../assets/fig-logo.png";
+import { useCart } from "../pages/CartContext";
 
 export function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { totalItems } = useCart();
 
   const utilizadorAtual = getUtilizadorAtual();
 
@@ -36,9 +41,10 @@ export function Layout() {
     { nome: "Reservas", href: "/reservas", icon: Calendar },
     { nome: "Ocorrências", href: "/ocorrencias", icon: AlertTriangle },
     { nome: "Marketplace", href: "/marketplace", icon: ShoppingBag },
-    { nome: "Administração", href: "/administracao", icon: Settings },
+    { nome: "Gestão Marketplace", href: "/anuncios-marketplace", icon: Store },
     { nome: "Faturação", href: "/faturacao", icon: FileText },
     { nome: "Perfil", href: "/perfil", icon: User },
+    { nome: "Administração", href: "/administracao", icon: Settings },
   ];
 
   const navegacaoAluno = [
@@ -47,6 +53,7 @@ export function Layout() {
     { nome: "Reservas", href: "/reservas", icon: Calendar },
     { nome: "Ocorrências", href: "/ocorrencias", icon: AlertTriangle },
     { nome: "Marketplace", href: "/marketplace", icon: ShoppingBag },
+    { nome: "Carrinho", href: "/carrinho", icon: ShoppingCart },
     { nome: "Perfil", href: "/perfil", icon: User },
   ];
 
@@ -112,6 +119,11 @@ export function Layout() {
               >
                 <Icon className="w-5 h-5" />
                 <span className="font-medium">{item.nome}</span>
+                {item.nome === "Carrinho" && totalItems > 0 && (
+                  <span className="ml-auto bg-gradient-to-r from-fig-purple to-fig-magenta text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                    {totalItems}
+                  </span>
+                )}
               </Link>
             );
           })}
@@ -141,7 +153,21 @@ export function Layout() {
       </aside>
 
       {/* Conteúdo Principal */}
-      <div className="flex-1 flex flex-col min-h-screen">
+      <div className="flex-1 flex flex-col min-h-screen relative">
+        {/* Botão Carrinho Desktop (Superior Direito) */}
+        {utilizadorAtual?.tipo === "aluno" && (
+          <div className="hidden lg:block absolute top-6 right-8 z-40">
+            <Link to="/carrinho" className="relative p-3 bg-white border border-gray-200 shadow-sm rounded-full flex items-center justify-center hover:bg-fig-purple/5 hover:border-fig-purple/30 hover:text-fig-purple transition-all text-gray-600" title="Ver Carrinho">
+              <ShoppingCart className="w-6 h-6" />
+              {totalItems > 0 && (
+                <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-r from-fig-purple to-fig-magenta text-[10px] font-bold text-white shadow-sm border-2 border-white">
+                  {totalItems}
+                </span>
+              )}
+            </Link>
+          </div>
+        )}
+
         {/* Header Mobile */}
         <header className="lg:hidden bg-white shadow-sm sticky top-0 z-50">
           <div className="px-4 py-4">
@@ -156,16 +182,28 @@ export function Layout() {
                 </div>
               </Link>
 
-              <button
-                className="p-2 rounded-lg hover:bg-gray-100"
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              >
-                {mobileMenuOpen ? (
-                  <X className="w-6 h-6 text-gray-600" />
-                ) : (
-                  <Menu className="w-6 h-6 text-gray-600" />
+              <div className="flex items-center gap-2">
+                {utilizadorAtual?.tipo === "aluno" && (
+                  <Link to="/carrinho" className="relative p-2 text-gray-600 hover:text-fig-purple transition-colors">
+                    <ShoppingCart className="w-6 h-6" />
+                    {totalItems > 0 && (
+                      <span className="absolute top-0 right-0 flex h-4 w-4 items-center justify-center rounded-full bg-gradient-to-r from-fig-purple to-fig-magenta text-[9px] font-bold text-white border-2 border-white">
+                        {totalItems}
+                      </span>
+                    )}
+                  </Link>
                 )}
-              </button>
+                <button
+                  className="p-2 rounded-lg hover:bg-gray-100"
+                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                >
+                  {mobileMenuOpen ? (
+                    <X className="w-6 h-6 text-gray-600" />
+                  ) : (
+                    <Menu className="w-6 h-6 text-gray-600" />
+                  )}
+                </button>
+              </div>
             </div>
 
             {/* Menu Mobile */}
@@ -191,6 +229,11 @@ export function Layout() {
                     >
                       <Icon className="w-5 h-5" />
                       <span>{item.nome}</span>
+                      {item.nome === "Carrinho" && totalItems > 0 && (
+                        <span className="ml-auto bg-gradient-to-r from-fig-purple to-fig-magenta text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                          {totalItems}
+                        </span>
+                      )}
                     </Link>
                   );
                 })}

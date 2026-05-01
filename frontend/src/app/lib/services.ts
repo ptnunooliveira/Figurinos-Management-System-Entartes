@@ -667,11 +667,34 @@ export async function getPropostasCobranca(): Promise<PropostaCobranca[]> {
 export async function atualizarEstadoProposta(id: number, idEstado: number): Promise<any> {
   const res = await apiFetch(`/propostas-cobranca/${id}/estado`, {
     method: 'PATCH',
-    body: JSON.stringify({ id_estado: idEstado }),
+    body: JSON.stringify({ id_estadopropostacobranca: idEstado }),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.erro ?? 'Erro ao atualizar proposta');
+  }
+  return res.json();
+}
+
+export async function aceitarProposta(idProposta: number): Promise<any> {
+  const res = await apiFetch(`/propostas-cobranca/${idProposta}/aceitar`, {
+    method: 'POST',
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.erro ?? 'Erro ao aceitar proposta');
+  }
+  return res.json();
+}
+
+export async function resolverComContraproposta(idOcorrencia: number, valor: number): Promise<any> {
+  const res = await apiFetch(`/propostas-cobranca/ocorrencia/${idOcorrencia}/resolver-contraproposta`, {
+    method: 'POST',
+    body: JSON.stringify({ valor }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.erro ?? 'Erro ao resolver ocorrência');
   }
   return res.json();
 }
@@ -684,6 +707,20 @@ export async function finalizarPropostaContaCorrente(id: number): Promise<any> {
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.erro ?? 'Erro ao finalizar proposta');
+  }
+  return res.json();
+}
+
+// ─── Utilizadores ─────────────────────────────────────────────────────────────
+
+export async function criarUtilizador(dados: { nome: string; email: string; password: string; perfil: string }): Promise<any> {
+  const res = await apiFetch('/auth/register', {
+    method: 'POST',
+    body: JSON.stringify(dados),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message ?? err.erro ?? 'Erro ao criar utilizador');
   }
   return res.json();
 }

@@ -105,7 +105,7 @@ export function Figurinos() {
       sexo: figurino.sexo?.id ? String(figurino.sexo.id) : "",
       estado: figurino.estado_condicao?.id ? String(figurino.estado_condicao.id) : "",
     });
-    setAcessoriosEditacao(figurino.figurino_acessorio.map((fa) => fa.id_acessorio));
+    setAcessoriosEditacao((figurino.figurino_acessorio ?? []).map((fa) => fa.id_acessorio));
     setMostrarModalEditar(true);
   };
 
@@ -213,7 +213,7 @@ export function Figurinos() {
     const estado = figurino.estado_condicao?.nome ?? '';
     const titulo = figurino.titulo ?? '';
     const descricao = figurino.descricao ?? '';
-    const acessorios = figurino.figurino_acessorio.map((fa) => fa.acessorio.nome);
+    const acessorios = (figurino.figurino_acessorio ?? []).map((fa) => fa.acessorio.nome);
 
     const correspondePesquisa =
       titulo.toLowerCase().includes(termoPesquisa.toLowerCase()) ||
@@ -405,18 +405,18 @@ export function Figurinos() {
                     )}
                   </div>
 
-                  {figurino.figurino_acessorio.length > 0 && (
+                  {(figurino.figurino_acessorio ?? []).length > 0 && (
                     <div className="mb-3">
                       <p className="text-xs text-gray-500 mb-1">Acessórios incluídos:</p>
                       <div className="flex flex-wrap gap-1">
-                        {figurino.figurino_acessorio.slice(0, 3).map((fa) => (
+                        {(figurino.figurino_acessorio ?? []).slice(0, 3).map((fa) => (
                           <span key={fa.id_acessorio} className="text-xs px-2 py-0.5 bg-fig-green/10 text-fig-green rounded">
                             {fa.acessorio.nome}
                           </span>
                         ))}
-                        {figurino.figurino_acessorio.length > 3 && (
+                        {(figurino.figurino_acessorio ?? []).length > 3 && (
                           <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded">
-                            +{figurino.figurino_acessorio.length - 3}
+                            +{(figurino.figurino_acessorio ?? []).length - 3}
                           </span>
                         )}
                       </div>
@@ -624,9 +624,9 @@ export function Figurinos() {
               </div>
               <div>
                 <label className="text-sm font-medium text-gray-700">Acessórios incluídos</label>
-                {figurinoSelecionado.figurino_acessorio.length > 0 ? (
+                {(figurinoSelecionado.figurino_acessorio ?? []).length > 0 ? (
                   <div className="mt-2 flex flex-wrap gap-2">
-                    {figurinoSelecionado.figurino_acessorio.map((fa) => (
+                    {(figurinoSelecionado.figurino_acessorio ?? []).map((fa) => (
                       <span key={fa.id_acessorio} className="px-3 py-1 bg-fig-green/10 text-fig-green text-sm rounded-full">
                         {fa.acessorio.nome}
                       </span>

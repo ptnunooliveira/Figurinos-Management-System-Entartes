@@ -18,7 +18,7 @@ export function Administracao() {
   const [anuncioDetalhe, setAnuncioDetalhe] = useState<AnuncioMarketplace | null>(null);
 
   const carregarDados = () => {
-    getMarketplaceGestao('Pendente').then(setAnunciosPendentes);
+    getMarketplaceGestao('Submetido').then(setAnunciosPendentes);
     getPropostasCobranca().then(setPropostas);
   };
 

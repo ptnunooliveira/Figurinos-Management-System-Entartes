@@ -486,7 +486,7 @@ export function Marketplace() {
 
           {utilizadorAtual?.tipo === 'aluno' && abaAtiva === "explorar" && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Sexo</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Género</label>
               <select
                 value={sexoSelecionado}
                 onChange={(e) => setSexoSelecionado(e.target.value)}

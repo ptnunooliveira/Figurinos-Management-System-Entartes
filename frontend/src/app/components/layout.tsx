@@ -12,8 +12,7 @@ import {
   LogOut,
   Megaphone,
   AlertTriangle,
-  ShoppingCart,
-  Store
+  ShoppingCart
 } from "lucide-react";
 import { useState } from "react";
 import { getUtilizadorAtual, logout } from "../lib/auth";
@@ -41,7 +40,6 @@ export function Layout() {
     { nome: "Reservas", href: "/reservas", icon: Calendar },
     { nome: "Ocorrências", href: "/ocorrencias", icon: AlertTriangle },
     { nome: "Marketplace", href: "/marketplace", icon: ShoppingBag },
-    { nome: "Gestão Marketplace", href: "/anuncios-marketplace", icon: Store },
     { nome: "Faturação", href: "/faturacao", icon: FileText },
     { nome: "Perfil", href: "/perfil", icon: User },
     { nome: "Administração", href: "/administracao", icon: Settings },
@@ -72,9 +70,9 @@ export function Layout() {
   const iniciaisUtilizador = nomeUtilizador.split(' ').map(n => n[0]).join('').slice(0, 2);
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-gray-50 flex lg:h-screen lg:overflow-hidden">
       {/* Sidebar Desktop */}
-      <aside className="hidden lg:flex flex-col w-64 bg-white border-r min-h-screen sticky top-0">
+      <aside className="hidden lg:flex flex-col w-64 bg-white border-r h-screen shrink-0">
         {/* Logo */}
         <Link to="/" className="flex items-center gap-3 p-6 border-b">
           <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">
@@ -153,7 +151,7 @@ export function Layout() {
       </aside>
 
       {/* Conteúdo Principal */}
-      <div className="flex-1 flex flex-col min-h-screen relative">
+      <div className="flex-1 flex flex-col min-h-screen relative lg:min-h-0 lg:h-screen">
         {/* Botão Carrinho Desktop (Superior Direito) */}
         {utilizadorAtual?.tipo === "aluno" && (
           <div className="hidden lg:block absolute top-6 right-8 z-40">
@@ -264,7 +262,7 @@ export function Layout() {
         </header>
 
         {/* Conteúdo */}
-        <main className="flex-1 p-4 lg:p-8">
+        <main className="flex-1 p-4 lg:p-8 lg:overflow-y-auto">
           <div className="max-w-7xl mx-auto">
             <Outlet />
           </div>

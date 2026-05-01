@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { FileDown, Calendar, DollarSign, CheckSquare } from "lucide-react";
+import { FileDown, Calendar, Euro, CheckSquare } from "lucide-react";
 import { getContaCorrente, getMinhaContaCorrente, marcarMovimentoExportado } from "../lib/services";
 import { getUtilizadorAtual } from "../lib/auth";
 import type { ContaCorrente } from "../lib/dados-mock";
@@ -115,7 +115,7 @@ export function Faturacao() {
         </div>
         <div className="bg-white rounded-xl shadow-sm p-6">
           <div className="flex items-center gap-3 mb-2">
-            <DollarSign className="w-5 h-5 text-green-600" />
+            <Euro className="w-5 h-5 text-green-600" />
             <p className="text-sm text-gray-600">Total a Faturar</p>
           </div>
           <p className="text-3xl font-bold text-gray-900">{formatarMoeda(Math.abs(totalFaturar))}</p>

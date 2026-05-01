@@ -13,10 +13,10 @@
  * ------------------------------------------------------------
  */
 
-const { PrismaClient } = require('@prisma/client');
-const { ID_ESTADO_OCORRENCIA } = require('../utils/estadosOcorrencia');
-const prisma = new PrismaClient();
-
+//const { PrismaClient } = require('@prisma/client');
+//const { ID_ESTADO_OCORRENCIA } = require('../utils/estadosOcorrencia');
+//const prisma = new PrismaClient();
+const prisma = require('../prisma/client');
 
 // Obter todas as propostas de cobrança
 const obterTodasPropostasCobranca = async () => {

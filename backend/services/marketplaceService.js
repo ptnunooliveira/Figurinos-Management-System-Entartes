@@ -234,8 +234,6 @@ const criarAnuncioMarketplace = async ({ titulo, descricao, tamanho, imagens, id
 };
 
 const obterAnunciosMarketplace = async () => {
-  await processarTransicoesTemporaisMarketplace();
-
   const estadoPublicado = await obterEstadoAnuncioPorNome("Publicado");
 
   if (!estadoPublicado) {
@@ -292,8 +290,6 @@ const obterAnunciosMarketplace = async () => {
 };
 
 const obterAnunciosMarketplaceGestao = async (estadoNome) => {
-  await processarTransicoesTemporaisMarketplace();
-
   const where = {};
 
   if (estadoNome) {
@@ -354,8 +350,6 @@ const obterAnunciosMarketplaceGestao = async (estadoNome) => {
 };
 
 const obterAnunciosMarketplacePorUtilizador = async (idUtilizador) => {
-  await processarTransicoesTemporaisMarketplace();
-
   const anuncios = await prisma.anuncio_marketplace.findMany({
     where: { id_utilizador: idUtilizador },
     orderBy: { id: "desc" },

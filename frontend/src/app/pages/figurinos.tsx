@@ -2,15 +2,11 @@ import { useState, useEffect } from "react";
 import { Search, Filter, Shirt, Plus, Trash2, Eye, Edit, Calendar, X } from "lucide-react";
 import { Link } from "react-router";
 import { getUtilizadorAtual } from "../lib/auth";
-<<<<<<< HEAD
-import { getFigurinosRaw, getAnunciosEscola, desativarFigurino, atualizarFigurino, criarAcessorio, type FigurinoAPI, type AnuncioEscolaAPI } from "../lib/services";
-=======
 import {
-  getFigurinosRaw, getAnunciosEscola, eliminarFigurino, atualizarFigurino,
+  getFigurinosRaw, getAnunciosEscola, eliminarFigurino, atualizarFigurino, criarAcessorio,
   getCategorias, getTiposFigurino, getSexos, getEstadosCondicao, getAcessorios,
   type FigurinoAPI, type AnuncioEscolaAPI, type AuxiliarItem,
 } from "../lib/services";
->>>>>>> origin/main
 import { useCart } from "./CartContext";
 import { toast } from "sonner";
 
@@ -56,7 +52,14 @@ export function Figurinos() {
     getAnunciosEscola().then(setAnunciosEscola);
   }, [utilizadorAtual?.tipo]);
 
-<<<<<<< HEAD
+  useEffect(() => {
+    getCategorias().then(setCategorias);
+    getTiposFigurino().then(setTipos);
+    getSexos().then(setSexos);
+    getEstadosCondicao().then(setEstadosCondicao);
+    getAcessorios().then(setAcessorios);
+  }, []);
+
   const handleCriarAcessorio = async () => {
     if (!nomeNovoAcessorio.trim()) return;
     try {
@@ -68,15 +71,6 @@ export function Figurinos() {
       toast.error(err.message || "Erro ao criar acessório");
     }
   };
-=======
-  useEffect(() => {
-    getCategorias().then(setCategorias);
-    getTiposFigurino().then(setTipos);
-    getSexos().then(setSexos);
-    getEstadosCondicao().then(setEstadosCondicao);
-    getAcessorios().then(setAcessorios);
-  }, []);
->>>>>>> origin/main
 
   const handleRemoverFigurino = async (id: number, descricao: string) => {
     if (!window.confirm(`Tem a certeza que deseja remover o figurino "${descricao}"?`)) return;

@@ -11,7 +11,6 @@ import { Devolucao } from "./pages/devolucao";
 import { Marketplace } from "./pages/marketplace";
 import { Perfil } from "./pages/perfil";
 import { Administracao } from "./pages/administracao";
-import { AnunciosMarketplace } from "./pages/anuncios-marketplace";
 import { Ocorrencias } from "./pages/ocorrencias";
 import { Faturacao } from "./pages/faturacao";
 import { NaoEncontrado } from "./pages/nao-encontrado";
@@ -96,14 +95,6 @@ export const router = createBrowserRouter([
         element: (
           <FuncionarioRoute>
             <Administracao />
-          </FuncionarioRoute>
-        ),
-      },
-      {
-        path: "anuncios-marketplace",
-        element: (
-          <FuncionarioRoute>
-            <AnunciosMarketplace />
           </FuncionarioRoute>
         ),
       },

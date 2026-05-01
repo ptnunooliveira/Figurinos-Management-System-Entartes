@@ -10,6 +10,30 @@
  */
 const { createClient } = require("@supabase/supabase-js");
 
+const CACHE_IMAGENS_TTL_MS = 60 * 1000;
+const cacheImagensPorAnuncio = new Map();
+
+const obterCacheImagens = (idAnuncio) => {
+  const entrada = cacheImagensPorAnuncio.get(idAnuncio);
+  if (!entrada) return null;
+  if (Date.now() > entrada.expiresAt) {
+    cacheImagensPorAnuncio.delete(idAnuncio);
+    return null;
+  }
+  return entrada.urls;
+};
+
+const guardarCacheImagens = (idAnuncio, urls) => {
+  cacheImagensPorAnuncio.set(idAnuncio, {
+    urls,
+    expiresAt: Date.now() + CACHE_IMAGENS_TTL_MS,
+  });
+};
+
+const invalidarCacheImagens = (idAnuncio) => {
+  cacheImagensPorAnuncio.delete(idAnuncio);
+};
+
 const obterExtensao = (mimetype) => {
   switch (mimetype) {
     case "image/jpeg":
@@ -65,10 +89,17 @@ const uploadImagensAnuncio = async (idAnuncio, idUtilizador, ficheiros) => {
     })
   );
 
+  invalidarCacheImagens(idAnuncio);
+
   return urls;
 };
 
 const listarImagensAnuncio = async (idAnuncio) => {
+  const emCache = obterCacheImagens(idAnuncio);
+  if (emCache) {
+    return emCache;
+  }
+
   const { client, bucket } = getStorageConfig();
   const pasta = `marketplace/${idAnuncio}`;
 
@@ -78,12 +109,16 @@ const listarImagensAnuncio = async (idAnuncio) => {
   });
 
   if (error || !Array.isArray(data)) {
+    guardarCacheImagens(idAnuncio, []);
     return [];
   }
 
-  return data
+  const urls = data
     .filter((item) => item && typeof item.name === "string")
     .map((item) => client.storage.from(bucket).getPublicUrl(`${pasta}/${item.name}`).data.publicUrl);
+
+  guardarCacheImagens(idAnuncio, urls);
+  return urls;
 };
 
 const removerImagensAnuncio = async (idAnuncio) => {
@@ -106,6 +141,8 @@ const removerImagensAnuncio = async (idAnuncio) => {
   if (caminhos.length > 0) {
     await client.storage.from(bucket).remove(caminhos);
   }
+
+  invalidarCacheImagens(idAnuncio);
 };
 
 const substituirImagensAnuncio = async (idAnuncio, idUtilizador, ficheiros) => {

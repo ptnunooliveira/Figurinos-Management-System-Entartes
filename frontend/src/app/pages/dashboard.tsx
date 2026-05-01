@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
-import { Calendar, Shirt, ShoppingBag, AlertCircle, TrendingUp, FileText, Bell, ShoppingCart } from "lucide-react";
+import { Calendar, Shirt, ShoppingBag, AlertCircle, TrendingUp, FileText, Bell, Trash2 } from "lucide-react";
 import { Link } from "react-router";
 import { getUtilizadorAtual } from "../lib/auth";
-import { getReservas, getMinhasReservas, getOcorrencias, getMinhasOcorrencias, getMarketplace, getMarketplaceGestao, getMarketplaceDoUtilizador, getAnunciosEscola } from "../lib/services";
+import { getReservas, getMinhasReservas, getOcorrencias, getMarketplace, getMarketplaceGestao, getAnunciosEscola, getMarketplaceDoUtilizador, getPropostasCobranca } from "../lib/services";
+import { getMinhasOcorrencias } from "../lib/services";
 import type { LinhaReserva } from "../lib/dados-mock";
 
 interface NotificacaoDashboard {
@@ -12,6 +13,8 @@ interface NotificacaoDashboard {
 }
 
 const DASHBOARD_NOTIF_KEY = "fighappens_notificacoes_vistas";
+const MARKETPLACE_INTERESSE_NOTIF_KEY = "fighappens_marketplace_interesses";
+const DASHBOARD_NOTIF_REMOVIDAS_KEY = "fighappens_notificacoes_removidas";
 
 export function Dashboard() {
   const utilizadorAtual = getUtilizadorAtual();
@@ -20,6 +23,7 @@ export function Dashboard() {
   const [figurinosDisponiveis, setFigurinosDisponiveis] = useState(0);
   const [ocorrenciasPendentes, setOcorrenciasPendentes] = useState(0);
   const [anunciosPendentes, setAnunciosPendentes] = useState(0);
+  const [propostasPendentes, setPropostasPendentes] = useState(0);
   const [totalMarketplace, setTotalMarketplace] = useState(0);
   const [proximasReservas, setProximasReservas] = useState<LinhaReserva[]>([]);
   const [mostrarNotificacoes, setMostrarNotificacoes] = useState(false);
@@ -40,12 +44,69 @@ export function Dashboard() {
     localStorage.setItem(DASHBOARD_NOTIF_KEY, JSON.stringify(chaves));
   };
 
+  const obterChavesRemovidas = (): string[] => {
+    try {
+      const raw = localStorage.getItem(DASHBOARD_NOTIF_REMOVIDAS_KEY);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  };
+
+  const guardarChavesRemovidas = (chaves: string[]) => {
+    localStorage.setItem(DASHBOARD_NOTIF_REMOVIDAS_KEY, JSON.stringify(chaves));
+  };
+
   const marcarComoLida = (chave: string) => {
     const vistas = obterChavesVistas();
     if (!vistas.includes(chave)) {
       guardarChavesVistas([...vistas, chave]);
     }
     setNotificacoes((prev) => prev.map((n) => (n.chave === chave ? { ...n, lida: true } : n)));
+  };
+
+  const eliminarNotificacao = (chave: string) => {
+    const removidas = obterChavesRemovidas();
+    if (!removidas.includes(chave)) {
+      guardarChavesRemovidas([...removidas, chave]);
+    }
+
+    setNotificacoes((prev) => prev.filter((n) => n.chave !== chave));
+
+    try {
+      const raw = localStorage.getItem(MARKETPLACE_INTERESSE_NOTIF_KEY);
+      const parsed = raw ? JSON.parse(raw) : [];
+      const lista = Array.isArray(parsed) ? parsed : [];
+      const atualizada = lista.filter((item: any) => String(item?.chave ?? "") !== chave);
+      localStorage.setItem(MARKETPLACE_INTERESSE_NOTIF_KEY, JSON.stringify(atualizada));
+    } catch {
+      // noop
+    }
+  };
+
+  const obterNotificacoesInteresseMarketplace = (idDono: number): NotificacaoDashboard[] => {
+    try {
+      const raw = localStorage.getItem(MARKETPLACE_INTERESSE_NOTIF_KEY);
+      if (!raw) return [];
+
+      const parsed = JSON.parse(raw);
+      const lista = Array.isArray(parsed) ? parsed : [];
+      const vistas = obterChavesVistas();
+      const removidas = obterChavesRemovidas();
+
+      return lista
+        .filter((item: any) => Number(item?.idDono) === idDono && typeof item?.mensagem === "string")
+        .filter((item: any) => !removidas.includes(String(item.chave ?? `interesse:${item.idAnuncio}:${item.idInteressado}`)))
+        .map((item: any) => ({
+          chave: String(item.chave ?? `interesse:${item.idAnuncio}:${item.idInteressado}`),
+          mensagem: item.mensagem,
+          lida: vistas.includes(String(item.chave ?? `interesse:${item.idAnuncio}:${item.idInteressado}`)),
+        }));
+    } catch {
+      return [];
+    }
   };
 
   useEffect(() => {
@@ -61,15 +122,58 @@ export function Dashboard() {
         });
         setReservasAtivas(ativas.length);
       });
-      getOcorrencias().then(ocs => {
-        setOcorrenciasPendentes(ocs.filter(o => {
+      Promise.all([getOcorrencias(), getMarketplaceGestao(), getPropostasCobranca()]).then(([ocs, anuncios, propostas]) => {
+        const ocorrenciasAResponder = ocs.filter((o) => {
           const e = o.estado?.toLowerCase();
-          return e === 'a aguardar' || e === 'a aguardar orçamento' || e === 'contestada pelo aluno';
-        }).length);
-      });
-      getMarketplaceGestao().then(anuncios => {
+          return e === 'em análise' || e === 'pendente' || e === 'a aguardar' || e === 'a aguardar orçamento';
+        }).length;
+
+        const anunciosAResponder = anuncios.filter((a) => {
+          const estado = (a.estado || "").toLowerCase();
+          return estado === "submetido" || estado === "pendente";
+        }).length;
+
+        const propostasAResponder = propostas.filter((p) => {
+          const estado = (p.estado || "").toLowerCase();
+          return estado !== "aceite" && estado !== "rejeitada" && estado !== "finalizada";
+        }).length;
+
+        setOcorrenciasPendentes(ocorrenciasAResponder);
+        setAnunciosPendentes(anunciosAResponder);
+        setPropostasPendentes(propostasAResponder);
         setTotalMarketplace(anuncios.length);
-        setAnunciosPendentes(anuncios.filter(a => a.estado === 'Pendente').length);
+
+        const vistas = obterChavesVistas();
+        const notificacoesGeradas: NotificacaoDashboard[] = [];
+
+        if (anunciosAResponder > 0) {
+          const chave = `admin:anuncios:${anunciosAResponder}`;
+          notificacoesGeradas.push({
+            chave,
+            mensagem: `Tem ${anunciosAResponder} anúncio${anunciosAResponder !== 1 ? "s" : ""} para responder.`,
+            lida: vistas.includes(chave),
+          });
+        }
+
+        if (ocorrenciasAResponder > 0) {
+          const chave = `admin:ocorrencias:${ocorrenciasAResponder}`;
+          notificacoesGeradas.push({
+            chave,
+            mensagem: `Tem ${ocorrenciasAResponder} ocorrência${ocorrenciasAResponder !== 1 ? "s" : ""} para analisar.`,
+            lida: vistas.includes(chave),
+          });
+        }
+
+        if (propostasAResponder > 0) {
+          const chave = `admin:propostas:${propostasAResponder}`;
+          notificacoesGeradas.push({
+            chave,
+            mensagem: `Tem ${propostasAResponder} proposta${propostasAResponder !== 1 ? "s" : ""} para responder.`,
+            lida: vistas.includes(chave),
+          });
+        }
+
+        setNotificacoes(notificacoesGeradas);
       });
     } else {
       getMinhasReservas().then(reservas => {
@@ -87,7 +191,7 @@ export function Dashboard() {
       getMinhasOcorrencias().then(ocs => {
         setOcorrenciasPendentes(ocs.filter(o => {
           const e = o.estado?.toLowerCase();
-          return e === 'a aguardar' || e === 'a aguardar orçamento' || e === 'contestada pelo aluno' || e === 'a aguardar resposta do aluno';
+          return e === 'a aguardar' || e === 'a aguardar orçamento';
         }).length);
       });
       getMarketplace().then(anuncios => {
@@ -95,8 +199,12 @@ export function Dashboard() {
       });
 
       if (utilizadorAtual?.id) {
+        const notificacoesInteresse = obterNotificacoesInteresseMarketplace(utilizadorAtual.id);
+        setNotificacoes(notificacoesInteresse);
+
         getMarketplaceDoUtilizador(utilizadorAtual.id).then((anuncios) => {
           const vistas = obterChavesVistas();
+          const removidas = obterChavesRemovidas();
           const notificacoesGeradas = anuncios
             .map((a) => {
               const estado = (a.estado || "").toLowerCase();
@@ -121,9 +229,10 @@ export function Dashboard() {
 
               return null;
             })
-            .filter((n): n is NotificacaoDashboard => n !== null);
+            .filter((n): n is NotificacaoDashboard => n !== null)
+            .filter((n) => !removidas.includes(n.chave));
 
-          setNotificacoes(notificacoesGeradas);
+          setNotificacoes([...notificacoesInteresse, ...notificacoesGeradas]);
         });
       }
     }
@@ -170,7 +279,7 @@ export function Dashboard() {
         <div className="flex items-start justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold mb-2">
-              Bem-vindo{utilizadorAtual?.tipo === 'funcionario' && 'a'} ao FigHappens, {utilizadorAtual?.nome.split(' ')[0]}! 👋
+              Bem-vindo ao FigHappens, {utilizadorAtual?.nome.split(' ')[0]}! 👋
             </h1>
             {utilizadorAtual?.tipo === 'aluno' && (
               <p className="text-fig-green-light text-lg">
@@ -179,7 +288,7 @@ export function Dashboard() {
             )}
           </div>
 
-          {utilizadorAtual?.tipo === 'aluno' && (
+          {!!utilizadorAtual && (
             <div className="relative">
               <button
                 type="button"
@@ -206,16 +315,29 @@ export function Dashboard() {
                     ) : (
                       notificacoes.map((n) => (
                         <div key={n.chave} className="p-4 border-b last:border-b-0">
-                          <p className={`text-sm ${n.lida ? "text-gray-500" : "text-gray-900 font-medium"}`}>{n.mensagem}</p>
-                          {!n.lida && (
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className={`text-sm ${n.lida ? "text-gray-500" : "text-gray-900 font-medium"}`}>{n.mensagem}</p>
+                              {!n.lida && (
+                                <button
+                                  type="button"
+                                  onClick={() => marcarComoLida(n.chave)}
+                                  className="mt-2 text-xs text-fig-purple hover:underline"
+                                >
+                                  Marcar como lida
+                                </button>
+                              )}
+                            </div>
                             <button
                               type="button"
-                              onClick={() => marcarComoLida(n.chave)}
-                              className="mt-2 text-xs text-fig-purple hover:underline"
+                              onClick={() => eliminarNotificacao(n.chave)}
+                              className="mt-1 text-gray-400 hover:text-red-600 transition-colors"
+                              aria-label="Eliminar notificação"
+                              title="Eliminar notificação"
                             >
-                              Marcar como lida
+                              <Trash2 className="w-4 h-4" />
                             </button>
-                          )}
+                          </div>
                         </div>
                       ))
                     )}
@@ -251,101 +373,102 @@ export function Dashboard() {
         })}
       </div>
 
-      {/* Alertas (funcionário) ou Próximas Reservas (aluno) */}
-      <div className="bg-white rounded-xl shadow-sm p-6">
-        <div className="flex items-center justify-between mb-5">
-          <h2 className="text-lg font-semibold text-gray-900">
-            {utilizadorAtual?.tipo === 'funcionario' ? 'Alertas' : 'Próximas Reservas'}
-          </h2>
-          {utilizadorAtual?.tipo === 'funcionario'
-            ? <AlertCircle className="w-5 h-5 text-orange-500" />
-            : <Calendar className="w-5 h-5 text-gray-400" />
-          }
-        </div>
-
-        {utilizadorAtual?.tipo === 'funcionario' ? (
-          <div className="space-y-3">
-            {anunciosPendentes > 0 && (
-              <Link
-                to="/anuncios-marketplace"
-                className="flex items-center gap-4 p-4 bg-amber-50 border border-amber-200 rounded-xl hover:bg-amber-100 transition-colors group"
-              >
-                <div className="w-10 h-10 bg-amber-100 group-hover:bg-amber-200 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors">
-                  <ShoppingBag className="w-5 h-5 text-amber-600" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-semibold text-amber-900">
-                    {anunciosPendentes} anúncio{anunciosPendentes !== 1 ? 's' : ''} pendente{anunciosPendentes !== 1 ? 's' : ''} de aprovação
-                  </p>
-                  <p className="text-xs text-amber-700 mt-0.5">Clique para aprovar ou rejeitar</p>
-                </div>
-                <span className="text-amber-400 group-hover:text-amber-600 transition-colors">→</span>
-              </Link>
-            )}
-            {ocorrenciasPendentes > 0 && (
-              <Link
-                to="/ocorrencias"
-                className="flex items-center gap-4 p-4 bg-orange-50 border border-orange-200 rounded-xl hover:bg-orange-100 transition-colors group"
-              >
-                <div className="w-10 h-10 bg-orange-100 group-hover:bg-orange-200 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors">
-                  <AlertCircle className="w-5 h-5 text-orange-600" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-semibold text-orange-900">
-                    {ocorrenciasPendentes} ocorrência{ocorrenciasPendentes !== 1 ? 's' : ''} a aguardar ação
-                  </p>
-                  <p className="text-xs text-orange-700 mt-0.5">Inclui ocorrências pendentes e contestadas</p>
-                </div>
-                <span className="text-orange-400 group-hover:text-orange-600 transition-colors">→</span>
-              </Link>
-            )}
-            {anunciosPendentes === 0 && ocorrenciasPendentes === 0 && (
-              <div className="text-center py-10 text-gray-500">
-                <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <TrendingUp className="w-7 h-7 text-green-500" />
-                </div>
-                <p className="font-medium text-gray-700">Tudo em ordem</p>
-                <p className="text-sm text-gray-400 mt-1">Sem alertas pendentes</p>
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {proximasReservas.length > 0 ? (
-              proximasReservas.map((linha) => (
-                <div key={linha.id} className="flex items-start gap-4 pb-4 border-b last:border-b-0 last:pb-0">
-                  <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <Shirt className="w-6 h-6 text-purple-600" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-900 truncate">{linha.anuncio.figurino.nome}</p>
-                    <p className="text-sm text-gray-600">
-                      {new Date(linha.data_inicio).toLocaleDateString('pt-PT')} — {new Date(linha.data_fim).toLocaleDateString('pt-PT')}
-                    </p>
-                    <p className="text-sm text-purple-600 mt-0.5">€{linha.valor_diario}/dia</p>
-                  </div>
-                </div>
-              ))
+      {/* Próximas Reservas ou Alertas */}
+      <div className="grid grid-cols-1 gap-6">
+        <div className="bg-white rounded-xl shadow-sm p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-lg font-semibold text-gray-900">
+              {utilizadorAtual?.tipo === 'funcionario' ? 'Alertas' : 'Próximas Reservas'}
+            </h2>
+            {utilizadorAtual?.tipo === 'funcionario' ? (
+              <AlertCircle className="w-5 h-5 text-orange-500" />
             ) : (
-              <div className="text-center py-10 text-gray-500">
-                <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <Calendar className="w-7 h-7 text-gray-400" />
-                </div>
-                <p className="font-medium text-gray-700">Nenhuma reserva próxima</p>
-                <Link to="/figurinos" className="text-fig-purple hover:text-fig-magenta text-sm mt-2 inline-block transition-colors">
-                  Explorar figurinos disponíveis →
-                </Link>
-              </div>
+              <Calendar className="w-5 h-5 text-gray-400" />
             )}
           </div>
-        )}
+          <div className="space-y-4">
+            {utilizadorAtual?.tipo === 'funcionario' ? (
+              <>
+                {anunciosPendentes > 0 && (
+                  <Link
+                    to="/administracao"
+                    className="block p-4 bg-yellow-50 border-l-4 border-yellow-500 rounded hover:bg-yellow-100 transition-colors"
+                  >
+                    <div className="flex items-start gap-3">
+                      <ShoppingBag className="w-5 h-5 text-yellow-600 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium text-yellow-900">
+                          {anunciosPendentes} anúncio{anunciosPendentes !== 1 ? 's' : ''} pendente{anunciosPendentes !== 1 ? 's' : ''}
+                        </p>
+                        <p className="text-xs text-yellow-700">Clique para aprovar ou rejeitar</p>
+                      </div>
+                    </div>
+                  </Link>
+                )}
+                {ocorrenciasPendentes > 0 && (
+                  <Link
+                    to="/ocorrencias"
+                    className="block p-4 bg-orange-50 border-l-4 border-orange-500 rounded hover:bg-orange-100 transition-colors"
+                  >
+                    <div className="flex items-start gap-3">
+                      <AlertCircle className="w-5 h-5 text-orange-600 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium text-orange-900">
+                          {ocorrenciasPendentes} ocorrência{ocorrenciasPendentes !== 1 ? 's' : ''} em análise
+                        </p>
+                        <p className="text-xs text-orange-700">Requer atenção</p>
+                      </div>
+                    </div>
+                  </Link>
+                )}
+                {anunciosPendentes === 0 && ocorrenciasPendentes === 0 && propostasPendentes === 0 && (
+                  <div className="text-center py-8 text-gray-500">
+                    <AlertCircle className="w-12 h-12 mx-auto mb-3 text-green-300" />
+                    <p className="text-sm">Tudo em ordem! 🎉</p>
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                {proximasReservas.length > 0 ? (
+                  proximasReservas.map((linha) => (
+                    <div key={linha.id} className="flex items-start gap-4 pb-4 border-b last:border-b-0 last:pb-0">
+                      <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <Shirt className="w-6 h-6 text-purple-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-gray-900 truncate">
+                          {linha.anuncio.figurino.nome}
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          {new Date(linha.data_inicio).toLocaleDateString('pt-PT')} - {new Date(linha.data_fim).toLocaleDateString('pt-PT')}
+                        </p>
+                        <p className="text-sm text-purple-600 mt-1">
+                          €{linha.valor_diario}/dia
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <Calendar className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                    <p className="text-sm">Nenhuma reserva próxima</p>
+                    <Link to="/figurinos" className="text-purple-600 hover:text-purple-700 text-sm mt-2 inline-block">
+                      Ver figurinos disponíveis
+                    </Link>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Ações Rápidas */}
       {utilizadorAtual?.tipo === 'aluno' && (
         <div className="bg-white rounded-xl shadow-sm p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Ações Rápidas</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <Link
               to="/figurinos"
               className="flex items-center gap-3 p-4 border-2 border-gray-200 rounded-lg hover:border-purple-300 hover:bg-purple-50 transition-colors"
@@ -374,16 +497,6 @@ export function Dashboard() {
               <div>
                 <p className="font-medium text-gray-900">Marketplace</p>
                 <p className="text-sm text-gray-500">Anunciar figurino</p>
-              </div>
-            </Link>
-            <Link
-              to="/carrinho"
-              className="flex items-center gap-3 p-4 border-2 border-gray-200 rounded-lg hover:border-purple-300 hover:bg-purple-50 transition-colors"
-            >
-              <ShoppingCart className="w-6 h-6 text-purple-600" />
-              <div>
-                <p className="font-medium text-gray-900">Carrinho</p>
-                <p className="text-sm text-gray-500">Finalizar as suas reservas</p>
               </div>
             </Link>
           </div>

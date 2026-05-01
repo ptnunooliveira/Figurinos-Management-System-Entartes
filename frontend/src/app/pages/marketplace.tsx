@@ -1,19 +1,23 @@
 import { useState, useEffect } from "react";
 import { Plus, ShoppingBag, Clock, CheckCircle, XCircle, Shirt, Upload, X, Search, Filter } from "lucide-react";
 import { getUtilizadorAtual } from "../lib/auth";
-import { getMarketplace, getMarketplaceGestao, getMarketplaceDoUtilizador, criarAnuncioMarketplace, getCategorias, getEstadosAnuncio, getTiposFigurino, getSexos, ressubmeterAnuncioMarketplace, eliminarAnuncioMarketplace, continuarAnuncioMarketplace } from "../lib/services";
+import { getMarketplace, getMarketplaceGestao, getMarketplaceDoUtilizador, criarAnuncioMarketplace, getCategorias, getEstadosAnuncio, getTiposFigurino, getSexos, ressubmeterAnuncioMarketplace, eliminarAnuncioMarketplace, continuarAnuncioMarketplace, aprovarAnuncioMarketplace } from "../lib/services";
 import type { AuxiliarItem } from "../lib/services";
 import type { AnuncioMarketplace } from "../lib/dados-mock";
 import { toast } from "sonner";
 
 export function Marketplace() {
+  const REQUEST_TIMEOUT_MS = 12000;
+  const MARKETPLACE_INTERESSE_NOTIF_KEY = "fighappens_marketplace_interesses";
   const utilizadorAtual = getUtilizadorAtual();
-  const [abaAtiva, setAbaAtiva] = useState<"explorar" | "meusAnuncios">("explorar");
+  const [abaAtiva, setAbaAtiva] = useState<"explorar" | "meusAnuncios" | "pendentes" | "historico">("explorar");
   const [mostrarCriarModal, setMostrarCriarModal] = useState(false);
   const [modoFormulario, setModoFormulario] = useState<"criar" | "ressubmeter">("criar");
   const [anuncioEmRessubmissaoId, setAnuncioEmRessubmissaoId] = useState<number | null>(null);
   const [anuncioParaRemover, setAnuncioParaRemover] = useState<AnuncioMarketplace | null>(null);
   const [anuncioParaRenovar, setAnuncioParaRenovar] = useState<AnuncioMarketplace | null>(null);
+  const [anuncioParaRejeitar, setAnuncioParaRejeitar] = useState<AnuncioMarketplace | null>(null);
+  const [motivoRejeicao, setMotivoRejeicao] = useState("");
   const [mostrarDetalheModal, setMostrarDetalheModal] = useState(false);
   const [anuncioDetalhe, setAnuncioDetalhe] = useState<AnuncioMarketplace | null>(null);
   const [imagensPreview, setImagensPreview] = useState<string[]>([]);
@@ -29,10 +33,13 @@ export function Marketplace() {
 
   const [todosAnuncios, setTodosAnuncios] = useState<AnuncioMarketplace[]>([]);
   const [meusAnunciosLista, setMeusAnunciosLista] = useState<AnuncioMarketplace[]>([]);
+  const [meusAnunciosCarregados, setMeusAnunciosCarregados] = useState(false);
+  const [aCarregarMeusAnuncios, setACarregarMeusAnuncios] = useState(false);
   const [categoriasLista, setCategoriasLista] = useState<AuxiliarItem[]>([]);
   const [estadosAnuncioLista, setEstadosAnuncioLista] = useState<AuxiliarItem[]>([]);
   const [tiposLista, setTiposLista] = useState<AuxiliarItem[]>([]);
   const [sexosLista, setSexosLista] = useState<AuxiliarItem[]>([]);
+  const isStaff = utilizadorAtual?.tipo === "funcionario" || utilizadorAtual?.tipo === "admin";
 
   const [formulario, setFormulario] = useState({
     titulo: "",
@@ -43,33 +50,107 @@ export function Marketplace() {
     sexo: "",
   });
 
+  const executarComTimeout = async <T,>(promise: Promise<T>, mensagemErro: string): Promise<T> => {
+    let timeoutId: number | undefined;
+
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timeoutId = window.setTimeout(() => {
+        reject(new Error(mensagemErro));
+      }, REQUEST_TIMEOUT_MS);
+    });
+
+    try {
+      return await Promise.race([promise, timeoutPromise]);
+    } finally {
+      if (timeoutId !== undefined) {
+        window.clearTimeout(timeoutId);
+      }
+    }
+  };
+
+  const carregarMeusAnuncios = async (force = false) => {
+    if (!utilizadorAtual?.id || utilizadorAtual?.tipo !== "aluno") return;
+    if (aCarregarMeusAnuncios) return;
+    if (!force && meusAnunciosCarregados) return;
+
+    setACarregarMeusAnuncios(true);
+    try {
+      const anuncios = await executarComTimeout(
+        getMarketplaceDoUtilizador(utilizadorAtual.id),
+        "A carregar os seus anúncios está a demorar. Tente novamente."
+      );
+      setMeusAnunciosLista(anuncios);
+      setMeusAnunciosCarregados(true);
+    } catch (err: any) {
+      toast.error(err?.message || "Erro ao carregar os seus anúncios");
+    } finally {
+      setACarregarMeusAnuncios(false);
+    }
+  };
+
+  const mudarAba = (aba: "explorar" | "meusAnuncios") => {
+    setAbaAtiva(aba);
+    if (aba === "meusAnuncios") {
+      carregarMeusAnuncios();
+    }
+  };
+
   useEffect(() => {
     getCategorias().then(setCategoriasLista);
     getEstadosAnuncio().then(setEstadosAnuncioLista);
     getTiposFigurino().then(setTiposLista);
     getSexos().then(setSexosLista);
-    if (utilizadorAtual?.tipo === 'funcionario') {
-      getMarketplaceGestao().then(setTodosAnuncios);
-    } else {
-      getMarketplace().then(setTodosAnuncios);
-      if (utilizadorAtual?.id) {
-        getMarketplaceDoUtilizador(utilizadorAtual.id).then(setMeusAnunciosLista);
+
+    const carregarMarketplace = async () => {
+      try {
+        if (isStaff) {
+          const anuncios = await executarComTimeout(
+            getMarketplaceGestao(),
+            "A carregar os anúncios de gestão está a demorar. Tente novamente."
+          );
+          setTodosAnuncios(anuncios);
+          return;
+        }
+
+        const anuncios = await executarComTimeout(
+          getMarketplace(),
+          "A carregar os anúncios está a demorar. Tente novamente."
+        );
+        setTodosAnuncios(anuncios);
+      } catch (err: any) {
+        toast.error(err?.message || "Erro ao carregar anúncios");
       }
-    }
+    };
+
+    carregarMarketplace();
+    setMeusAnunciosCarregados(false);
+    setMeusAnunciosLista([]);
   }, [utilizadorAtual?.tipo, utilizadorAtual?.id]);
+
+  useEffect(() => {
+    if (isStaff) {
+      setAbaAtiva("pendentes");
+      return;
+    }
+    setAbaAtiva("explorar");
+  }, [isStaff]);
 
   const meusAnuncios = meusAnunciosLista;
   const estadosPublicados = ["aprovado", "publicado"];
+  const normalizarEstado = (estado: string) => estado.trim().toLowerCase();
   const outrosAnuncios = todosAnuncios.filter(a =>
     a.id_utilizador !== utilizadorAtual?.id &&
     estadosPublicados.includes((a.estado || "").trim().toLowerCase())
   );
 
-  const anunciosAMostrar = utilizadorAtual?.tipo === 'funcionario'
-    ? todosAnuncios
-    : (abaAtiva === "explorar" ? outrosAnuncios : meusAnuncios);
+  const anunciosPendentes = todosAnuncios.filter((a) => {
+    const estado = normalizarEstado(a.estado || "");
+    return estado === "submetido" || estado === "pendente";
+  });
 
-  const normalizarEstado = (estado: string) => estado.trim().toLowerCase();
+  const anunciosAMostrar = isStaff
+    ? (abaAtiva === "pendentes" ? anunciosPendentes : todosAnuncios)
+    : (abaAtiva === "explorar" ? outrosAnuncios : meusAnuncios);
 
   const estadoCompativel = (estadoAnuncio: string, estadoFiltro: string) => {
     const anuncio = normalizarEstado(estadoAnuncio);
@@ -269,9 +350,7 @@ export function Marketplace() {
       setFormulario({ titulo: "", descricao: "", tamanho: "", categoria: "", tipo: "", sexo: "" });
       setImagensPreview([]);
       setImagensFicheiro([]);
-      if (utilizadorAtual?.id) {
-        getMarketplaceDoUtilizador(utilizadorAtual.id).then(setMeusAnunciosLista);
-      }
+      await carregarMeusAnuncios(true);
     } catch (err: any) {
       toast.error(err.message || "Erro ao criar anúncio");
     }
@@ -303,6 +382,49 @@ export function Marketplace() {
     setAnuncioDetalhe(null);
   };
 
+  const sinalizarInteresse = () => {
+    if (!anuncioDetalhe?.id_utilizador || !utilizadorAtual?.id) {
+      toast.error("Não foi possível sinalizar interesse neste anúncio.");
+      return;
+    }
+
+    if (anuncioDetalhe.id_utilizador === utilizadorAtual.id) {
+      toast.error("Não pode sinalizar interesse no seu próprio anúncio.");
+      return;
+    }
+
+    try {
+      const raw = localStorage.getItem(MARKETPLACE_INTERESSE_NOTIF_KEY);
+      const lista = raw ? JSON.parse(raw) : [];
+      const notificacoes = Array.isArray(lista) ? lista : [];
+
+      const jaExiste = notificacoes.some((n: any) =>
+        Number(n?.idAnuncio) === anuncioDetalhe.id &&
+        Number(n?.idDono) === anuncioDetalhe.id_utilizador &&
+        Number(n?.idInteressado) === utilizadorAtual.id
+      );
+
+      if (!jaExiste) {
+        const mensagem = `O/A utilizador/a ${utilizadorAtual.nome} tem interesse no seu figurino. O email da pessoa é: ${utilizadorAtual.email}.`;
+        notificacoes.push({
+          chave: `interesse:${anuncioDetalhe.id}:${utilizadorAtual.id}`,
+          idAnuncio: anuncioDetalhe.id,
+          idDono: anuncioDetalhe.id_utilizador,
+          idInteressado: utilizadorAtual.id,
+          mensagem,
+          data: new Date().toISOString(),
+        });
+
+        localStorage.setItem(MARKETPLACE_INTERESSE_NOTIF_KEY, JSON.stringify(notificacoes));
+      }
+    } catch {
+      toast.error("Erro ao guardar notificação de interesse.");
+      return;
+    }
+
+    toast.success("Interesse sinalizado com sucesso.");
+  };
+
   const limparFiltros = () => {
     setTermoPesquisa("");
     setCategoriaSelecionada("todas");
@@ -331,12 +453,18 @@ export function Marketplace() {
       fecharConfirmacaoRemocao();
 
       if (utilizadorAtual?.tipo === 'funcionario') {
-        getMarketplaceGestao().then(setTodosAnuncios);
+        const anuncios = await executarComTimeout(
+          getMarketplaceGestao(),
+          "A atualizar anúncios de gestão está a demorar. Tente novamente."
+        );
+        setTodosAnuncios(anuncios);
       } else {
-        getMarketplace().then(setTodosAnuncios);
-        if (utilizadorAtual?.id) {
-          getMarketplaceDoUtilizador(utilizadorAtual.id).then(setMeusAnunciosLista);
-        }
+        const anuncios = await executarComTimeout(
+          getMarketplace(),
+          "A atualizar anúncios está a demorar. Tente novamente."
+        );
+        setTodosAnuncios(anuncios);
+        await carregarMeusAnuncios(true);
       }
     } catch (err: any) {
       toast.error(err.message || "Erro ao remover anúncio");
@@ -345,6 +473,52 @@ export function Marketplace() {
 
   const abrirConfirmacaoRenovacao = (anuncio: AnuncioMarketplace) => {
     setAnuncioParaRenovar(anuncio);
+  };
+
+  const abrirModalRejeicao = (anuncio: AnuncioMarketplace) => {
+    setAnuncioParaRejeitar(anuncio);
+    setMotivoRejeicao("");
+  };
+
+  const fecharModalRejeicao = () => {
+    setAnuncioParaRejeitar(null);
+    setMotivoRejeicao("");
+  };
+
+  const aprovarAnuncioPendente = async (id: number) => {
+    try {
+      await aprovarAnuncioMarketplace(id, true);
+      toast.success("Anúncio aprovado com sucesso!");
+      const anuncios = await executarComTimeout(
+        getMarketplaceGestao(),
+        "A atualizar anúncios de gestão está a demorar. Tente novamente."
+      );
+      setTodosAnuncios(anuncios);
+    } catch (err: any) {
+      toast.error(err?.message || "Erro ao aprovar anúncio");
+    }
+  };
+
+  const confirmarRejeicao = async () => {
+    if (!anuncioParaRejeitar) return;
+    const motivo = motivoRejeicao.trim();
+    if (!motivo) {
+      toast.error("Indique o motivo da rejeição");
+      return;
+    }
+
+    try {
+      await aprovarAnuncioMarketplace(anuncioParaRejeitar.id, false, motivo);
+      toast.success("Anúncio rejeitado");
+      fecharModalRejeicao();
+      const anuncios = await executarComTimeout(
+        getMarketplaceGestao(),
+        "A atualizar anúncios de gestão está a demorar. Tente novamente."
+      );
+      setTodosAnuncios(anuncios);
+    } catch (err: any) {
+      toast.error(err?.message || "Erro ao rejeitar anúncio");
+    }
   };
 
   const fecharConfirmacaoRenovacao = () => {
@@ -360,12 +534,18 @@ export function Marketplace() {
       fecharConfirmacaoRenovacao();
 
       if (utilizadorAtual?.tipo === 'funcionario') {
-        getMarketplaceGestao().then(setTodosAnuncios);
+        const anuncios = await executarComTimeout(
+          getMarketplaceGestao(),
+          "A atualizar anúncios de gestão está a demorar. Tente novamente."
+        );
+        setTodosAnuncios(anuncios);
       } else {
-        getMarketplace().then(setTodosAnuncios);
-        if (utilizadorAtual?.id) {
-          getMarketplaceDoUtilizador(utilizadorAtual.id).then(setMeusAnunciosLista);
-        }
+        const anuncios = await executarComTimeout(
+          getMarketplace(),
+          "A atualizar anúncios está a demorar. Tente novamente."
+        );
+        setTodosAnuncios(anuncios);
+        await carregarMeusAnuncios(true);
       }
     } catch (err: any) {
       toast.error(err.message || "Erro ao renovar anúncio");
@@ -378,11 +558,7 @@ export function Marketplace() {
       <div className="flex items-start justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Marketplace</h1>
-          <p className="text-gray-600">
-            {utilizadorAtual?.tipo === 'funcionario'
-              ? 'Gerir anúncios submetidos pelos alunos'
-              : 'Partilhe ou encontre figurinos na comunidade'}
-          </p>
+          <p className="text-gray-600">Gestão do Marketplace</p>
         </div>
         {utilizadorAtual?.tipo === 'aluno' && (
           <button
@@ -399,7 +575,7 @@ export function Marketplace() {
       {utilizadorAtual?.tipo === 'aluno' && (
         <div className="bg-white rounded-xl shadow-sm p-1 inline-flex gap-1">
           <button
-            onClick={() => setAbaAtiva("explorar")}
+            onClick={() => mudarAba("explorar")}
             className={`px-6 py-2 rounded-lg transition-colors ${
               abaAtiva === "explorar"
                 ? "bg-purple-600 text-white"
@@ -410,7 +586,7 @@ export function Marketplace() {
             Explorar ({outrosAnuncios.length})
           </button>
           <button
-            onClick={() => setAbaAtiva("meusAnuncios")}
+            onClick={() => mudarAba("meusAnuncios")}
             className={`px-6 py-2 rounded-lg transition-colors ${
               abaAtiva === "meusAnuncios"
                 ? "bg-purple-600 text-white"
@@ -422,7 +598,29 @@ export function Marketplace() {
         </div>
       )}
 
+      {isStaff && (
+        <div className="bg-white rounded-xl shadow-sm p-1 inline-flex gap-1">
+          <button
+            onClick={() => setAbaAtiva("pendentes")}
+            className={`px-6 py-2 rounded-lg transition-colors ${
+              abaAtiva === "pendentes" ? "bg-purple-600 text-white" : "text-gray-600 hover:bg-gray-100"
+            }`}
+          >
+            Anúncios pendentes ({anunciosPendentes.length})
+          </button>
+          <button
+            onClick={() => setAbaAtiva("historico")}
+            className={`px-6 py-2 rounded-lg transition-colors ${
+              abaAtiva === "historico" ? "bg-purple-600 text-white" : "text-gray-600 hover:bg-gray-100"
+            }`}
+          >
+            Histórico de anúncios ({todosAnuncios.length})
+          </button>
+        </div>
+      )}
+
       {/* Filtros */}
+      {!(isStaff && abaAtiva === "pendentes") && (
       <div className="bg-white rounded-xl shadow-sm p-6 space-y-4">
         {/* Barra de Pesquisa */}
         <div className="relative">
@@ -437,7 +635,12 @@ export function Marketplace() {
         </div>
 
         {/* Filtros em Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div
+          className={[
+            "grid grid-cols-1 sm:grid-cols-2 gap-4",
+            isStaff ? "lg:grid-cols-2 max-w-4xl mx-auto" : "lg:grid-cols-3",
+          ].join(" ")}
+        >
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               <Filter className="w-4 h-4 inline mr-1" />
@@ -489,7 +692,7 @@ export function Marketplace() {
 
           {utilizadorAtual?.tipo === 'aluno' && abaAtiva === "explorar" && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Sexo</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Género</label>
               <select
                 value={sexoSelecionado}
                 onChange={(e) => setSexoSelecionado(e.target.value)}
@@ -503,9 +706,9 @@ export function Marketplace() {
             </div>
           )}
 
-          {(utilizadorAtual?.tipo === 'funcionario' || abaAtiva === 'meusAnuncios') && (
+          {(isStaff || abaAtiva === 'meusAnuncios') && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Estado</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Estado Anúncio</label>
               <select
                 value={estadoSelecionado}
                 onChange={(e) => setEstadoSelecionado(e.target.value)}
@@ -519,7 +722,7 @@ export function Marketplace() {
             </div>
           )}
 
-          {utilizadorAtual?.tipo === 'funcionario' && (
+          {isStaff && (
             <div className="lg:col-start-1">
               <label className="block text-sm font-medium text-gray-700 mb-2">Data Submissão (Início)</label>
               <input
@@ -531,7 +734,7 @@ export function Marketplace() {
             </div>
           )}
 
-          {utilizadorAtual?.tipo === 'funcionario' && (
+          {isStaff && (
             <div className="lg:col-start-2">
               <label className="block text-sm font-medium text-gray-700 mb-2">Data Submissão (Fim)</label>
               <input
@@ -558,6 +761,7 @@ export function Marketplace() {
           </button>
         </div>
       </div>
+      )}
 
       {/* Grelha de Anúncios */}
       <div className="space-y-4">
@@ -595,7 +799,7 @@ export function Marketplace() {
                       <span className="inline-flex items-center px-3 py-1 bg-gray-100 text-gray-700 text-xs rounded-full font-medium">
                         {anuncio.tamanho}
                       </span>
-                      {(utilizadorAtual?.tipo === 'funcionario' || abaAtiva === "meusAnuncios") && (
+                      {(isStaff || abaAtiva === "meusAnuncios") && (
                         <span className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${getCorEstado(estadoAnuncio)}`}>
                           <IconeEstado className="w-3 h-3" />
                           {estadoLabel}
@@ -605,7 +809,7 @@ export function Marketplace() {
 
                     {/* Informação adicional */}
                     <div className="text-xs text-gray-500 mb-3 space-y-1">
-                      {(abaAtiva === "meusAnuncios" || utilizadorAtual?.tipo === 'funcionario') && formatarDataPT(anuncio.data_anuncio) && (
+                      {(abaAtiva === "meusAnuncios" || isStaff) && formatarDataPT(anuncio.data_anuncio) && (
                         <p>Submetido em {formatarDataPT(anuncio.data_anuncio)}</p>
                       )}
                       <p>{linhaDataEstado}</p>
@@ -629,6 +833,27 @@ export function Marketplace() {
                         >
                           Ver Detalhes
                         </button>
+                      ) : isStaff && abaAtiva === "pendentes" ? (
+                        <div className="flex gap-2 flex-wrap">
+                          <button
+                            onClick={() => abrirDetalhes(anuncio)}
+                            className="w-full sm:w-auto bg-gradient-to-r from-fig-purple to-fig-magenta hover:shadow-lg text-white py-2 px-6 rounded-lg transition-all"
+                          >
+                            Ver Detalhes
+                          </button>
+                          <button
+                            onClick={() => aprovarAnuncioPendente(anuncio.id)}
+                            className="w-full sm:w-auto bg-gradient-to-r from-fig-green to-emerald-500 hover:shadow-lg text-white py-2 px-6 rounded-lg transition-all"
+                          >
+                            Aprovar
+                          </button>
+                          <button
+                            onClick={() => abrirModalRejeicao(anuncio)}
+                            className="w-full sm:w-auto border border-red-300 text-red-700 py-2 px-6 rounded-lg hover:bg-red-50 transition-colors"
+                          >
+                            Rejeitar
+                          </button>
+                        </div>
                       ) : (() => {
                         const estado = normalizarEstado(anuncio.estado);
 
@@ -641,12 +866,14 @@ export function Marketplace() {
                               >
                                 Ver Detalhes
                               </button>
-                              <button
-                                onClick={() => abrirRessubmissao(anuncio)}
-                                className="w-full sm:w-auto bg-gradient-to-r from-fig-purple to-fig-magenta hover:shadow-lg text-white py-2 px-6 rounded-lg transition-all"
-                              >
-                                Ressubmeter
-                              </button>
+                              {anuncio.id_utilizador === utilizadorAtual?.id && (
+                                <button
+                                  onClick={() => abrirRessubmissao(anuncio)}
+                                  className="w-full sm:w-auto bg-gradient-to-r from-fig-purple to-fig-magenta hover:shadow-lg text-white py-2 px-6 rounded-lg transition-all"
+                                >
+                                  Ressubmeter
+                                </button>
+                              )}
                             </div>
                           );
                         }
@@ -666,12 +893,14 @@ export function Marketplace() {
                               >
                                 Manter
                               </button>
-                              <button
-                                onClick={() => abrirConfirmacaoRemocao(anuncio)}
-                                className="w-full sm:w-auto border border-red-300 text-red-700 py-2 px-6 rounded-lg hover:bg-red-50 transition-colors"
-                              >
-                                Remover
-                              </button>
+                              {!isStaff && (
+                                <button
+                                  onClick={() => abrirConfirmacaoRemocao(anuncio)}
+                                  className="w-full sm:w-auto border border-red-300 text-red-700 py-2 px-6 rounded-lg hover:bg-red-50 transition-colors"
+                                >
+                                  Remover
+                                </button>
+                              )}
                             </div>
                           );
                         }
@@ -716,12 +945,14 @@ export function Marketplace() {
                             >
                               Ver Detalhes
                             </button>
-                            <button
-                              onClick={() => abrirConfirmacaoRemocao(anuncio)}
-                              className="w-full sm:w-auto border border-red-300 text-red-700 py-2 px-6 rounded-lg hover:bg-red-50 transition-colors"
-                            >
-                              Remover
-                            </button>
+                            {!isStaff && (
+                              <button
+                                onClick={() => abrirConfirmacaoRemocao(anuncio)}
+                                className="w-full sm:w-auto border border-red-300 text-red-700 py-2 px-6 rounded-lg hover:bg-red-50 transition-colors"
+                              >
+                                Remover
+                              </button>
+                            )}
                           </div>
                         );
                       })()}
@@ -739,12 +970,16 @@ export function Marketplace() {
         <div className="bg-white rounded-xl shadow-sm p-12 text-center">
           <ShoppingBag className="w-16 h-16 mx-auto text-gray-300 mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">
-            {abaAtiva === "explorar" ? "Nenhum anúncio disponível" : "Ainda não tem anúncios"}
+            {isStaff
+              ? (abaAtiva === "pendentes" ? "Sem anúncios pendentes" : "Sem anúncios no histórico")
+              : (abaAtiva === "explorar" ? "Nenhum anúncio disponível" : "Ainda não tem anúncios")}
           </h3>
           <p className="text-gray-600 mb-6">
-            {abaAtiva === "explorar"
-              ? "Não há anúncios disponíveis no momento."
-              : "Crie o seu primeiro anúncio e comece a partilhar!"}
+            {isStaff
+              ? (abaAtiva === "pendentes" ? "Não existem anúncios para validação neste momento." : "Não há anúncios no histórico do marketplace.")
+              : (abaAtiva === "explorar"
+                ? "Não há anúncios disponíveis no momento."
+                : "Crie o seu primeiro anúncio e comece a partilhar!")}
           </p>
           {abaAtiva === "meusAnuncios" && (
             <button
@@ -765,7 +1000,7 @@ export function Marketplace() {
             <div className="p-6 border-b sticky top-0 bg-white flex items-start justify-between gap-4">
               <div>
               <h2 className="text-xl font-semibold text-gray-900">{anuncioDetalhe.titulo}</h2>
-                <p className="text-sm text-gray-600 mt-1">Detalhes do anúncio</p>
+                <p className="text-sm text-gray-600 mt-1">Anúncio criado por: {anuncioDetalhe.utilizador || "Utilizador desconhecido"}</p>
               </div>
               <button
                 type="button"
@@ -807,7 +1042,65 @@ export function Marketplace() {
                 <div className="bg-gray-50 rounded-lg p-3"><span className="text-gray-500">Sexo</span><p className="font-medium">{anuncioDetalhe.sexo || "—"}</p></div>
               </div>
 
-              <p className="text-xs text-gray-500">Submetido em {new Date(anuncioDetalhe.data_anuncio).toLocaleDateString('pt-PT')}</p>
+              <div className="flex items-center justify-between gap-3">
+                <div />
+                {utilizadorAtual?.tipo === "aluno" && (
+                  <div className="flex items-center gap-2 ml-auto">
+                    <button
+                      type="button"
+                      onClick={sinalizarInteresse}
+                      className="px-4 py-2 rounded-lg bg-gradient-to-r from-fig-green to-emerald-500 hover:shadow-lg text-white transition-all"
+                    >
+                      Sinalizar Interesse
+                    </button>
+                    <button
+                      type="button"
+                      onClick={fecharDetalhes}
+                      className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {anuncioParaRejeitar && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-md w-full">
+            <div className="p-6 border-b">
+              <h2 className="text-xl font-bold text-gray-900">Motivo da rejeição</h2>
+              <p className="text-sm text-gray-600 mt-1 line-clamp-1">{anuncioParaRejeitar.titulo}</p>
+            </div>
+
+            <div className="p-6 space-y-3">
+              <textarea
+                value={motivoRejeicao}
+                onChange={(e) => setMotivoRejeicao(e.target.value)}
+                rows={4}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-fig-purple focus:border-transparent"
+                placeholder="Ex: Descrição incompleta e sem detalhes do estado da peça."
+              />
+            </div>
+
+            <div className="p-6 border-t bg-gray-50 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={fecharModalRejeicao}
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={confirmarRejeicao}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+              >
+                Confirmar
+              </button>
             </div>
           </div>
         </div>

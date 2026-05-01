@@ -332,6 +332,7 @@ export async function marcarMovimentoExportado(id: number): Promise<void> {
 
 // ─── Marketplace ─────────────────────────────────────────────────────────────
 
+// Converte payload bruto da API para o tipo de anúncio usado na UI.
 function mapAnuncioMarketplace(a: any): AnuncioMarketplace {
   const estadoBase = a.estado_anuncio?.nome ?? a.situacao ?? '';
   const estadoNormalizado = typeof estadoBase === 'string' ? estadoBase.trim().toLowerCase() : '';
@@ -353,10 +354,12 @@ function mapAnuncioMarketplace(a: any): AnuncioMarketplace {
     sexo: a.sexo ?? '',
     estado,
     id_utilizador: a.id_utilizador ?? 0,
+    utilizador: a.utilizador ?? undefined,
     imagens: Array.isArray(a.imagens) ? a.imagens.filter((img: unknown) => typeof img === 'string') : [],
   };
 }
 
+// Obtém anúncios públicos do marketplace para a aba de exploração.
 export async function getMarketplace(): Promise<AnuncioMarketplace[]> {
   try {
     const res = await apiFetch('/marketplace');
@@ -369,6 +372,7 @@ export async function getMarketplace(): Promise<AnuncioMarketplace[]> {
   }
 }
 
+// Obtém anúncios para gestão com filtro opcional por estado.
 export async function getMarketplaceGestao(estado?: string): Promise<AnuncioMarketplace[]> {
   try {
     const query = estado ? `?estado=${encodeURIComponent(estado)}` : '';
@@ -382,6 +386,7 @@ export async function getMarketplaceGestao(estado?: string): Promise<AnuncioMark
   }
 }
 
+// Cria anúncio no marketplace com suporte a imagens (multipart/form-data).
 export async function criarAnuncioMarketplace(dados: FormData): Promise<any> {
   const res = await apiFetch('/marketplace', {
     method: 'POST',
@@ -395,6 +400,7 @@ export async function criarAnuncioMarketplace(dados: FormData): Promise<any> {
   return res.json();
 }
 
+// Aprova ou rejeita um anúncio no fluxo de gestão.
 export async function aprovarAnuncioMarketplace(id: number, aprovado: boolean, motivorejeicao?: string): Promise<any> {
   const res = await apiFetch(`/marketplace/${id}/aprovar`, {
     method: 'PATCH',
@@ -407,6 +413,7 @@ export async function aprovarAnuncioMarketplace(id: number, aprovado: boolean, m
   return res.json();
 }
 
+// Ressubmete anúncio rejeitado com atualização de dados e/ou imagens.
 export async function ressubmeterAnuncioMarketplace(id: number, dados: FormData): Promise<any> {
   const res = await apiFetch(`/marketplace/${id}/ressubmeter`, {
     method: 'POST',
@@ -420,6 +427,7 @@ export async function ressubmeterAnuncioMarketplace(id: number, dados: FormData)
   return res.json();
 }
 
+// Remove anúncio do aluno (soft delete com mudança para Arquivado).
 export async function eliminarAnuncioMarketplace(id: number): Promise<void> {
   const res = await apiFetch(`/marketplace/${id}`, { method: 'DELETE' });
   if (!res.ok) {
@@ -428,6 +436,7 @@ export async function eliminarAnuncioMarketplace(id: number): Promise<void> {
   }
 }
 
+// Renova anúncio em estado pendente de renovação.
 export async function continuarAnuncioMarketplace(id: number): Promise<any> {
   const res = await apiFetch(`/marketplace/${id}/continuar`, { method: 'POST' });
   if (!res.ok) {
@@ -562,6 +571,7 @@ export async function getOcorrencia(id: number): Promise<OcorrenciaDetalhada | n
 
 export const getEstadosOcorrencia = () => getAuxiliar('/pesquisa/estados-ocorrencia');
 
+// Obtém os anúncios de um utilizador específico.
 export async function getMarketplaceDoUtilizador(userId: number): Promise<AnuncioMarketplace[]> {
   try {
     const res = await apiFetch(`/marketplace/${userId}`);

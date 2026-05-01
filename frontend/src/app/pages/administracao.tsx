@@ -1,99 +1,50 @@
-import { useState, useEffect } from "react";
-import { CheckCircle, XCircle, Shirt, Euro, ListChecks, X } from "lucide-react";
-import {
-  getMarketplaceGestao, aprovarAnuncioMarketplace,
-  getPropostasCobranca, atualizarEstadoProposta, finalizarPropostaContaCorrente,
-  type PropostaCobranca,
-} from "../lib/services";
-import type { AnuncioMarketplace } from "../lib/dados-mock";
+import { useState } from "react";
+import { UserPlus, Eye, EyeOff } from "lucide-react";
+import { criarUtilizador } from "../lib/services";
+import { getUtilizadorAtual } from "../lib/auth";
 import { toast } from "sonner";
 
 export function Administracao() {
-  const [abaAtiva, setAbaAtiva] = useState<"anuncios" | "propostas">("anuncios");
+  const utilizadorAtual = getUtilizadorAtual();
+  const isAdmin = utilizadorAtual?.perfil === "ADMIN";
 
-  const [anunciosPendentes, setAnunciosPendentes] = useState<AnuncioMarketplace[]>([]);
-  const [propostas, setPropostas] = useState<PropostaCobranca[]>([]);
-  const [anuncioParaRejeitar, setAnuncioParaRejeitar] = useState<AnuncioMarketplace | null>(null);
-  const [motivoRejeicao, setMotivoRejeicao] = useState("");
-  const [anuncioDetalhe, setAnuncioDetalhe] = useState<AnuncioMarketplace | null>(null);
+  const perfisDisponiveis = isAdmin
+    ? [
+        { value: "ALUNO", label: "Aluno" },
+        { value: "FUNCIONARIO", label: "Funcionário" },
+      ]
+    : [{ value: "ALUNO", label: "Aluno" }];
 
-  const carregarDados = () => {
-    getMarketplaceGestao('Submetido').then(setAnunciosPendentes);
-    getPropostasCobranca().then(setPropostas);
+  const [nome, setNome] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [perfil, setPerfil] = useState("ALUNO");
+  const [mostrarPassword, setMostrarPassword] = useState(false);
+  const [submetendo, setSubmetendo] = useState(false);
+
+  const limparFormulario = () => {
+    setNome("");
+    setEmail("");
+    setPassword("");
+    setPerfil("ALUNO");
   };
 
-  useEffect(() => {
-    carregarDados();
-  }, []);
-
-  const aprovarAnuncio = async (id: number) => {
-    try {
-      await aprovarAnuncioMarketplace(id, true);
-      toast.success("Anúncio aprovado com sucesso!");
-      carregarDados();
-    } catch (err: any) {
-      toast.error(err.message || "Erro ao aprovar anúncio");
-    }
-  };
-
-  const rejeitarAnuncio = async (id: number, motivo: string) => {
-    try {
-      await aprovarAnuncioMarketplace(id, false, motivo);
-      toast.success("Anúncio rejeitado");
-      carregarDados();
-    } catch (err: any) {
-      toast.error(err.message || "Erro ao rejeitar anúncio");
-    }
-  };
-
-  const abrirModalRejeicao = (anuncio: AnuncioMarketplace) => {
-    setAnuncioParaRejeitar(anuncio);
-    setMotivoRejeicao("");
-  };
-
-  const fecharModalRejeicao = () => {
-    setAnuncioParaRejeitar(null);
-    setMotivoRejeicao("");
-  };
-
-  const confirmarRejeicao = async () => {
-    if (!anuncioParaRejeitar) return;
-
-    const motivo = motivoRejeicao.trim();
-    if (!motivo) {
-      toast.error("Indique o motivo da rejeição");
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (submetendo) return;
+    if (!nome.trim() || !email.trim() || !password.trim()) {
+      toast.error("Preencha todos os campos obrigatórios");
       return;
     }
-
-    await rejeitarAnuncio(anuncioParaRejeitar.id, motivo);
-    fecharModalRejeicao();
-  };
-
-  const abrirDetalhesAnuncio = (anuncio: AnuncioMarketplace) => {
-    setAnuncioDetalhe(anuncio);
-  };
-
-  const fecharDetalhesAnuncio = () => {
-    setAnuncioDetalhe(null);
-  };
-
-  const handleAtualizarEstadoProposta = async (id: number, idEstado: number, label: string) => {
+    setSubmetendo(true);
     try {
-      await atualizarEstadoProposta(id, idEstado);
-      toast.success(`Proposta marcada como ${label}`);
-      carregarDados();
+      await criarUtilizador({ nome: nome.trim(), email: email.trim(), password, perfil });
+      toast.success(`${perfil === "ALUNO" ? "Aluno" : "Funcionário"} criado com sucesso`);
+      limparFormulario();
     } catch (err: any) {
-      toast.error(err.message || "Erro ao atualizar proposta");
-    }
-  };
-
-  const handleFinalizarProposta = async (id: number) => {
-    try {
-      await finalizarPropostaContaCorrente(id);
-      toast.success("Proposta finalizada e adicionada à conta corrente");
-      carregarDados();
-    } catch (err: any) {
-      toast.error(err.message || "Erro ao finalizar proposta");
+      toast.error(err.message || "Erro ao criar utilizador");
+    } finally {
+      setSubmetendo(false);
     }
   };
 
@@ -101,243 +52,119 @@ export function Administracao() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Administração</h1>
-        <p className="text-gray-600">Gerencie anúncios e propostas de cobrança</p>
+        <p className="text-gray-600">Gestão de utilizadores do sistema</p>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm p-1 inline-flex gap-1">
-        <button
-          onClick={() => setAbaAtiva("anuncios")}
-          className={`px-6 py-2 rounded-lg transition-colors ${
-            abaAtiva === "anuncios"
-              ? "text-white"
-              : "text-gray-600 hover:bg-gray-100"
-          }`}
-          style={abaAtiva === "anuncios" ? { backgroundColor: "var(--fig-purple)" } : {}}
-        >
-          Anúncios ({anunciosPendentes.length})
-        </button>
-        <button
-          onClick={() => setAbaAtiva("propostas")}
-          className={`px-6 py-2 rounded-lg transition-colors ${
-            abaAtiva === "propostas"
-              ? "text-white"
-              : "text-gray-600 hover:bg-gray-100"
-          }`}
-          style={abaAtiva === "propostas" ? { backgroundColor: "var(--fig-purple)" } : {}}
-        >
-          <span className="flex items-center gap-1">
-            <ListChecks className="w-4 h-4" />
-            Propostas ({propostas.length})
-          </span>
-        </button>
-      </div>
-
-      {abaAtiva === "anuncios" && (
+      <div className="max-w-lg">
         <div className="bg-white rounded-xl shadow-sm p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            Anúncios Pendentes de Aprovação
-          </h3>
-          {anunciosPendentes.length > 0 ? (
-            <div className="space-y-4">
-              {anunciosPendentes.map((anuncio) => (
-                <div key={anuncio.id} className="border rounded-lg p-4">
-                  <div className="flex items-start gap-4">
-                    <div className="w-20 h-20 bg-gradient-to-br from-fig-purple/20 to-fig-magenta/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                      {anuncio.imagens?.length > 0 ? (
-                        <img src={anuncio.imagens[0]} alt={anuncio.titulo} className="w-20 h-20 rounded-lg object-cover" />
-                      ) : (
-                        <Shirt className="w-10 h-10 text-fig-purple" />
-                      )}
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="font-semibold text-gray-900 mb-1">{anuncio.titulo}</h4>
-                      <p className="text-sm text-gray-600 mb-2">{anuncio.descricao}</p>
-                      <div className="flex gap-2 mb-2">
-                        <span className="px-2 py-1 bg-fig-purple/10 text-fig-purple text-xs rounded">
-                          {anuncio.categoria}
-                        </span>
-                        <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">
-                          {anuncio.tamanho}
-                        </span>
-                      </div>
-                      <p className="text-xs text-gray-500">
-                        Submetido em {new Date(anuncio.data_anuncio).toLocaleDateString('pt-PT')}
-                      </p>
-                      <div className="mt-3">
-                        <button
-                          onClick={() => abrirDetalhesAnuncio(anuncio)}
-                          className="w-full sm:w-auto bg-gradient-to-r from-fig-purple to-fig-magenta hover:shadow-lg text-white py-2 px-6 rounded-lg transition-all"
-                        >
-                          Ver Detalhes
-                        </button>
-                      </div>
-                    </div>
-                    <div className="flex flex-col gap-2 self-center">
-                      <button
-                        onClick={() => aprovarAnuncio(anuncio.id)}
-                        className="flex items-center gap-2 px-4 py-2 bg-fig-green hover:bg-fig-green/90 text-white rounded-lg transition-colors"
-                      >
-                        <CheckCircle className="w-4 h-4" />
-                        Aprovar
-                      </button>
-                      <button
-                        onClick={() => abrirModalRejeicao(anuncio)}
-                        className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
-                      >
-                        <XCircle className="w-4 h-4" />
-                        Rejeitar
-                      </button>
-                    </div>
-                  </div>
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 bg-gradient-to-br from-fig-purple to-fig-magenta rounded-lg flex items-center justify-center">
+              <UserPlus className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">Criar Utilizador</h2>
+              <p className="text-sm text-gray-500">
+                {isAdmin ? "Crie alunos ou funcionários" : "Crie um novo aluno"}
+              </p>
+            </div>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {isAdmin && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Tipo de utilizador
+                </label>
+                <div className="flex gap-3">
+                  {perfisDisponiveis.map((p) => (
+                    <button
+                      key={p.value}
+                      type="button"
+                      onClick={() => setPerfil(p.value)}
+                      className={`flex-1 py-2.5 px-4 rounded-lg border-2 text-sm font-medium transition-colors ${
+                        perfil === p.value
+                          ? "border-fig-purple text-fig-purple bg-fig-purple/5"
+                          : "border-gray-200 text-gray-600 hover:border-gray-300"
+                      }`}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
                 </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-12">
-              <CheckCircle className="w-16 h-16 mx-auto text-green-300 mb-4" />
-              <p className="text-gray-600">Nenhum anúncio pendente de aprovação</p>
-            </div>
-          )}
-        </div>
-      )}
+              </div>
+            )}
 
-      {anuncioParaRejeitar && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl max-w-md w-full">
-            <div className="p-6 border-b">
-              <h2 className="text-xl font-bold text-gray-900">Motivo da rejeição</h2>
-              <p className="text-sm text-gray-600 mt-1 line-clamp-1">{anuncioParaRejeitar.titulo}</p>
-            </div>
-
-            <div className="p-6 space-y-3">
-              <textarea
-                value={motivoRejeicao}
-                onChange={(e) => setMotivoRejeicao(e.target.value)}
-                rows={4}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-fig-purple focus:border-transparent"
-                placeholder="Ex: Descrição incompleta e sem detalhes do estado da peça."
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Nome completo *
+              </label>
+              <input
+                type="text"
+                value={nome}
+                onChange={(e) => setNome(e.target.value)}
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-fig-purple focus:border-transparent"
+                placeholder="Ex: Maria Silva"
+                required
               />
             </div>
 
-            <div className="p-6 border-t bg-gray-50 flex justify-end gap-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Email *
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-fig-purple focus:border-transparent"
+                placeholder="exemplo@escola.pt"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Password *
+              </label>
+              <div className="relative">
+                <input
+                  type={mostrarPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-4 py-3 pr-12 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-fig-purple focus:border-transparent"
+                  placeholder="Mínimo 6 caracteres"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setMostrarPassword((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  {mostrarPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-2">
               <button
                 type="button"
-                onClick={fecharModalRejeicao}
-                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
+                onClick={limparFormulario}
+                disabled={submetendo}
+                className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-60"
               >
-                Cancelar
+                Limpar
               </button>
               <button
-                type="button"
-                onClick={confirmarRejeicao}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+                type="submit"
+                disabled={submetendo}
+                className="flex-1 py-3 bg-gradient-to-r from-fig-purple to-fig-magenta text-white rounded-lg hover:shadow-lg transition-all disabled:opacity-60 disabled:cursor-not-allowed font-medium"
               >
-                Confirmar
+                {submetendo ? "A criar..." : `Criar ${perfil === "ALUNO" ? "Aluno" : "Funcionário"}`}
               </button>
             </div>
-          </div>
+          </form>
         </div>
-      )}
-
-      {anuncioDetalhe && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b sticky top-0 bg-white flex items-start justify-between gap-4">
-              <div>
-                <h2 className="text-xl font-bold text-gray-900">{anuncioDetalhe.titulo}</h2>
-                <p className="text-sm text-gray-600 mt-1">Anúncio criado por: {anuncioDetalhe.utilizador || "Utilizador desconhecido"}</p>
-              </div>
-              <button type="button" onClick={fecharDetalhesAnuncio} className="text-gray-500 hover:text-gray-700" aria-label="Fechar">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="p-6 space-y-5">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {anuncioDetalhe.imagens?.length > 0 ? (
-                  anuncioDetalhe.imagens.map((img, idx) => (
-                    <img key={`${anuncioDetalhe.id}-${idx}`} src={img} alt={`${anuncioDetalhe.titulo} ${idx + 1}`} className="w-full h-56 object-cover rounded-lg border" />
-                  ))
-                ) : (
-                  <div className="sm:col-span-2 h-56 rounded-lg border bg-gray-50 flex items-center justify-center">
-                    <Shirt className="w-16 h-16 text-gray-300" />
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <h3 className="font-medium text-gray-900 mb-2">Descrição</h3>
-                <p className="text-gray-700">{anuncioDetalhe.descricao || "Sem descrição."}</p>
-              </div>
-
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
-                <div className="bg-gray-50 rounded-lg p-3"><span className="text-gray-500">Categoria</span><p className="font-medium">{anuncioDetalhe.categoria || "—"}</p></div>
-                <div className="bg-gray-50 rounded-lg p-3"><span className="text-gray-500">Tamanho</span><p className="font-medium">{anuncioDetalhe.tamanho || "—"}</p></div>
-                <div className="bg-gray-50 rounded-lg p-3"><span className="text-gray-500">Tipo</span><p className="font-medium">{anuncioDetalhe.tipo || "—"}</p></div>
-                <div className="bg-gray-50 rounded-lg p-3"><span className="text-gray-500">Sexo</span><p className="font-medium">{anuncioDetalhe.sexo || "—"}</p></div>
-              </div>
-
-              <p className="text-xs text-gray-500">Submetido em {new Date(anuncioDetalhe.data_anuncio).toLocaleDateString('pt-PT')}</p>
-            </div>
-          </div>
-        </div>
-      )}
-      {abaAtiva === "propostas" && (
-        <div className="bg-white rounded-xl shadow-sm p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Propostas de Cobrança</h3>
-          {propostas.length > 0 ? (
-            <div className="space-y-4">
-              {propostas.map((p) => (
-                <div key={p.id} className="border rounded-lg p-4">
-                  <div className="flex items-center justify-between flex-wrap gap-4">
-                    <div>
-                      <p className="font-semibold text-gray-900">Proposta #{p.id}</p>
-                      <p className="text-sm text-gray-600">Ocorrência #{p.id_ocorrencia}</p>
-                      <p className="text-sm text-gray-600">Valor: <span className="font-medium text-red-600">€{p.valor.toFixed(2)}</span></p>
-                      <span className="inline-block mt-1 px-2 py-0.5 text-xs rounded bg-gray-100 text-gray-700">{p.estado}</span>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {p.estado?.toLowerCase() !== 'finalizada' && p.estado?.toLowerCase() !== 'aceite' && (
-                        <button
-                          onClick={() => handleAtualizarEstadoProposta(p.id, 2, 'Aceite')}
-                          className="flex items-center gap-1.5 px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg transition-colors"
-                        >
-                          <CheckCircle className="w-4 h-4" />
-                          Aceitar
-                        </button>
-                      )}
-                      {p.estado?.toLowerCase() !== 'finalizada' && p.estado?.toLowerCase() !== 'rejeitada' && (
-                        <button
-                          onClick={() => handleAtualizarEstadoProposta(p.id, 3, 'Rejeitada')}
-                          className="flex items-center gap-1.5 px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg transition-colors"
-                        >
-                          <XCircle className="w-4 h-4" />
-                          Rejeitar
-                        </button>
-                      )}
-                      {(p.estado?.toLowerCase() === 'aceite') && (
-                        <button
-                          onClick={() => handleFinalizarProposta(p.id)}
-                          className="flex items-center gap-1.5 px-3 py-2 bg-fig-purple hover:bg-fig-purple/90 text-white text-sm rounded-lg transition-colors"
-                        >
-                          <Euro className="w-4 h-4" />
-                          Mover p/ Conta Corrente
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-12">
-              <ListChecks className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-              <p className="text-gray-600">Nenhuma proposta de cobrança</p>
-            </div>
-          )}
-        </div>
-      )}
-
+      </div>
     </div>
   );
 }

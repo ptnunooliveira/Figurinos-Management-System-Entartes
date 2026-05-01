@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Plus, ShoppingBag, Clock, CheckCircle, XCircle, Shirt, Upload, X, Search, Filter } from "lucide-react";
 import { getUtilizadorAtual } from "../lib/auth";
-import { getMarketplace, getMarketplaceGestao, getMarketplaceDoUtilizador, criarAnuncioMarketplace, getCategorias, getEstadosAnuncio, getTiposFigurino, getSexos, ressubmeterAnuncioMarketplace, eliminarAnuncioMarketplace, continuarAnuncioMarketplace } from "../lib/services";
+import { getMarketplace, getMarketplaceGestao, getMarketplaceDoUtilizador, criarAnuncioMarketplace, getCategorias, getEstadosAnuncio, getTiposFigurino, getSexos, ressubmeterAnuncioMarketplace, eliminarAnuncioMarketplace, continuarAnuncioMarketplace, aprovarAnuncioMarketplace } from "../lib/services";
 import type { AuxiliarItem } from "../lib/services";
 import type { AnuncioMarketplace } from "../lib/dados-mock";
 import { toast } from "sonner";
@@ -10,12 +10,14 @@ export function Marketplace() {
   const REQUEST_TIMEOUT_MS = 12000;
   const MARKETPLACE_INTERESSE_NOTIF_KEY = "fighappens_marketplace_interesses";
   const utilizadorAtual = getUtilizadorAtual();
-  const [abaAtiva, setAbaAtiva] = useState<"explorar" | "meusAnuncios">("explorar");
+  const [abaAtiva, setAbaAtiva] = useState<"explorar" | "meusAnuncios" | "pendentes" | "historico">("explorar");
   const [mostrarCriarModal, setMostrarCriarModal] = useState(false);
   const [modoFormulario, setModoFormulario] = useState<"criar" | "ressubmeter">("criar");
   const [anuncioEmRessubmissaoId, setAnuncioEmRessubmissaoId] = useState<number | null>(null);
   const [anuncioParaRemover, setAnuncioParaRemover] = useState<AnuncioMarketplace | null>(null);
   const [anuncioParaRenovar, setAnuncioParaRenovar] = useState<AnuncioMarketplace | null>(null);
+  const [anuncioParaRejeitar, setAnuncioParaRejeitar] = useState<AnuncioMarketplace | null>(null);
+  const [motivoRejeicao, setMotivoRejeicao] = useState("");
   const [mostrarDetalheModal, setMostrarDetalheModal] = useState(false);
   const [anuncioDetalhe, setAnuncioDetalhe] = useState<AnuncioMarketplace | null>(null);
   const [imagensPreview, setImagensPreview] = useState<string[]>([]);
@@ -37,6 +39,7 @@ export function Marketplace() {
   const [estadosAnuncioLista, setEstadosAnuncioLista] = useState<AuxiliarItem[]>([]);
   const [tiposLista, setTiposLista] = useState<AuxiliarItem[]>([]);
   const [sexosLista, setSexosLista] = useState<AuxiliarItem[]>([]);
+  const isStaff = utilizadorAtual?.tipo === "funcionario" || utilizadorAtual?.tipo === "admin";
 
   const [formulario, setFormulario] = useState({
     titulo: "",
@@ -100,7 +103,7 @@ export function Marketplace() {
 
     const carregarMarketplace = async () => {
       try {
-        if (utilizadorAtual?.tipo === "funcionario") {
+        if (isStaff) {
           const anuncios = await executarComTimeout(
             getMarketplaceGestao(),
             "A carregar os anúncios de gestão está a demorar. Tente novamente."
@@ -124,18 +127,30 @@ export function Marketplace() {
     setMeusAnunciosLista([]);
   }, [utilizadorAtual?.tipo, utilizadorAtual?.id]);
 
+  useEffect(() => {
+    if (isStaff) {
+      setAbaAtiva("pendentes");
+      return;
+    }
+    setAbaAtiva("explorar");
+  }, [isStaff]);
+
   const meusAnuncios = meusAnunciosLista;
   const estadosPublicados = ["aprovado", "publicado"];
+  const normalizarEstado = (estado: string) => estado.trim().toLowerCase();
   const outrosAnuncios = todosAnuncios.filter(a =>
     a.id_utilizador !== utilizadorAtual?.id &&
     estadosPublicados.includes((a.estado || "").trim().toLowerCase())
   );
 
-  const anunciosAMostrar = utilizadorAtual?.tipo === 'funcionario'
-    ? todosAnuncios
-    : (abaAtiva === "explorar" ? outrosAnuncios : meusAnuncios);
+  const anunciosPendentes = todosAnuncios.filter((a) => {
+    const estado = normalizarEstado(a.estado || "");
+    return estado === "submetido" || estado === "pendente";
+  });
 
-  const normalizarEstado = (estado: string) => estado.trim().toLowerCase();
+  const anunciosAMostrar = isStaff
+    ? (abaAtiva === "pendentes" ? anunciosPendentes : todosAnuncios)
+    : (abaAtiva === "explorar" ? outrosAnuncios : meusAnuncios);
 
   const estadoCompativel = (estadoAnuncio: string, estadoFiltro: string) => {
     const anuncio = normalizarEstado(estadoAnuncio);
@@ -460,6 +475,52 @@ export function Marketplace() {
     setAnuncioParaRenovar(anuncio);
   };
 
+  const abrirModalRejeicao = (anuncio: AnuncioMarketplace) => {
+    setAnuncioParaRejeitar(anuncio);
+    setMotivoRejeicao("");
+  };
+
+  const fecharModalRejeicao = () => {
+    setAnuncioParaRejeitar(null);
+    setMotivoRejeicao("");
+  };
+
+  const aprovarAnuncioPendente = async (id: number) => {
+    try {
+      await aprovarAnuncioMarketplace(id, true);
+      toast.success("Anúncio aprovado com sucesso!");
+      const anuncios = await executarComTimeout(
+        getMarketplaceGestao(),
+        "A atualizar anúncios de gestão está a demorar. Tente novamente."
+      );
+      setTodosAnuncios(anuncios);
+    } catch (err: any) {
+      toast.error(err?.message || "Erro ao aprovar anúncio");
+    }
+  };
+
+  const confirmarRejeicao = async () => {
+    if (!anuncioParaRejeitar) return;
+    const motivo = motivoRejeicao.trim();
+    if (!motivo) {
+      toast.error("Indique o motivo da rejeição");
+      return;
+    }
+
+    try {
+      await aprovarAnuncioMarketplace(anuncioParaRejeitar.id, false, motivo);
+      toast.success("Anúncio rejeitado");
+      fecharModalRejeicao();
+      const anuncios = await executarComTimeout(
+        getMarketplaceGestao(),
+        "A atualizar anúncios de gestão está a demorar. Tente novamente."
+      );
+      setTodosAnuncios(anuncios);
+    } catch (err: any) {
+      toast.error(err?.message || "Erro ao rejeitar anúncio");
+    }
+  };
+
   const fecharConfirmacaoRenovacao = () => {
     setAnuncioParaRenovar(null);
   };
@@ -497,7 +558,7 @@ export function Marketplace() {
       <div className="flex items-start justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Marketplace</h1>
-          <p className="text-gray-600">Histórico de anúncios do marketplace</p>
+          <p className="text-gray-600">Gestão do Marketplace</p>
         </div>
         {utilizadorAtual?.tipo === 'aluno' && (
           <button
@@ -537,7 +598,29 @@ export function Marketplace() {
         </div>
       )}
 
+      {isStaff && (
+        <div className="bg-white rounded-xl shadow-sm p-1 inline-flex gap-1">
+          <button
+            onClick={() => setAbaAtiva("pendentes")}
+            className={`px-6 py-2 rounded-lg transition-colors ${
+              abaAtiva === "pendentes" ? "bg-purple-600 text-white" : "text-gray-600 hover:bg-gray-100"
+            }`}
+          >
+            Anúncios pendentes ({anunciosPendentes.length})
+          </button>
+          <button
+            onClick={() => setAbaAtiva("historico")}
+            className={`px-6 py-2 rounded-lg transition-colors ${
+              abaAtiva === "historico" ? "bg-purple-600 text-white" : "text-gray-600 hover:bg-gray-100"
+            }`}
+          >
+            Histórico de anúncios ({todosAnuncios.length})
+          </button>
+        </div>
+      )}
+
       {/* Filtros */}
+      {!(isStaff && abaAtiva === "pendentes") && (
       <div className="bg-white rounded-xl shadow-sm p-6 space-y-4">
         {/* Barra de Pesquisa */}
         <div className="relative">
@@ -555,7 +638,7 @@ export function Marketplace() {
         <div
           className={[
             "grid grid-cols-1 sm:grid-cols-2 gap-4",
-            utilizadorAtual?.tipo === "funcionario" ? "lg:grid-cols-2 max-w-4xl mx-auto" : "lg:grid-cols-3",
+            isStaff ? "lg:grid-cols-2 max-w-4xl mx-auto" : "lg:grid-cols-3",
           ].join(" ")}
         >
           <div>
@@ -623,7 +706,7 @@ export function Marketplace() {
             </div>
           )}
 
-          {(utilizadorAtual?.tipo === 'funcionario' || abaAtiva === 'meusAnuncios') && (
+          {(isStaff || abaAtiva === 'meusAnuncios') && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Estado Anúncio</label>
               <select
@@ -639,7 +722,7 @@ export function Marketplace() {
             </div>
           )}
 
-          {utilizadorAtual?.tipo === 'funcionario' && (
+          {isStaff && (
             <div className="lg:col-start-1">
               <label className="block text-sm font-medium text-gray-700 mb-2">Data Submissão (Início)</label>
               <input
@@ -651,7 +734,7 @@ export function Marketplace() {
             </div>
           )}
 
-          {utilizadorAtual?.tipo === 'funcionario' && (
+          {isStaff && (
             <div className="lg:col-start-2">
               <label className="block text-sm font-medium text-gray-700 mb-2">Data Submissão (Fim)</label>
               <input
@@ -678,6 +761,7 @@ export function Marketplace() {
           </button>
         </div>
       </div>
+      )}
 
       {/* Grelha de Anúncios */}
       <div className="space-y-4">
@@ -715,7 +799,7 @@ export function Marketplace() {
                       <span className="inline-flex items-center px-3 py-1 bg-gray-100 text-gray-700 text-xs rounded-full font-medium">
                         {anuncio.tamanho}
                       </span>
-                      {(utilizadorAtual?.tipo === 'funcionario' || abaAtiva === "meusAnuncios") && (
+                      {(isStaff || abaAtiva === "meusAnuncios") && (
                         <span className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${getCorEstado(estadoAnuncio)}`}>
                           <IconeEstado className="w-3 h-3" />
                           {estadoLabel}
@@ -725,7 +809,7 @@ export function Marketplace() {
 
                     {/* Informação adicional */}
                     <div className="text-xs text-gray-500 mb-3 space-y-1">
-                      {(abaAtiva === "meusAnuncios" || utilizadorAtual?.tipo === 'funcionario') && formatarDataPT(anuncio.data_anuncio) && (
+                      {(abaAtiva === "meusAnuncios" || isStaff) && formatarDataPT(anuncio.data_anuncio) && (
                         <p>Submetido em {formatarDataPT(anuncio.data_anuncio)}</p>
                       )}
                       <p>{linhaDataEstado}</p>
@@ -749,6 +833,27 @@ export function Marketplace() {
                         >
                           Ver Detalhes
                         </button>
+                      ) : isStaff && abaAtiva === "pendentes" ? (
+                        <div className="flex gap-2 flex-wrap">
+                          <button
+                            onClick={() => abrirDetalhes(anuncio)}
+                            className="w-full sm:w-auto bg-gradient-to-r from-fig-purple to-fig-magenta hover:shadow-lg text-white py-2 px-6 rounded-lg transition-all"
+                          >
+                            Ver Detalhes
+                          </button>
+                          <button
+                            onClick={() => aprovarAnuncioPendente(anuncio.id)}
+                            className="w-full sm:w-auto bg-gradient-to-r from-fig-green to-emerald-500 hover:shadow-lg text-white py-2 px-6 rounded-lg transition-all"
+                          >
+                            Aprovar
+                          </button>
+                          <button
+                            onClick={() => abrirModalRejeicao(anuncio)}
+                            className="w-full sm:w-auto border border-red-300 text-red-700 py-2 px-6 rounded-lg hover:bg-red-50 transition-colors"
+                          >
+                            Rejeitar
+                          </button>
+                        </div>
                       ) : (() => {
                         const estado = normalizarEstado(anuncio.estado);
 
@@ -761,12 +866,14 @@ export function Marketplace() {
                               >
                                 Ver Detalhes
                               </button>
-                              <button
-                                onClick={() => abrirRessubmissao(anuncio)}
-                                className="w-full sm:w-auto bg-gradient-to-r from-fig-purple to-fig-magenta hover:shadow-lg text-white py-2 px-6 rounded-lg transition-all"
-                              >
-                                Ressubmeter
-                              </button>
+                              {anuncio.id_utilizador === utilizadorAtual?.id && (
+                                <button
+                                  onClick={() => abrirRessubmissao(anuncio)}
+                                  className="w-full sm:w-auto bg-gradient-to-r from-fig-purple to-fig-magenta hover:shadow-lg text-white py-2 px-6 rounded-lg transition-all"
+                                >
+                                  Ressubmeter
+                                </button>
+                              )}
                             </div>
                           );
                         }
@@ -786,12 +893,14 @@ export function Marketplace() {
                               >
                                 Manter
                               </button>
-                              <button
-                                onClick={() => abrirConfirmacaoRemocao(anuncio)}
-                                className="w-full sm:w-auto border border-red-300 text-red-700 py-2 px-6 rounded-lg hover:bg-red-50 transition-colors"
-                              >
-                                Remover
-                              </button>
+                              {!isStaff && (
+                                <button
+                                  onClick={() => abrirConfirmacaoRemocao(anuncio)}
+                                  className="w-full sm:w-auto border border-red-300 text-red-700 py-2 px-6 rounded-lg hover:bg-red-50 transition-colors"
+                                >
+                                  Remover
+                                </button>
+                              )}
                             </div>
                           );
                         }
@@ -836,12 +945,14 @@ export function Marketplace() {
                             >
                               Ver Detalhes
                             </button>
-                            <button
-                              onClick={() => abrirConfirmacaoRemocao(anuncio)}
-                              className="w-full sm:w-auto border border-red-300 text-red-700 py-2 px-6 rounded-lg hover:bg-red-50 transition-colors"
-                            >
-                              Remover
-                            </button>
+                            {!isStaff && (
+                              <button
+                                onClick={() => abrirConfirmacaoRemocao(anuncio)}
+                                className="w-full sm:w-auto border border-red-300 text-red-700 py-2 px-6 rounded-lg hover:bg-red-50 transition-colors"
+                              >
+                                Remover
+                              </button>
+                            )}
                           </div>
                         );
                       })()}
@@ -859,12 +970,16 @@ export function Marketplace() {
         <div className="bg-white rounded-xl shadow-sm p-12 text-center">
           <ShoppingBag className="w-16 h-16 mx-auto text-gray-300 mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">
-            {abaAtiva === "explorar" ? "Nenhum anúncio disponível" : "Ainda não tem anúncios"}
+            {isStaff
+              ? (abaAtiva === "pendentes" ? "Sem anúncios pendentes" : "Sem anúncios no histórico")
+              : (abaAtiva === "explorar" ? "Nenhum anúncio disponível" : "Ainda não tem anúncios")}
           </h3>
           <p className="text-gray-600 mb-6">
-            {abaAtiva === "explorar"
-              ? "Não há anúncios disponíveis no momento."
-              : "Crie o seu primeiro anúncio e comece a partilhar!"}
+            {isStaff
+              ? (abaAtiva === "pendentes" ? "Não existem anúncios para validação neste momento." : "Não há anúncios no histórico do marketplace.")
+              : (abaAtiva === "explorar"
+                ? "Não há anúncios disponíveis no momento."
+                : "Crie o seu primeiro anúncio e comece a partilhar!")}
           </p>
           {abaAtiva === "meusAnuncios" && (
             <button
@@ -928,12 +1043,7 @@ export function Marketplace() {
               </div>
 
               <div className="flex items-center justify-between gap-3">
-                {utilizadorAtual?.tipo !== "aluno" ? (
-                  <p className="text-xs text-gray-500">Submetido em {new Date(anuncioDetalhe.data_anuncio).toLocaleDateString('pt-PT')}</p>
-                ) : (
-                  <div />
-                )}
-
+                <div />
                 {utilizadorAtual?.tipo === "aluno" && (
                   <div className="flex items-center gap-2 ml-auto">
                     <button
@@ -953,6 +1063,44 @@ export function Marketplace() {
                   </div>
                 )}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {anuncioParaRejeitar && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-md w-full">
+            <div className="p-6 border-b">
+              <h2 className="text-xl font-bold text-gray-900">Motivo da rejeição</h2>
+              <p className="text-sm text-gray-600 mt-1 line-clamp-1">{anuncioParaRejeitar.titulo}</p>
+            </div>
+
+            <div className="p-6 space-y-3">
+              <textarea
+                value={motivoRejeicao}
+                onChange={(e) => setMotivoRejeicao(e.target.value)}
+                rows={4}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-fig-purple focus:border-transparent"
+                placeholder="Ex: Descrição incompleta e sem detalhes do estado da peça."
+              />
+            </div>
+
+            <div className="p-6 border-t bg-gray-50 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={fecharModalRejeicao}
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={confirmarRejeicao}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+              >
+                Confirmar
+              </button>
             </div>
           </div>
         </div>

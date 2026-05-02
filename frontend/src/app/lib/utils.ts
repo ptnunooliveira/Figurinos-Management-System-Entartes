@@ -5,24 +5,24 @@ import type { ContaCorrente } from './dados-mock';
 export function exportarParaExcel(dados: ContaCorrente[], nomeArquivo: string = 'faturacao') {
   // Preparar dados para exportação
   const dadosExportacao = dados.map(item => ({
-    'Data': new Date(item.data).toLocaleDateString('pt-PT'),
-    'Tipo de Movimento': item.tipo_movimento,
+    'Data Movimento': item.data ? new Date(item.data).toLocaleDateString('pt-PT') : '',
+    'Aluno': item.nome_aluno || '',
+    'Tipo': item.tipo_movimento,
     'Descrição': item.descricao,
     'Valor (€)': item.valor.toFixed(2),
-    'Exportado': item.exportado_faturacao ? 'Sim' : 'Não',
+    'Data Exportação': item.data_exportacao ? new Date(item.data_exportacao).toLocaleDateString('pt-PT') : '',
   }));
 
-  // Criar workbook e worksheet
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.json_to_sheet(dadosExportacao);
 
-  // Ajustar largura das colunas
   const colWidths = [
-    { wch: 12 }, // Data
-    { wch: 20 }, // Tipo de Movimento
+    { wch: 14 }, // Data Movimento
+    { wch: 25 }, // Aluno
+    { wch: 14 }, // Tipo
     { wch: 40 }, // Descrição
     { wch: 12 }, // Valor
-    { wch: 10 }, // Exportado
+    { wch: 16 }, // Data Exportação
   ];
   ws['!cols'] = colWidths;
 
@@ -49,13 +49,12 @@ export function validarFormatoImagem(file: File): boolean {
   return formatosPermitidos.includes(file.type);
 }
 
-// Calcular total de dias entre datas
+// Calcular total de dias entre datas (mesmo dia = 1 dia)
 export function calcularDias(dataInicio: string, dataFim: string): number {
   const inicio = new Date(dataInicio);
   const fim = new Date(dataFim);
   const diffTime = Math.abs(fim.getTime() - inicio.getTime());
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  return diffDays;
+  return Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
 }
 
 // Formatar moeda em euros

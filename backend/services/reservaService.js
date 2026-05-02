@@ -334,6 +334,65 @@ const atualizarEstadoReserva = async (idReserva, idNovoEstado, idFuncionario) =>
 };
 
 
+const TRANSICOES_LINHA_PERMITIDAS = {
+    1: [2, 5],  // PENDENTE -> CONFIRMADA OU CANCELADA
+};
+
+const atualizarEstadoLinhaReserva = async (idReserva, idLinha, idNovoEstado, idFuncionario) => {
+
+    const linha = await prisma.linha_reserva.findUnique({
+        where: { id: idLinha },
+        select: { id_estado_linha_reserva: true, id_reserva: true }
+    });
+
+    if (!linha) {
+        const erro = new Error("Linha de reserva não encontrada.");
+        erro.status = 404;
+        throw erro;
+    }
+
+    if (linha.id_reserva !== idReserva) {
+        const erro = new Error("A linha não pertence a esta reserva.");
+        erro.status = 400;
+        throw erro;
+    }
+
+    const proximosEstados = TRANSICOES_LINHA_PERMITIDAS[linha.id_estado_linha_reserva] || [];
+    if (!proximosEstados.includes(idNovoEstado)) {
+        const erro = new Error(`Não é permitido passar do estado ${linha.id_estado_linha_reserva} para o estado ${idNovoEstado}.`);
+        erro.status = 400;
+        throw erro;
+    }
+
+    await prisma.linha_reserva.update({
+        where: { id: idLinha },
+        data: { id_estado_linha_reserva: idNovoEstado }
+    });
+
+    // Verificar se deve atualizar o estado da reserva
+    const todasLinhas = await prisma.linha_reserva.findMany({
+        where: { id_reserva: idReserva },
+        select: { id_estado_linha_reserva: true }
+    });
+
+    const nenhumaPendente = todasLinhas.every(l => l.id_estado_linha_reserva !== 1);
+    const todasCanceladas = todasLinhas.every(l => l.id_estado_linha_reserva === 5);
+
+    if (nenhumaPendente) {
+        const novoEstadoReserva = todasCanceladas ? 5 : 2;
+        await prisma.reserva.update({
+            where: { id: idReserva },
+            data: { id_estado: novoEstadoReserva, id_funcionario: idFuncionario }
+        });
+    }
+
+    return await prisma.linha_reserva.findUnique({
+        where: { id: idLinha },
+        include: { estado_linha_reserva: true }
+    });
+};
+
+
 const cancelarReserva = async(idReserva, idAluno) => {
 
     const reserva = await prisma.reserva.findUnique({
@@ -394,5 +453,6 @@ module.exports = {
     obterDetalhesReserva,
     criarReserva,
     atualizarEstadoReserva,
+    atualizarEstadoLinhaReserva,
     cancelarReserva
 };

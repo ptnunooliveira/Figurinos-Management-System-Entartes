@@ -80,11 +80,12 @@ const figurinoTemDanoPorComparacao = async (id_linha_reserva, id_checklist_devol
 // Criar nova devolução
 // Oficializa a entrega de uma linha_reserva e liga-a à checklist de entrada.
 // Se o estado do figurino piorou face ao levantamento, cria automaticamente uma ocorrência.
+// Cria sempre um registo de conta_corrente com o valor do aluguer (valordiario × dias).
 const criarDevolucao = async ({ id_linha_reserva, id_checklist, datadevolucao }) => {
-  // Verificar se a linha_reserva existe (inclui anuncio para obter o figurino)
+  // Verificar se a linha_reserva existe (inclui anuncio para obter o figurino e reserva para o utilizador)
   const linhaReserva = await prisma.linha_reserva.findUnique({
     where: { id: id_linha_reserva },
-    include: { anuncio_escola: true },
+    include: { anuncio_escola: true, reserva: true },
   });
   if (!linhaReserva) {
     const err = new Error("Linha de reserva nao encontrada.");
@@ -143,6 +144,29 @@ const criarDevolucao = async ({ id_linha_reserva, id_checklist, datadevolucao })
     },
   });
 
+  // Criar registo de conta_corrente com o valor do aluguer (valordiario × dias)
+  let movimentoAluguer = null;
+  const idUtilizador = linhaReserva.reserva?.id_utilizador ?? null;
+  const valorDiario = linhaReserva.valordiario || linhaReserva.anuncio_escola?.valordiarioaluguer || 0;
+  if (idUtilizador && valorDiario && linhaReserva.datainicio && linhaReserva.datafim) {
+    const inicio = new Date(linhaReserva.datainicio);
+    const fim = new Date(linhaReserva.datafim);
+    const dias = Math.max(1, Math.ceil((fim - inicio) / (1000 * 60 * 60 * 24)));
+    const valorAluguer = valorDiario * dias;
+
+    if (valorAluguer > 0) {
+      movimentoAluguer = await prisma.conta_corrente.create({
+        data: {
+          valor: valorAluguer,
+          exportadofaturacao: false,
+          dataexportacao: null,
+          id_utilizador: idUtilizador,
+          id_linha_reserva,
+        },
+      });
+    }
+  }
+
   // Comparar estado do figurino: se piorou face ao levantamento, cria ocorrência automaticamente
   let ocorrencia = null;
   const temDano = await figurinoTemDanoPorComparacao(id_linha_reserva, id_checklist);
@@ -162,7 +186,7 @@ const criarDevolucao = async ({ id_linha_reserva, id_checklist, datadevolucao })
     });
   }
 
-  return { ...devolucao, ocorrencia };
+  return { ...devolucao, ocorrencia, movimentoAluguer };
 };
 
 //#endregion devolucoes

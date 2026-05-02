@@ -264,6 +264,36 @@ const atualizarEstadoReserva = async (req, res) => {
 };
 
 
+const atualizarEstadoLinhaReserva = async (req, res) => {
+
+    try {
+
+        const idReserva = parseInt(req.params.id);
+        const idLinha = parseInt(req.params.idLinha);
+        const { id_estado } = req.body;
+
+        if (isNaN(idReserva) || isNaN(idLinha)) {
+            return res.status(400).json({ erro: "IDs inválidos." });
+        }
+
+        if (!id_estado) {
+            return res.status(400).json({ erro: "O novo estado é obrigatório." });
+        }
+
+        const linhaAtualizada = await reservaService.atualizarEstadoLinhaReserva(idReserva, idLinha, id_estado, req.user.id);
+
+        return res.status(200).json(linhaAtualizada);
+
+    } catch (erro) {
+
+        if (erro.status) {
+            return res.status(erro.status).json({ erro: erro.message });
+        }
+        return res.status(500).json({ erro: "Erro interno ao processar a atualização da linha de reserva." });
+    }
+};
+
+
 const cancelarReserva = async (req, res) => {
 
     try {
@@ -304,5 +334,6 @@ module.exports = {
     obterDetalhesReserva,
     criarReserva,
     atualizarEstadoReserva,
+    atualizarEstadoLinhaReserva,
     cancelarReserva
 };

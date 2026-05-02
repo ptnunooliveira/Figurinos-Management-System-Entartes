@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Calendar, Clock, CheckCircle, XCircle, AlertCircle, Shirt, ClipboardCheck, PackageOpen, Search, Filter, Ban, CheckCheck } from "lucide-react";
 import { Link } from "react-router";
 import { getUtilizadorAtual } from "../lib/auth";
-import { getReservas, getMinhasReservas, cancelarReserva, atualizarEstadoReserva } from "../lib/services";
+import { getReservas, getMinhasReservas, cancelarReserva, atualizarEstadoReserva, atualizarEstadoLinhaReserva } from "../lib/services";
 import type { Reserva } from "../lib/dados-mock";
 import { calcularDias, formatarMoeda } from "../lib/utils";
 import { toast } from "sonner";
@@ -34,24 +34,24 @@ export function Reservas() {
     }
   };
 
-  const handleAprovarReserva = async (id: number) => {
+  const handleAprovarLinha = async (idReserva: number, idLinha: number) => {
     try {
-      await atualizarEstadoReserva(id, 2);
-      toast.success("Reserva aprovada com sucesso!");
+      await atualizarEstadoLinhaReserva(idReserva, idLinha, 2);
+      toast.success("Linha aprovada com sucesso!");
       carregarReservas();
     } catch (err: any) {
-      toast.error(err.message || "Erro ao aprovar reserva");
+      toast.error(err.message || "Erro ao aprovar linha");
     }
   };
 
-  const handleRecusarReserva = async (id: number) => {
-    if (!window.confirm("Tem a certeza que deseja recusar esta reserva?")) return;
+  const handleRecusarLinha = async (idReserva: number, idLinha: number) => {
+    if (!window.confirm("Tem a certeza que deseja recusar esta linha?")) return;
     try {
-      await atualizarEstadoReserva(id, 5);
-      toast.success("Reserva recusada com sucesso!");
+      await atualizarEstadoLinhaReserva(idReserva, idLinha, 5);
+      toast.success("Linha recusada com sucesso!");
       carregarReservas();
     } catch (err: any) {
-      toast.error(err.message || "Erro ao recusar reserva");
+      toast.error(err.message || "Erro ao recusar linha");
     }
   };
 
@@ -250,6 +250,26 @@ export function Reservas() {
                               <p className="font-semibold text-purple-600">Total: {formatarMoeda(valorTotal)}</p>
                             </div>
                           </div>
+
+                          {/* Botões de aprovação por linha */}
+                          {(utilizadorAtual?.tipo === 'funcionario' || utilizadorAtual?.perfil === 'ADMIN') && abaAtiva === "ativas" && linha.estado?.toUpperCase() === 'PENDENTE' && (
+                            <div className="flex justify-end gap-2 mt-3 pt-3 border-t">
+                              <button
+                                onClick={() => handleRecusarLinha(reserva.id, linha.id)}
+                                className="flex items-center gap-1 px-3 py-1.5 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors"
+                              >
+                                <Ban className="w-3.5 h-3.5" />
+                                Recusar
+                              </button>
+                              <button
+                                onClick={() => handleAprovarLinha(reserva.id, linha.id)}
+                                className="flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors"
+                              >
+                                <CheckCheck className="w-3.5 h-3.5" />
+                                Aprovar
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -258,29 +278,10 @@ export function Reservas() {
               </div>
 
               {/* Ações da Reserva */}
-              {utilizadorAtual?.tipo === 'funcionario' || utilizadorAtual?.perfil === 'ADMIN' && abaAtiva === "ativas" && (
+              {(utilizadorAtual?.tipo === 'funcionario' || utilizadorAtual?.perfil === 'ADMIN') && abaAtiva === "ativas" && (
                 (() => {
                   const e = reserva.estado?.toUpperCase();
-                  if (e === 'PENDENTE') {
-                    return (
-                      <div className="bg-gray-50 px-6 py-4 flex justify-end gap-3 flex-wrap">
-                        <button
-                          onClick={() => handleRecusarReserva(reserva.id)}
-                          className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-                        >
-                          <Ban className="w-4 h-4" />
-                          Recusar
-                        </button>
-                        <button
-                          onClick={() => handleAprovarReserva(reserva.id)}
-                          className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                        >
-                          <CheckCheck className="w-4 h-4" />
-                          Aprovar
-                        </button>
-                      </div>
-                    );
-                  } else if (e === 'CONFIRMADA') {
+                  if (e === 'CONFIRMADA') {
                     return (
                       <div className="bg-gray-50 px-6 py-4 flex justify-end gap-3 flex-wrap">
                         <button
@@ -349,7 +350,7 @@ export function Reservas() {
             </h3>
             <p className="text-gray-600 mb-6">
               {abaAtiva === "ativas"
-                ? utilizadorAtual?.tipo === 'funcionario' || utilizadorAtual?.perfil === 'ADMIN'
+                ? (utilizadorAtual?.tipo === 'funcionario' || utilizadorAtual?.perfil === 'ADMIN')
                   ? "Não há reservas ativas no momento."
                   : "Ainda não tem reservas ativas. Explore o catálogo!"
                 : "Ainda não há histórico de reservas."}

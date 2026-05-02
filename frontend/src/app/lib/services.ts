@@ -330,18 +330,67 @@ export async function getChecklistsReserva(idReserva: number): Promise<Checklist
 
 // ─── Conta Corrente ──────────────────────────────────────────────────────────
 
+function calcularDiasLinha(lr: any): number {
+  if (!lr?.datainicio || !lr?.datafim) return 1;
+  const inicio = new Date(lr.datainicio);
+  const fim = new Date(lr.datafim);
+  return Math.max(1, Math.ceil((fim.getTime() - inicio.getTime()) / (1000 * 60 * 60 * 24)));
+}
+
 function mapContaCorrente(m: any): ContaCorrente {
-  const data = m.linha_reserva?.datainicio ?? m.dataexportacao ?? null;
-  const descricao = m.ocorrencia?.descricao
-    ?? (m.linha_reserva ? `Aluguer - Linha #${m.id_linha_reserva}` : m.tipo_movimento_contacorrente?.nome ?? '');
+  const data = m.linha_reserva?.datainicio ?? m.ocorrencia?.dataregisto ?? null;
+
+  let descricao: string;
+  if (m.id_ocorrencia && m.id_linha_reserva) {
+    descricao = `Reserva #${m.id_linha_reserva} que gerou Ocorrência #${m.id_ocorrencia}`;
+  } else if (m.id_linha_reserva && m.linha_reserva) {
+    const dias = calcularDiasLinha(m.linha_reserva);
+    const valorDiario = m.linha_reserva.valordiario ?? 0;
+    descricao = `Reserva #${m.id_linha_reserva}, ${dias} dia${dias !== 1 ? 's' : ''}, ${valorDiario.toFixed(2)}€/dia`;
+  } else {
+    descricao = m.tipo_movimento_contacorrente?.nome ?? '';
+  }
+
+  // Cadeia de fallback para o valor:
+  // 1. conta_corrente.valor (se não nulo nem 0)
+  // 2. proposta de cobrança aceite mais recente
+  // 3. ocorrencia.valor
+  // 4. valordiario × dias da linha_reserva
+  let valor: number | null = (m.valor != null && m.valor !== 0) ? m.valor : null;
+
+  if (!valor) {
+    const propostaValor = (m.ocorrencia?.propostacobranca as any[] | undefined)
+      ?.find((p: any) => p.valor != null && p.valor !== 0)?.valor ?? null;
+    valor = propostaValor;
+  }
+
+  if (!valor && m.ocorrencia?.valor) {
+    valor = m.ocorrencia.valor;
+  }
+
+  if (!valor && m.linha_reserva?.datainicio && m.linha_reserva?.datafim && m.linha_reserva?.valordiario) {
+    const inicio = new Date(m.linha_reserva.datainicio);
+    const fim = new Date(m.linha_reserva.datafim);
+    const dias = Math.max(1, Math.ceil((fim.getTime() - inicio.getTime()) / (1000 * 60 * 60 * 24)));
+    valor = m.linha_reserva.valordiario * dias;
+  }
+
+  const tipo_movimento = m.id_ocorrencia
+    ? 'Ocorrência'
+    : m.id_linha_reserva
+      ? 'Reserva'
+      : (m.tipo_movimento_contacorrente?.nome ?? '');
+
   return {
     id: m.id,
-    valor: m.valor ?? 0,
+    valor: valor ?? 0,
     data: data ? new Date(data).toISOString() : '',
-    tipo_movimento: m.tipo_movimento_contacorrente?.nome ?? '',
+    tipo_movimento,
     descricao,
     exportado_faturacao: m.exportadofaturacao ?? false,
+    data_exportacao: m.dataexportacao ? new Date(m.dataexportacao).toISOString() : null,
     id_utilizador: m.id_utilizador ?? 0,
+    nome_aluno: m.utilizador?.nome ?? '',
   };
 }
 
@@ -372,6 +421,16 @@ export async function getMinhaContaCorrente(): Promise<ContaCorrente[]> {
 
 export async function marcarMovimentoExportado(id: number): Promise<void> {
   await apiFetch(`/conta-corrente/${id}/exportar`, { method: 'PATCH' });
+}
+
+export async function sincronizarMovimentosAluguer(): Promise<{ criados: number }> {
+  try {
+    const res = await apiFetch('/conta-corrente/sincronizar-alugueres', { method: 'POST' });
+    if (!res.ok) return { criados: 0 };
+    return res.json();
+  } catch {
+    return { criados: 0 };
+  }
 }
 
 // ─── Marketplace ─────────────────────────────────────────────────────────────
@@ -816,6 +875,18 @@ export async function criarReserva(linhas: { id_anuncio: number; datainicio: str
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.erro ?? err.error ?? 'Erro ao criar reserva');
+  }
+  return res.json();
+}
+
+export async function atualizarEstadoLinhaReserva(idReserva: number, idLinha: number, idEstado: number): Promise<any> {
+  const res = await apiFetch(`/reservas/${idReserva}/linhas/${idLinha}/estado`, {
+    method: 'PATCH',
+    body: JSON.stringify({ id_estado: idEstado }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.erro ?? 'Erro ao atualizar estado da linha de reserva');
   }
   return res.json();
 }

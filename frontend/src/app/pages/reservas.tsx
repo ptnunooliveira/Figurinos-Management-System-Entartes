@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Calendar, Clock, CheckCircle, XCircle, AlertCircle, Shirt, ClipboardCheck, PackageOpen, Search, Filter, Ban, CheckCheck } from "lucide-react";
 import { Link } from "react-router";
 import { getUtilizadorAtual } from "../lib/auth";
-import { getReservas, getMinhasReservas, cancelarReserva, atualizarEstadoReserva } from "../lib/services";
+import { getReservas, getMinhasReservas, cancelarReserva, atualizarEstadoReserva, atualizarEstadoLinhaReserva } from "../lib/services";
 import type { Reserva } from "../lib/dados-mock";
 import { calcularDias, formatarMoeda } from "../lib/utils";
 import { toast } from "sonner";
@@ -34,36 +34,39 @@ export function Reservas() {
     }
   };
 
-  const handleAprovarReserva = async (id: number) => {
+  const handleAprovarLinha = async (idReserva: number, idLinha: number) => {
     try {
-      await atualizarEstadoReserva(id, 2);
-      toast.success("Reserva aprovada com sucesso!");
+      await atualizarEstadoLinhaReserva(idReserva, idLinha, 2);
+      toast.success("Linha aprovada com sucesso!");
       carregarReservas();
     } catch (err: any) {
-      toast.error(err.message || "Erro ao aprovar reserva");
+      toast.error(err.message || "Erro ao aprovar linha");
     }
   };
 
-  const handleRecusarReserva = async (id: number) => {
-    if (!window.confirm("Tem a certeza que deseja recusar esta reserva?")) return;
+  const handleRecusarLinha = async (idReserva: number, idLinha: number) => {
+    if (!window.confirm("Tem a certeza que deseja recusar esta linha?")) return;
     try {
-      await atualizarEstadoReserva(id, 5);
-      toast.success("Reserva recusada com sucesso!");
+      await atualizarEstadoLinhaReserva(idReserva, idLinha, 5);
+      toast.success("Linha recusada com sucesso!");
       carregarReservas();
     } catch (err: any) {
-      toast.error(err.message || "Erro ao recusar reserva");
+      toast.error(err.message || "Erro ao recusar linha");
     }
   };
 
-  const reservasAtivas = reservas.filter(r =>
+  const sortDesc = (arr: Reserva[]) =>
+    [...arr].sort((a, b) => (b.id ?? 0) - (a.id ?? 0));
+
+  const reservasAtivas = sortDesc(reservas.filter(r =>
     r.estado === "CONFIRMADA" || r.estado === "EM CURSO" ||
     r.estado === "PENDENTE"
-  );
+  ));
 
-  const reservasHistorico = reservas.filter(r =>
+  const reservasHistorico = sortDesc(reservas.filter(r =>
     r.estado === "CONCLUIDA" || r.estado === "CANCELADA" ||
     r.estado === "Devolvida" || r.estado === "Cancelada" || r.estado === "ATRASADA"
-  );
+  ));
 
   const reservasExibir = abaAtiva === "ativas" ? reservasAtivas : reservasHistorico;
 
@@ -101,20 +104,20 @@ export function Reservas() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       {/* Cabeçalho */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
+        <h1 className="text-2xl font-bold text-gray-900 mb-0.5">
           {utilizadorAtual?.tipo === 'funcionario' || utilizadorAtual?.perfil === 'ADMIN' ? 'Gestão de Reservas' : 'Minhas Reservas'}
         </h1>
-        <p className="text-gray-600">Gerencie as reservas de figurinos</p>
+        <p className="text-gray-600 text-sm">Gerencie as reservas de figurinos</p>
       </div>
 
       {/* Abas */}
       <div className="bg-white rounded-xl shadow-sm p-1 inline-flex gap-1">
         <button
           onClick={() => setAbaAtiva("ativas")}
-          className={`px-6 py-2 rounded-lg transition-colors ${
+          className={`px-5 py-1.5 rounded-lg text-sm transition-colors ${
             abaAtiva === "ativas"
               ? "bg-purple-600 text-white"
               : "text-gray-600 hover:bg-gray-100"
@@ -124,7 +127,7 @@ export function Reservas() {
         </button>
         <button
           onClick={() => setAbaAtiva("historico")}
-          className={`px-6 py-2 rounded-lg transition-colors ${
+          className={`px-5 py-1.5 rounded-lg text-sm transition-colors ${
             abaAtiva === "historico"
               ? "bg-purple-600 text-white"
               : "text-gray-600 hover:bg-gray-100"
@@ -135,27 +138,27 @@ export function Reservas() {
       </div>
 
       {/* Filtros */}
-      <div className="bg-white rounded-xl shadow-sm p-6 space-y-4">
+      <div className="bg-white rounded-xl shadow-sm px-4 py-3 space-y-2">
         {/* Barra de Pesquisa */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
             type="text"
             value={termoPesquisa}
             onChange={(e) => setTermoPesquisa(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-            placeholder="Pesquisar por ID, cliente ou figurino..."
+            className="w-full pl-9 pr-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            placeholder="Pesquisar por ID, aluno ou figurino..."
           />
         </div>
 
         {/* Filtro de Estado */}
-        <div className="flex items-center justify-between flex-wrap gap-4">
+        <div className="flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-2">
-            <Filter className="w-5 h-5 text-gray-400" />
+            <Filter className="w-4 h-4 text-gray-400" />
             <select
               value={estadoSelecionado}
               onChange={(e) => setEstadoSelecionado(e.target.value)}
-              className="border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             >
               <option value="todos">Todos os Estados</option>
               <option value="CONFIRMADA">Confirmada</option>
@@ -168,188 +171,162 @@ export function Reservas() {
           </div>
 
           {/* Contagem de Resultados */}
-          <p className="text-gray-600">
+          <p className="text-sm text-gray-600">
             {reservasFiltradas.length} reserva{reservasFiltradas.length !== 1 ? 's' : ''} encontrada{reservasFiltradas.length !== 1 ? 's' : ''}
           </p>
         </div>
       </div>
 
       {/* Lista de Reservas */}
-      <div className="space-y-4">
+      <div className="space-y-2">
         {reservasFiltradas.length > 0 ? (
-          reservasFiltradas.map((reserva) => (
-            <div key={reserva.id} className="bg-white rounded-xl shadow-sm overflow-hidden">
-              {/* Cabeçalho da Reserva */}
-              <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-6 border-b">
-                <div className="flex items-start justify-between flex-wrap gap-4">
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <Calendar className="w-5 h-5 text-purple-600" />
-                      <h3 className="font-semibold text-gray-900">
-                        Reserva #{reserva.id}
-                      </h3>
-                    </div>
-                    <p className="text-sm text-gray-600">
-                      Data da reserva: {reserva.data_reserva ? new Date(reserva.data_reserva).toLocaleDateString('pt-PT') : '—'}
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      Cliente: {reserva.utilizador.nome}
-                    </p>
+          reservasFiltradas.map((reserva) => {
+            const eStaff = utilizadorAtual?.tipo === 'funcionario' || utilizadorAtual?.perfil === 'ADMIN';
+            const eAtiva = abaAtiva === "ativas";
+            const estadoRes = reserva.estado?.toUpperCase();
+
+            return (
+              <div key={reserva.id} className="bg-white rounded-xl shadow-sm overflow-hidden flex">
+                {/* Coluna esquerda — info da reserva */}
+                <div className="w-36 flex-shrink-0 border-r bg-gradient-to-b from-purple-50 to-pink-50 p-3 flex flex-col gap-1">
+                  <div className="flex items-center gap-1">
+                    <Calendar className="w-3.5 h-3.5 text-purple-600 flex-shrink-0" />
+                    <span className="font-semibold text-gray-900 text-sm">#{reserva.id}</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    {(() => {
-                      const IconeEstado = getIconeEstado(reserva.estado);
-                      return <IconeEstado className="w-5 h-5" />;
-                    })()}
-                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${getCorEstado(reserva.estado)}`}>
+                  <p className="text-xs text-gray-500">
+                    {reserva.data_reserva ? new Date(reserva.data_reserva).toLocaleDateString('pt-PT') : '—'}
+                  </p>
+                  <p className="text-xs text-gray-700 font-medium truncate" title={reserva.utilizador.nome}>
+                    {reserva.utilizador.nome}
+                  </p>
+                  <div className="mt-auto pt-1">
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getCorEstado(reserva.estado)}`}>
                       {reserva.estado}
                     </span>
                   </div>
                 </div>
-              </div>
 
-              {/* Itens da Reserva */}
-              <div className="p-6 space-y-4">
-                {reserva.linhas.map((linha) => {
-                  const dias = calcularDias(linha.data_inicio, linha.data_fim);
-                  const valorTotal = (linha.valor_diario ?? 0) * dias;
+                {/* Coluna direita — linhas */}
+                <div className="flex-1 min-w-0 divide-y">
+                  {reserva.linhas.map((linha) => {
+                    const dias = calcularDias(linha.data_inicio, linha.data_fim);
+                    const valorTotal = (linha.valor_diario ?? 0) * dias;
+                    const estadoLinha = linha.estado?.toUpperCase();
 
-                  return (
-                    <div key={linha.id} className="border rounded-lg p-4">
-                      <div className="flex items-start gap-4">
-                        <div className="w-20 h-20 bg-gradient-to-br from-purple-100 to-pink-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                          <Shirt className="w-10 h-10 text-purple-400" />
+                    return (
+                      <div key={linha.id} className="flex items-center gap-3 px-3 py-2">
+                        {/* Imagem */}
+                        <div className="w-11 h-11 bg-gradient-to-br from-purple-100 to-pink-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <Shirt className="w-6 h-6 text-purple-400" />
                         </div>
+
+                        {/* Info figurino */}
                         <div className="flex-1 min-w-0">
-                          <h4 className="font-semibold text-gray-900 mb-1">
+                          <p className="text-sm font-semibold text-gray-900 truncate">
                             {linha.anuncio?.figurino?.nome || '—'}
-                          </h4>
-                          <p className="text-sm text-gray-600 mb-2">
-                            {linha.anuncio?.figurino?.descricao || ''}
                           </p>
-
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm mb-3">
-                            <div className="flex items-center gap-2">
-                              <Calendar className="w-4 h-4 text-gray-400" />
-                              <span className="text-gray-600">
-                                {linha.data_inicio ? new Date(linha.data_inicio).toLocaleDateString('pt-PT') : '—'} - {linha.data_fim ? new Date(linha.data_fim).toLocaleDateString('pt-PT') : '—'}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Clock className="w-4 h-4 text-gray-400" />
-                              <span className="text-gray-600">{dias} dia{dias !== 1 ? 's' : ''}</span>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center justify-between flex-wrap gap-2">
-                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${getCorEstado(linha.estado)}`}>
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-gray-500 mt-0.5">
+                            <span className="flex items-center gap-1">
+                              <Calendar className="w-3 h-3" />
+                              {linha.data_inicio ? new Date(linha.data_inicio).toLocaleDateString('pt-PT') : '—'}
+                              {' – '}
+                              {linha.data_fim ? new Date(linha.data_fim).toLocaleDateString('pt-PT') : '—'}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              {dias} dia{dias !== 1 ? 's' : ''}
+                            </span>
+                            <span className={`px-2 py-0.5 rounded-full font-medium ${getCorEstado(linha.estado)}`}>
                               {linha.estado}
                             </span>
-                            <div className="text-right">
-                              <p className="text-sm text-gray-600">{formatarMoeda(linha.valor_diario ?? 0)}/dia × {dias} dias</p>
-                              <p className="font-semibold text-purple-600">Total: {formatarMoeda(valorTotal)}</p>
-                            </div>
                           </div>
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            {formatarMoeda(linha.valor_diario ?? 0)}/dia × {dias} dias
+                            {' · '}
+                            <span className="font-semibold text-purple-600">Total: {formatarMoeda(valorTotal)}</span>
+                          </p>
+                        </div>
+
+                        {/* Botões à direita da linha */}
+                        <div className="flex-shrink-0 flex flex-col gap-1 items-end">
+                          {eStaff && eAtiva && estadoLinha === 'PENDENTE' && (
+                            <>
+                              <button
+                                onClick={() => handleRecusarLinha(reserva.id, linha.id)}
+                                className="flex items-center justify-center gap-1 w-24 py-1 text-xs rounded-lg border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 transition-colors whitespace-nowrap"
+                              >
+                                <Ban className="w-3 h-3" />
+                                Recusar
+                              </button>
+                              <button
+                                onClick={() => handleAprovarLinha(reserva.id, linha.id)}
+                                className="flex items-center justify-center gap-1 w-24 py-1 text-xs rounded-lg border border-green-200 bg-green-50 text-green-700 hover:bg-green-100 transition-colors whitespace-nowrap"
+                              >
+                                <CheckCheck className="w-3 h-3" />
+                                Aprovar
+                              </button>
+                            </>
+                          )}
+                          {eStaff && eAtiva && estadoRes === 'CONFIRMADA' && estadoLinha !== 'PENDENTE' && (
+                            <>
+                              <button
+                                onClick={() => {
+                                  if (window.confirm("O figurino não está conforme? Tem a certeza que deseja cancelar o pedido?")) {
+                                    atualizarEstadoReserva(reserva.id, 5)
+                                      .then(() => { toast.success("Reserva cancelada!"); carregarReservas(); })
+                                      .catch((err) => toast.error(err.message));
+                                  }
+                                }}
+                                className="flex items-center justify-center gap-1 w-24 py-1 text-xs rounded-lg border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 transition-colors whitespace-nowrap"
+                                title="Cancelar caso artigo não conforme"
+                              >
+                                <Ban className="w-3 h-3" />
+                                Cancelar
+                              </button>
+                              <Link
+                                to={`/levantamento/${reserva.id}`}
+                                className="flex items-center justify-center gap-1 w-24 py-1 text-xs rounded-lg border border-green-200 bg-green-50 text-green-700 hover:bg-green-100 transition-colors whitespace-nowrap"
+                              >
+                                <ClipboardCheck className="w-3 h-3" />
+                                Levantamento
+                              </Link>
+                            </>
+                          )}
+                          {eStaff && eAtiva && estadoRes === 'EM CURSO' && (
+                            <Link
+                              to={`/devolucao/${reserva.id}`}
+                              className="flex items-center justify-center gap-1 w-24 py-1 text-xs rounded-lg border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors whitespace-nowrap"
+                            >
+                              <PackageOpen className="w-3 h-3" />
+                              Devolução
+                            </Link>
+                          )}
+                          {!eStaff && eAtiva && (estadoRes === 'CONFIRMADA' || estadoRes === 'PENDENTE') && (
+                            <button
+                              onClick={() => handleCancelarReserva(reserva.id)}
+                              className="flex items-center justify-center gap-1 w-24 py-1 text-xs rounded-lg border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 transition-colors whitespace-nowrap"
+                            >
+                              <Ban className="w-3 h-3" />
+                              Cancelar
+                            </button>
+                          )}
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
-
-              {/* Ações da Reserva */}
-              {utilizadorAtual?.tipo === 'funcionario' || utilizadorAtual?.perfil === 'ADMIN' && abaAtiva === "ativas" && (
-                (() => {
-                  const e = reserva.estado?.toUpperCase();
-                  if (e === 'PENDENTE') {
-                    return (
-                      <div className="bg-gray-50 px-6 py-4 flex justify-end gap-3 flex-wrap">
-                        <button
-                          onClick={() => handleRecusarReserva(reserva.id)}
-                          className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-                        >
-                          <Ban className="w-4 h-4" />
-                          Recusar
-                        </button>
-                        <button
-                          onClick={() => handleAprovarReserva(reserva.id)}
-                          className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                        >
-                          <CheckCheck className="w-4 h-4" />
-                          Aprovar
-                        </button>
-                      </div>
-                    );
-                  } else if (e === 'CONFIRMADA') {
-                    return (
-                      <div className="bg-gray-50 px-6 py-4 flex justify-end gap-3 flex-wrap">
-                        <button
-                          onClick={() => {
-                            if (window.confirm("O figurino não está conforme? Tem a certeza que deseja cancelar o pedido?")) {
-                              atualizarEstadoReserva(reserva.id, 5)
-                                .then(() => { toast.success("Reserva cancelada!"); carregarReservas(); })
-                                .catch((err) => toast.error(err.message));
-                            }
-                          }}
-                          className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-                          title="Cancelar caso artigo não conforme"
-                        >
-                          <Ban className="w-4 h-4" />
-                          Cancelar
-                        </button>
-                        <Link
-                          to={`/levantamento/${reserva.id}`}
-                          className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                        >
-                          <ClipboardCheck className="w-4 h-4" />
-                          Processar Levantamento
-                        </Link>
-                      </div>
-                    );
-                  } else if (e === 'EM CURSO') {
-                    return (
-                      <div className="bg-gray-50 px-6 py-4 flex justify-end gap-3 flex-wrap">
-                        <Link
-                          to={`/devolucao/${reserva.id}`}
-                          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                        >
-                          <PackageOpen className="w-4 h-4" />
-                          Processar Devolução
-                        </Link>
-                      </div>
-                    );
-                  }
-                  return null;
-                })()
-              )}
-              {utilizadorAtual?.tipo !== 'funcionario' && utilizadorAtual?.perfil !== 'ADMIN' && abaAtiva === "ativas" && (
-                (() => {
-                  const e = reserva.estado?.toUpperCase();
-                  const podeCanc = e === 'CONFIRMADA' || e === 'PENDENTE';
-                  return podeCanc ? (
-                    <div className="bg-gray-50 px-6 py-4 flex justify-end">
-                      <button
-                        onClick={() => handleCancelarReserva(reserva.id)}
-                        className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-                      >
-                        <Ban className="w-4 h-4" />
-                        Cancelar Reserva
-                      </button>
-                    </div>
-                  ) : null;
-                })()
-              )}
-            </div>
-          ))
+            );
+          })
         ) : (
-          <div className="bg-white rounded-xl shadow-sm p-12 text-center">
-            <Calendar className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
+          <div className="bg-white rounded-xl shadow-sm p-10 text-center">
+            <Calendar className="w-12 h-12 mx-auto text-gray-300 mb-3" />
+            <h3 className="text-base font-medium text-gray-900 mb-1">
               {abaAtiva === "ativas" ? "Nenhuma reserva ativa" : "Nenhuma reserva no histórico"}
             </h3>
-            <p className="text-gray-600 mb-6">
+            <p className="text-sm text-gray-600 mb-4">
               {abaAtiva === "ativas"
-                ? utilizadorAtual?.tipo === 'funcionario' || utilizadorAtual?.perfil === 'ADMIN'
+                ? (utilizadorAtual?.tipo === 'funcionario' || utilizadorAtual?.perfil === 'ADMIN')
                   ? "Não há reservas ativas no momento."
                   : "Ainda não tem reservas ativas. Explore o catálogo!"
                 : "Ainda não há histórico de reservas."}
@@ -357,7 +334,7 @@ export function Reservas() {
             {abaAtiva === "ativas" && utilizadorAtual?.tipo !== 'funcionario' && utilizadorAtual?.perfil !== 'ADMIN' && (
               <Link
                 to="/figurinos"
-                className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg transition-colors inline-block"
+                className="bg-purple-600 hover:bg-purple-700 text-white px-5 py-2 rounded-lg text-sm transition-colors inline-block"
               >
                 Explorar Figurinos
               </Link>

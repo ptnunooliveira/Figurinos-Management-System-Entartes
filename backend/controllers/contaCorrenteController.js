@@ -119,10 +119,22 @@ const marcarMovimentoComoExportado = async (req, res) => {
 };
 
 
+const sincronizarMovimentosAluguer = async (req, res) => {
+    try {
+        const resultado = await contaCorrenteService.sincronizarMovimentosAluguer();
+        return res.status(200).json(resultado);
+    } catch (erro) {
+        console.error('Erro ao sincronizar movimentos de aluguer:', erro);
+        return res.status(500).json({ erro: 'Erro interno do servidor.' });
+    }
+};
+
+
 module.exports = {
     obterTodosMovimentosContaCorrente,
     obterMovimentoContaCorrente,
     obterMinhaContaCorrente,
     obterContaCorrentePorUtilizador,
-    marcarMovimentoComoExportado
+    marcarMovimentoComoExportado,
+    sincronizarMovimentosAluguer
 };

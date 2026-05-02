@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   AlertTriangle,
   CheckCircle,
@@ -13,6 +13,8 @@ import {
   ArrowLeft,
   ThumbsUp,
   ThumbsDown,
+  Search,
+  Filter,
 } from "lucide-react";
 import {
   getOcorrencias,
@@ -60,6 +62,13 @@ export function Ocorrencias() {
   const [ocorrencias, setOcorrencias] = useState<OcorrenciaDetalhada[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [selecionada, setSelecionada] = useState<OcorrenciaDetalhada | null>(null);
+
+  // Filtros
+  const [filtroTexto, setFiltroTexto] = useState("");
+  const [filtroAluno, setFiltroAluno] = useState("");
+  const [filtroEstado, setFiltroEstado] = useState("");
+  const [filtroDataInicio, setFiltroDataInicio] = useState("");
+  const [filtroDataFim, setFiltroDataFim] = useState("");
 
   // Modal "Proposta de valor ao cliente"
   const [acaoAtiva, setAcaoAtiva] = useState<AcaoTipo | null>(null);
@@ -353,6 +362,54 @@ export function Ocorrencias() {
     }
   };
 
+  // === Filtros ===
+
+  const ocorrenciasFiltradas = useMemo(() => {
+    return ocorrencias.filter((o) => {
+      if (filtroTexto) {
+        const termo = filtroTexto.toLowerCase();
+        const corresponde =
+          o.descricao?.toLowerCase().includes(termo) ||
+          String(o.id).includes(termo) ||
+          o.figurino_nome?.toLowerCase().includes(termo);
+        if (!corresponde) return false;
+      }
+      if (isFuncionario && filtroAluno) {
+        const termo = filtroAluno.toLowerCase();
+        if (!o.cliente_nome?.toLowerCase().includes(termo)) return false;
+      }
+      if (filtroEstado) {
+        if ((o.estado || "").toLowerCase() !== filtroEstado.toLowerCase()) return false;
+      }
+      if (filtroDataInicio) {
+        const dataOcorrencia = new Date(o.data_criacao).setHours(0, 0, 0, 0);
+        const inicio = new Date(filtroDataInicio).setHours(0, 0, 0, 0);
+        if (dataOcorrencia < inicio) return false;
+      }
+      if (filtroDataFim) {
+        const dataOcorrencia = new Date(o.data_criacao).setHours(0, 0, 0, 0);
+        const fim = new Date(filtroDataFim).setHours(23, 59, 59, 999);
+        if (dataOcorrencia > fim) return false;
+      }
+      return true;
+    });
+  }, [ocorrencias, filtroTexto, filtroAluno, filtroEstado, filtroDataInicio, filtroDataFim, isFuncionario]);
+
+  const estadosUnicos = useMemo(() => {
+    const set = new Set(ocorrencias.map((o) => o.estado).filter(Boolean));
+    return Array.from(set).sort();
+  }, [ocorrencias]);
+
+  const temFiltroAtivo = filtroTexto || filtroAluno || filtroEstado || filtroDataInicio || filtroDataFim;
+
+  const limparFiltros = () => {
+    setFiltroTexto("");
+    setFiltroAluno("");
+    setFiltroEstado("");
+    setFiltroDataInicio("");
+    setFiltroDataFim("");
+  };
+
   // === Render ===
 
   if (selecionada) {
@@ -419,6 +476,76 @@ export function Ocorrencias() {
         <p className="text-gray-600">Lista de ocorrências geradas no processo de devolução</p>
       </div>
 
+      {/* Painel de filtros */}
+      <div className="bg-white rounded-xl shadow-sm p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <Filter className="w-4 h-4 text-gray-500" />
+          <span className="text-sm font-medium text-gray-700">Filtros</span>
+          {temFiltroAtivo && (
+            <button
+              onClick={limparFiltros}
+              className="ml-auto text-xs text-blue-600 hover:underline flex items-center gap-1"
+            >
+              <X className="w-3 h-3" /> Limpar filtros
+            </button>
+          )}
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {/* Texto livre */}
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Pesquisar descrição, #id, figurino…"
+              value={filtroTexto}
+              onChange={(e) => setFiltroTexto(e.target.value)}
+              className="w-full pl-8 pr-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          {/* Aluno (só para funcionário) */}
+          {isFuncionario && (
+            <input
+              type="text"
+              placeholder="Filtrar por aluno…"
+              value={filtroAluno}
+              onChange={(e) => setFiltroAluno(e.target.value)}
+              className="w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          )}
+
+          {/* Estado */}
+          <select
+            value={filtroEstado}
+            onChange={(e) => setFiltroEstado(e.target.value)}
+            className="w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+          >
+            <option value="">Todos os estados</option>
+            {estadosUnicos.map((est) => (
+              <option key={est} value={est}>{est}</option>
+            ))}
+          </select>
+
+          {/* Intervalo de datas */}
+          <div className="flex gap-2">
+            <input
+              type="date"
+              value={filtroDataInicio}
+              onChange={(e) => setFiltroDataInicio(e.target.value)}
+              title="Data início"
+              className="w-full px-2 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <input
+              type="date"
+              value={filtroDataFim}
+              onChange={(e) => setFiltroDataFim(e.target.value)}
+              title="Data fim"
+              className="w-full px-2 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+        </div>
+      </div>
+
       <div className="bg-white rounded-xl shadow-sm p-6">
         {carregando ? (
           <p className="text-center text-gray-500 py-8">A carregar...</p>
@@ -427,9 +554,17 @@ export function Ocorrencias() {
             <CheckCircle className="w-16 h-16 mx-auto text-green-300 mb-4" />
             <p className="text-gray-600">Nenhuma ocorrência registada</p>
           </div>
+        ) : ocorrenciasFiltradas.length === 0 ? (
+          <div className="text-center py-12">
+            <Search className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+            <p className="text-gray-600">Nenhuma ocorrência corresponde aos filtros</p>
+            <button onClick={limparFiltros} className="mt-2 text-sm text-blue-600 hover:underline">
+              Limpar filtros
+            </button>
+          </div>
         ) : (
           <div className="space-y-3">
-            {ocorrencias.map((o) => {
+            {ocorrenciasFiltradas.map((o) => {
               const IconeEstado = iconeEstado(o.estado);
               return (
                 <button

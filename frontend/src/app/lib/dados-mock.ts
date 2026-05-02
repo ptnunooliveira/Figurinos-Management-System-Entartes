@@ -116,5 +116,7 @@ export interface ContaCorrente {
   tipo_movimento: string;
   descricao: string;
   exportado_faturacao: boolean;
+  data_exportacao: string | null;
   id_utilizador: number;
+  nome_aluno: string;
 }

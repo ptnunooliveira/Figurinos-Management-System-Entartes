@@ -34,4 +34,7 @@ router.get('/utilizador/:idUtilizador', authMiddleware, perfilMiddleware('FUNCIO
 // PATCH /api/conta-corrente/:id/exportar
 router.patch('/:id/exportar', authMiddleware, perfilMiddleware('FUNCIONARIO'), contaCorrenteController.marcarMovimentoComoExportado);
 
+// POST /api/conta-corrente/sincronizar-alugueres
+router.post('/sincronizar-alugueres', authMiddleware, perfilMiddleware(['FUNCIONARIO', 'ADMIN']), contaCorrenteController.sincronizarMovimentosAluguer);
+
 module.exports = router;

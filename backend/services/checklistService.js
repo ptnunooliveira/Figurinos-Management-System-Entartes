@@ -146,7 +146,7 @@ const criarChecklist = async (idFuncionario, dadosChecklist, idReserva) => {
         const ID_ESTADO_LINHA_EM_CURSO = 3;
 
         await prisma.linha_reserva.updateMany({
-            where: { id_reserva: idReserva },
+            where: { id_reserva: idReserva, id_estado_linha_reserva: { not: 5 } },
             data: { id_estado_linha_reserva: ID_ESTADO_LINHA_EM_CURSO }
         });
 

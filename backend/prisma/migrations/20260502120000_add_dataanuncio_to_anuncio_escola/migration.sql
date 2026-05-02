@@ -1,0 +1,2 @@
+ALTER TABLE "anuncio_escola"
+ADD COLUMN IF NOT EXISTS "dataanuncio" DATE DEFAULT CURRENT_DATE;

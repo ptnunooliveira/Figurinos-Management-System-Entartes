@@ -21,7 +21,13 @@ const obterTodosMovimentosContaCorrente = async () => {
         include: {
             utilizador: true,
             tipo_movimento_contacorrente: true,
-            ocorrencia: true,
+            ocorrencia: {
+                include: {
+                    propostacobranca: {
+                        orderBy: { id: 'desc' }
+                    }
+                }
+            },
             linha_reserva: true
         },
         orderBy: {
@@ -42,7 +48,13 @@ const obterMovimentoContaCorrente = async (idMovimento) => {
         include: {
             utilizador: true,
             tipo_movimento_contacorrente: true,
-            ocorrencia: true,
+            ocorrencia: {
+                include: {
+                    propostacobranca: {
+                        orderBy: { id: 'desc' }
+                    }
+                }
+            },
             linha_reserva: true
         }
     });
@@ -59,7 +71,13 @@ const obterContaCorrentePorUtilizador = async (idUtilizador) => {
         },
         include: {
             tipo_movimento_contacorrente: true,
-            ocorrencia: true,
+            ocorrencia: {
+                include: {
+                    propostacobranca: {
+                        orderBy: { id: 'desc' }
+                    }
+                }
+            },
             linha_reserva: true
         },
         orderBy: {
@@ -102,9 +120,65 @@ const marcarMovimentoComoExportado = async (idMovimento) => {
 };
 
 
+// Cria registos de aluguer em falta para todas as devoluções processadas.
+// Idempotente: ignora devoluções que já têm registo de aluguer em conta_corrente.
+const sincronizarMovimentosAluguer = async () => {
+    const devolucoes = await prisma.devolucao.findMany({
+        include: {
+            linha_reserva: {
+                include: {
+                    reserva: true,
+                    anuncio_escola: true,
+                }
+            }
+        }
+    });
+
+    let criados = 0;
+
+    for (const dev of devolucoes) {
+        const lr = dev.linha_reserva;
+        if (!lr) continue;
+
+        const idUtilizador = lr.reserva?.id_utilizador ?? null;
+        if (!idUtilizador) continue;
+
+        // Ignora se já existe registo de aluguer (id_ocorrencia null = aluguer, não ocorrência)
+        const jaExiste = await prisma.conta_corrente.findFirst({
+            where: { id_linha_reserva: lr.id, id_ocorrencia: null }
+        });
+        if (jaExiste) continue;
+
+        // Usa valordiario congelado; fallback para o preço atual do anúncio
+        const valorDiario = lr.valordiario || lr.anuncio_escola?.valordiarioaluguer || 0;
+        if (!valorDiario || !lr.datainicio || !lr.datafim) continue;
+
+        const inicio = new Date(lr.datainicio);
+        const fim = new Date(lr.datafim);
+        const dias = Math.max(1, Math.ceil((fim - inicio) / (1000 * 60 * 60 * 24)));
+        const valorAluguer = valorDiario * dias;
+        if (valorAluguer <= 0) continue;
+
+        await prisma.conta_corrente.create({
+            data: {
+                valor: valorAluguer,
+                exportadofaturacao: false,
+                dataexportacao: null,
+                id_utilizador: idUtilizador,
+                id_linha_reserva: lr.id,
+            }
+        });
+        criados++;
+    }
+
+    return { criados };
+};
+
+
 module.exports = {
     obterTodosMovimentosContaCorrente,
     obterMovimentoContaCorrente,
     obterContaCorrentePorUtilizador,
-    marcarMovimentoComoExportado
+    marcarMovimentoComoExportado,
+    sincronizarMovimentosAluguer
 };

@@ -25,6 +25,7 @@ model anuncio_escola {
   id_figurino        Int?
   valordiarioaluguer Float?
   id_estado          Int?
+  dataanuncio        DateTime?       @default(now()) @db.Date
   estado_anuncio     estado_anuncio? @relation(fields: [id_estado], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_anuncio_escola_estado")
   figurino           figurino?       @relation(fields: [id_figurino], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_anuncio_escola_figurino")
   linha_reserva      linha_reserva[]

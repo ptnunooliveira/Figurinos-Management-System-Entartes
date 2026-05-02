@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { PlusCircle, Search, Filter, Shirt, Euro, Edit, Trash2, Calendar, X } from "lucide-react";
 import { getUtilizadorAtual } from "../lib/auth";
-import { getAnunciosEscola, getFigurinosRaw, criarAnuncioEscola, atualizarAnuncioEscola, eliminarAnuncioEscola, type AnuncioEscolaAPI, type FigurinoAPI } from "../lib/services";
+import { getAnunciosEscola, getFigurinosRaw, criarAnuncioEscola, atualizarAnuncioEscola, eliminarAnuncioEscola, getCategorias, getTiposFigurino, getSexos, type AnuncioEscolaAPI, type FigurinoAPI, type AuxiliarItem } from "../lib/services";
 import { useCart } from "./CartContext";
 import { toast } from "sonner";
 
@@ -9,12 +9,16 @@ export function AnunciosEscola() {
   const utilizadorAtual = getUtilizadorAtual();
   const [anunciosEscola, setAnunciosEscola] = useState<AnuncioEscolaAPI[]>([]);
   const [figurinos, setFigurinos] = useState<FigurinoAPI[]>([]);
+  const [categorias, setCategorias] = useState<AuxiliarItem[]>([]);
+  const [tiposFigurino, setTiposFigurino] = useState<AuxiliarItem[]>([]);
+  const [sexos, setSexos] = useState<AuxiliarItem[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [categoriaSelecionada, setCategoriaSelecionada] = useState<string>("todas");
-  const [tipoSelecionado, setTipoSelecionado] = useState<string>("todos");
-  const [tamanhoSelecionado, setTamanhoSelecionado] = useState<string>("todos");
-  const [generoSelecionado, setGeneroSelecionado] = useState<string>("todos");
-  const [estadoSelecionado, setEstadoSelecionado] = useState<string>("todos");
+  const [categoriaSelecionada, setCategoriaSelecionada] = useState<string>("");
+  const [tipoSelecionado, setTipoSelecionado] = useState<string>("");
+  const [tamanhoSelecionado, setTamanhoSelecionado] = useState<string>("");
+  const [generoSelecionado, setGeneroSelecionado] = useState<string>("");
+  const [dataInicio, setDataInicio] = useState<string>("");
+  const [dataFim, setDataFim] = useState<string>("");
   const [mostrarDialogo, setMostrarDialogo] = useState(false);
   const [figurinoSelecionado, setFigurinoSelecionado] = useState("");
   const [valorDiario, setValorDiario] = useState("");
@@ -29,6 +33,9 @@ export function AnunciosEscola() {
   useEffect(() => {
     getAnunciosEscola().then(setAnunciosEscola);
     getFigurinosRaw().then(setFigurinos);
+    getCategorias().then(setCategorias);
+    getTiposFigurino().then(setTiposFigurino);
+    getSexos().then(setSexos);
   }, []);
 
   const anunciosFiltrados = anunciosEscola.filter((anuncio) => {
@@ -38,33 +45,35 @@ export function AnunciosEscola() {
     const tipo = fig?.tipo_figurino?.nome ?? '';
     const tamanho = fig?.tamanho ?? '';
     const sexo = fig?.sexo?.nome ?? '';
-    const estado = anuncio.estado_anuncio?.nome ?? '';
     const acessorios = fig?.figurino_acessorio?.map((fa) => fa.acessorio.nome) ?? [];
 
     const correspondePesquisa =
+      !searchTerm ||
       descricao.toLowerCase().includes(searchTerm.toLowerCase()) ||
       categoria.toLowerCase().includes(searchTerm.toLowerCase()) ||
       tamanho.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      estado.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      sexo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      tipo.toLowerCase().includes(searchTerm.toLowerCase()) ||
       acessorios.some((nome) => nome.toLowerCase().includes(searchTerm.toLowerCase()));
+
+    const dataAnuncio = anuncio.dataanuncio ? anuncio.dataanuncio.slice(0, 10) : null;
+    const dentroIntervalo =
+      (!dataInicio || (dataAnuncio && dataAnuncio >= dataInicio)) &&
+      (!dataFim || (dataAnuncio && dataAnuncio <= dataFim));
 
     return (
       correspondePesquisa &&
-      (categoriaSelecionada === "todas" || categoria === categoriaSelecionada) &&
-      (tipoSelecionado === "todos" || tipo === tipoSelecionado) &&
-      (tamanhoSelecionado === "todos" || tamanho === tamanhoSelecionado) &&
-      (generoSelecionado === "todos" || sexo === generoSelecionado) &&
-      (estadoSelecionado === "todos" || estado === estadoSelecionado)
+      dentroIntervalo &&
+      (!categoriaSelecionada || fig?.categoria?.id?.toString() === categoriaSelecionada) &&
+      (!tipoSelecionado || fig?.tipo_figurino?.id?.toString() === tipoSelecionado) &&
+      (!tamanhoSelecionado || tamanho === tamanhoSelecionado) &&
+      (!generoSelecionado || fig?.sexo?.id?.toString() === generoSelecionado)
     );
   });
 
-  const categoriasUnicas = [...new Set(anunciosEscola.map((a) => a.figurino?.categoria?.nomecategoria ?? '').filter(Boolean))].sort();
-  const tiposUnicos = [...new Set(anunciosEscola.map((a) => a.figurino?.tipo_figurino?.nome ?? '').filter(Boolean))].sort();
   const tamanhosUnicos = [...new Set(anunciosEscola.map((a) => a.figurino?.tamanho ?? '').filter(Boolean))].sort();
-  const generosUnicos = [...new Set(anunciosEscola.map((a) => a.figurino?.sexo?.nome ?? '').filter(Boolean))].sort();
-  const estadosUnicos = [...new Set(anunciosEscola.map((a) => a.estado_anuncio?.nome ?? '').filter(Boolean))].sort();
 
-  const handleCriarAnuncio = async (e: React.FormEvent) => {
+  const handleCriarAnuncio = async (e: { preventDefault(): void }) => {
     e.preventDefault();
     if (!figurinoSelecionado || !valorDiario) {
       toast.error("Por favor, preencha todos os campos");
@@ -98,7 +107,7 @@ export function AnunciosEscola() {
     }
   };
 
-  const handleEditarAnuncio = async (e: React.FormEvent) => {
+  const handleEditarAnuncio = async (e: { preventDefault(): void }) => {
     e.preventDefault();
     if (!editarAnuncio) return;
     const valor = parseFloat(valorDiarioEditar);
@@ -161,213 +170,201 @@ export function AnunciosEscola() {
   const figurinoObj = figurinos.find((f) => f.id === parseInt(figurinoSelecionado));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       {/* Cabeçalho */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Anúncios da Escola</h1>
-          <p className="text-gray-600 mt-1">Gerir anúncios de aluguer de figurinos da escola</p>
+          <p className="text-gray-600 text-sm mt-0.5">Gerir anúncios de aluguer de figurinos da escola</p>
         </div>
         {utilizadorAtual?.tipo === 'funcionario' && (
           <button
             onClick={() => setMostrarDialogo(true)}
-            className="flex items-center gap-2 bg-gradient-to-r from-fig-purple to-fig-magenta text-white px-6 py-3 rounded-lg hover:shadow-lg transition-all"
+            className="flex items-center gap-1.5 bg-gradient-to-r from-fig-purple to-fig-magenta text-white px-4 py-2 text-sm rounded-lg hover:shadow-lg transition-all whitespace-nowrap"
           >
-            <PlusCircle className="w-5 h-5" />
+            <PlusCircle className="w-4 h-4" />
             Criar Anúncio
           </button>
         )}
       </div>
 
       {/* Pesquisa e Filtros */}
-      <div className="bg-white rounded-xl shadow-sm p-6 space-y-4">
+      <div className="bg-white rounded-xl shadow-sm px-4 py-3 space-y-2">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
             type="text"
-            placeholder="Pesquisar anúncios..."
+            placeholder="Pesquisar por texto livre"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            className="w-full pl-9 pr-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
           />
         </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              <Filter className="w-4 h-4 inline mr-1" />
-              Categoria
-            </label>
-            <select
-              value={categoriaSelecionada}
-              onChange={(e) => setCategoriaSelecionada(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-            >
-              <option value="todas">Todas as categorias</option>
-              {categoriasUnicas.map((cat) => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Tipo</label>
-            <select
-              value={tipoSelecionado}
-              onChange={(e) => setTipoSelecionado(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-            >
-              <option value="todos">Todos os tipos</option>
-              {tiposUnicos.map((tipo) => (
-                <option key={tipo} value={tipo}>{tipo}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Tamanho</label>
-            <select
-              value={tamanhoSelecionado}
-              onChange={(e) => setTamanhoSelecionado(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-            >
-              <option value="todos">Todos os tamanhos</option>
-              {tamanhosUnicos.map((tamanho) => (
-                <option key={tamanho} value={tamanho}>{tamanho}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Género</label>
-            <select
-              value={generoSelecionado}
-              onChange={(e) => setGeneroSelecionado(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-            >
-              <option value="todos">Todos</option>
-              {generosUnicos.map((genero) => (
-                <option key={genero} value={genero}>{genero}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Estado</label>
-            <select
-              value={estadoSelecionado}
-              onChange={(e) => setEstadoSelecionado(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-            >
-              <option value="todos">Todos os estados</option>
-              {estadosUnicos.map((estado) => (
-                <option key={estado} value={estado}>{estado}</option>
-              ))}
-            </select>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Filter className="w-4 h-4 text-gray-400 flex-shrink-0" />
+          <select
+            value={categoriaSelecionada}
+            onChange={(e) => setCategoriaSelecionada(e.target.value)}
+            className="px-2 py-1.5 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+          >
+            <option value="">Todas as categorias</option>
+            {categorias.map((c) => <option key={c.id} value={c.id.toString()}>{c.nome}</option>)}
+          </select>
+          <select
+            value={tipoSelecionado}
+            onChange={(e) => setTipoSelecionado(e.target.value)}
+            className="px-2 py-1.5 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+          >
+            <option value="">Todos os tipos</option>
+            {tiposFigurino.map((t) => <option key={t.id} value={t.id.toString()}>{t.nome}</option>)}
+          </select>
+          <select
+            value={tamanhoSelecionado}
+            onChange={(e) => setTamanhoSelecionado(e.target.value)}
+            className="px-2 py-1.5 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+          >
+            <option value="">Todos os tamanhos</option>
+            {tamanhosUnicos.map((t) => <option key={t} value={t}>{t}</option>)}
+          </select>
+          <select
+            value={generoSelecionado}
+            onChange={(e) => setGeneroSelecionado(e.target.value)}
+            className="px-2 py-1.5 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+          >
+            <option value="">Todos os géneros</option>
+            {sexos.map((s) => <option key={s.id} value={s.id.toString()}>{s.nome}</option>)}
+          </select>
+          <div className="flex items-center gap-1 text-xs text-gray-500">
+            <Calendar className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+            <span className="whitespace-nowrap">Data Publicação</span>
+            <input
+              type="date"
+              value={dataInicio}
+              onChange={(e) => setDataInicio(e.target.value)}
+              className="px-2 py-1.5 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              title="Data de publicação — de"
+            />
+            <span>–</span>
+            <input
+              type="date"
+              value={dataFim}
+              onChange={(e) => setDataFim(e.target.value)}
+              min={dataInicio || undefined}
+              className="px-2 py-1.5 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              title="Data de publicação — até"
+            />
+            {(dataInicio || dataFim) && (
+              <button
+                onClick={() => { setDataInicio(""); setDataFim(""); }}
+                className="text-gray-400 hover:text-gray-600"
+                title="Limpar datas"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
         </div>
       </div>
 
       {/* Lista de Anúncios */}
-      <div className="space-y-4">
+      <div className="space-y-2">
         {anunciosFiltrados.map((anuncio) => (
-          <div key={anuncio.id} className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow overflow-hidden">
-            <div className="flex flex-col sm:flex-row gap-0 sm:gap-6">
-              <div className="w-full sm:w-32 h-32 bg-gradient-to-br from-fig-purple/10 via-fig-magenta/10 to-fig-green/10 flex items-center justify-center flex-shrink-0">
-                <Shirt className="w-16 h-16 text-fig-purple/30" />
+          <div key={anuncio.id} className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow overflow-hidden flex">
+            {/* Imagem */}
+            <div className="w-30 bg-gradient-to-br from-fig-purple/10 via-fig-magenta/10 to-fig-green/10 flex items-center justify-center flex-shrink-0">
+              <Shirt className="w-8 h-8 text-fig-purple/30" />
+            </div>
+
+            {/* Conteúdo */}
+            <div className="flex-1 min-w-0 px-4 py-9 flex items-center gap-4">
+              {/* Info principal */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-3 mb-1">
+                  <p className="font-semibold text-gray-900 text-sm truncate">
+                    {anuncio.figurino?.descricao ?? '—'}
+                  </p>
+                  <span className="flex items-center gap-1 text-xs text-gray-400 whitespace-nowrap flex-shrink-0">
+                    <Calendar className="w-3 h-3" />
+                    {anuncio.dataanuncio ? new Date(anuncio.dataanuncio).toLocaleDateString('pt-PT') : '—'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {anuncio.figurino?.categoria && (
+                    <span className="px-2 py-0.5 bg-fig-purple/10 text-fig-purple text-xs rounded-full font-medium">
+                      {anuncio.figurino.categoria.nomecategoria}
+                    </span>
+                  )}
+                  {anuncio.figurino?.tipo_figurino && (
+                    <span className="px-2 py-0.5 bg-fig-green/10 text-fig-green text-xs rounded-full font-medium">
+                      {anuncio.figurino.tipo_figurino.nome}
+                    </span>
+                  )}
+                  {anuncio.figurino?.tamanho && (
+                    <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full font-medium">
+                      {anuncio.figurino.tamanho}
+                    </span>
+                  )}
+                  {anuncio.figurino?.sexo && (
+                    <span className="px-2 py-0.5 bg-fig-purple/10 text-fig-purple text-xs rounded-full font-medium">
+                      {anuncio.figurino.sexo.nome}
+                    </span>
+                  )}
+                  {anuncio.figurino?.figurino_acessorio && anuncio.figurino.figurino_acessorio.length > 0 && (
+                    <>
+                      {anuncio.figurino.figurino_acessorio.slice(0, 3).map((fa) => (
+                        <span key={fa.id_acessorio} className="px-2 py-0.5 bg-blue-50 text-blue-600 text-xs rounded-full font-medium">
+                          {fa.acessorio.nome}
+                        </span>
+                      ))}
+                      {anuncio.figurino.figurino_acessorio.length > 3 && (
+                        <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full">
+                          +{anuncio.figurino.figurino_acessorio.length - 3}
+                        </span>
+                      )}
+                    </>
+                  )}
+                </div>
               </div>
 
-              <div className="flex-1 p-5 sm:py-5 sm:pr-5 sm:pl-0">
-                <div className="flex flex-col h-full">
-                  <div className="mb-3">
-                    <h3 className="font-semibold text-gray-900 text-lg mb-1">
-                      {anuncio.figurino?.descricao ?? '—'}
-                    </h3>
-                    <p className="text-sm text-gray-600 line-clamp-1">
-                      {anuncio.figurino?.localizacao ?? ''}
-                    </p>
-                  </div>
+              {/* Preço */}
+              <div className="flex items-baseline gap-0.5 flex-shrink-0">
+                <span className="font-bold text-fig-purple">€{(anuncio.valordiarioaluguer ?? 0).toFixed(2)}</span>
+                <span className="text-xs text-gray-400">/dia</span>
+              </div>
 
-                  <div className="flex items-center gap-2 flex-wrap mb-3">
-                    {anuncio.figurino?.categoria && (
-                      <span className="inline-flex items-center gap-1 px-3 py-1 bg-fig-purple/10 text-fig-purple text-xs rounded-full font-medium">
-                        {anuncio.figurino.categoria.nomecategoria}
-                      </span>
-                    )}
-                    {anuncio.figurino?.tamanho && (
-                      <span className="inline-flex items-center px-3 py-1 bg-gray-100 text-gray-700 text-xs rounded-full font-medium">
-                        {anuncio.figurino.tamanho}
-                      </span>
-                    )}
-                    {anuncio.estado_anuncio && (
-                      <span className={`inline-flex items-center px-3 py-1 text-xs rounded-full font-medium ${
-                        anuncio.estado_anuncio.nome === "Disponível"
-                          ? "bg-fig-green/10 text-fig-green"
-                          : "bg-fig-magenta/10 text-fig-magenta"
-                      }`}>
-                        {anuncio.estado_anuncio.nome}
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="flex items-center gap-2 text-fig-purple mb-3">
-                    <Euro className="w-4 h-4" />
-                    <span className="font-bold text-lg">€{(anuncio.valordiarioaluguer ?? 0).toFixed(2)}</span>
-                    <span className="text-sm text-gray-500">/dia</span>
-                  </div>
-
-                  {anuncio.figurino?.figurino_acessorio && anuncio.figurino.figurino_acessorio.length > 0 && (
-                    <div className="mb-3">
-                      <p className="text-xs text-gray-500 mb-1">Acessórios incluídos:</p>
-                      <div className="flex flex-wrap gap-1">
-                        {anuncio.figurino.figurino_acessorio.slice(0, 3).map((fa) => (
-                          <span key={fa.id_acessorio} className="px-2 py-1 bg-fig-green/10 text-fig-green text-xs rounded">
-                            {fa.acessorio.nome}
-                          </span>
-                        ))}
-                        {anuncio.figurino.figurino_acessorio.length > 3 && (
-                          <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded">
-                            +{anuncio.figurino.figurino_acessorio.length - 3}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="mt-auto pt-3 border-t">
-                    {utilizadorAtual?.tipo === 'funcionario' ? (
-                      <div className="flex items-center justify-end gap-4 text-sm flex-wrap">
-                        <button
-                          className="flex items-center gap-1.5 text-yellow-600 hover:text-yellow-700 transition-colors"
-                          onClick={() => { setEditarAnuncio(anuncio); setValorDiarioEditar(String(anuncio.valordiarioaluguer ?? '')); }}
-                        >
-                          <Edit className="w-4 h-4" />
-                          Editar
-                        </button>
-                        <button
-                          className="flex items-center gap-1.5 text-red-600 hover:text-red-700 transition-colors"
-                          onClick={() => handleRemoverAnuncio(anuncio.id, anuncio.figurino?.descricao ?? '')}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                          Remover
-                        </button>
-                        <button
-                          onClick={() => handleAbrirReserva(anuncio)}
-                          className="flex items-center gap-1.5 bg-gradient-to-r from-fig-purple to-fig-magenta hover:shadow-lg text-white py-1.5 px-4 rounded-lg transition-all"
-                        >
-                          Reservar
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => handleAbrirReserva(anuncio)}
-                        className="w-full sm:w-auto bg-gradient-to-r from-fig-purple to-fig-magenta hover:shadow-lg text-white py-2 px-6 rounded-lg transition-all"
-                      >
-                        Reservar
-                      </button>
-                    )}
-                  </div>
-                </div>
+              {/* Ações */}
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {utilizadorAtual?.tipo === 'funcionario' ? (
+                  <>
+                    <button
+                      className="flex items-center gap-1 px-2.5 py-1 text-xs border border-yellow-200 bg-yellow-50 text-yellow-700 hover:bg-yellow-100 rounded-lg transition-colors whitespace-nowrap"
+                      onClick={() => { setEditarAnuncio(anuncio); setValorDiarioEditar(String(anuncio.valordiarioaluguer ?? '')); }}
+                    >
+                      <Edit className="w-3 h-3" />
+                      Editar
+                    </button>
+                    <button
+                      className="flex items-center gap-1 px-2.5 py-1 text-xs border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg transition-colors whitespace-nowrap"
+                      onClick={() => handleRemoverAnuncio(anuncio.id, anuncio.figurino?.descricao ?? '')}
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      Remover
+                    </button>
+                    <button
+                      onClick={() => handleAbrirReserva(anuncio)}
+                      className="flex items-center gap-1 px-2.5 py-1 text-xs bg-gradient-to-r from-fig-purple to-fig-magenta text-white rounded-lg hover:shadow-md transition-all whitespace-nowrap"
+                    >
+                      Reservar
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => handleAbrirReserva(anuncio)}
+                    className="flex items-center gap-1 px-3 py-1.5 text-xs bg-gradient-to-r from-fig-purple to-fig-magenta text-white rounded-lg hover:shadow-md transition-all whitespace-nowrap"
+                  >
+                    Reservar
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -375,9 +372,9 @@ export function AnunciosEscola() {
       </div>
 
       {anunciosFiltrados.length === 0 && (
-        <div className="text-center py-12 bg-white rounded-xl">
-          <Shirt className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-          <p className="text-gray-500">Nenhum anúncio encontrado</p>
+        <div className="text-center py-10 bg-white rounded-xl">
+          <Shirt className="w-12 h-12 mx-auto text-gray-300 mb-3" />
+          <p className="text-gray-500 text-sm">Nenhum anúncio encontrado</p>
         </div>
       )}
 

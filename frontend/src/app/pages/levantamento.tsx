@@ -6,6 +6,7 @@ import { getUtilizadorAtual } from "../lib/auth";
 import { getReservaDetalhes, getEstadosCondicao, criarChecklist } from "../lib/services";
 import type { AuxiliarItem } from "../lib/services";
 import type { Reserva } from "../lib/dados-mock";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 export function Levantamento() {
@@ -15,9 +16,12 @@ export function Levantamento() {
   const assinaturaClienteRef = useRef<SignatureCanvas>(null);
   const utilizadorAtual = getUtilizadorAtual();
 
-  const [reserva, setReserva] = useState<Reserva | null>(null);
-  const [carregando, setCarregando] = useState(true);
-  const [estadosCondicao, setEstadosCondicao] = useState<AuxiliarItem[]>([]);
+  const { data: reserva = null, isFetching: carregando } = useQuery<Reserva | null>({
+    queryKey: ["reservaDetalhes", id],
+    queryFn: () => getReservaDetalhes(Number(id)),
+    enabled: !!id,
+  });
+  const { data: estadosCondicao = [] } = useQuery<AuxiliarItem[]>({ queryKey: ["estadosCondicao"], queryFn: getEstadosCondicao });
   const [checklist, setChecklist] = useState<Array<{
     id: number; nome: string; observacoes: string; verificado: boolean;
   }>>([]);
@@ -26,19 +30,10 @@ export function Levantamento() {
   const [linhaSelecionadaId, setLinhaSelecionadaId] = useState<number | null>(null);
 
   useEffect(() => {
-    if (!id) return;
-    Promise.all([
-      getReservaDetalhes(Number(id)),
-      getEstadosCondicao(),
-    ]).then(([r, estados]) => {
-      if (r && r.linhas.length > 0) {
-        setReserva(r);
-        setLinhaSelecionadaId(r.linhas[0].id);
-      }
-      setEstadosCondicao(estados);
-      setCarregando(false);
-    });
-  }, [id]);
+    if (reserva && reserva.linhas.length > 0 && !linhaSelecionadaId) {
+      setLinhaSelecionadaId(reserva.linhas[0].id);
+    }
+  }, [reserva]);
 
   // Atualiza os detalhes exibidos sempre que a linha selecionada muda
   useEffect(() => {

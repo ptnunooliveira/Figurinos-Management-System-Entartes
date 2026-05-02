@@ -1,23 +1,32 @@
 import { createBrowserRouter, Navigate } from "react-router";
+import { lazy, Suspense } from "react";
 import { Layout } from "./components/layout";
-import { Login } from "./pages/login";
-import { Dashboard } from "./pages/dashboard";
-import { Figurinos } from "./pages/figurinos";
-import { CriarFigurino } from "./pages/criar-figurino";
-import { AnunciosEscola } from "./pages/anuncios-escola";
-import { Reservas } from "./pages/reservas";
-import { Levantamento } from "./pages/levantamento";
-import { Devolucao } from "./pages/devolucao";
-import { Marketplace } from "./pages/marketplace";
-import { Perfil } from "./pages/perfil";
-import { Administracao } from "./pages/administracao";
-import { Ocorrencias } from "./pages/ocorrencias";
-import { Faturacao } from "./pages/faturacao";
-import { NaoEncontrado } from "./pages/nao-encontrado";
-import { Carrinho } from "./pages/Carrinho";
 import { isAuthenticated, getUtilizadorAtual } from "./lib/auth";
 
-// Componente de proteção de rota
+const Login = lazy(() => import("./pages/login").then(m => ({ default: m.Login })));
+const Dashboard = lazy(() => import("./pages/dashboard").then(m => ({ default: m.Dashboard })));
+const Figurinos = lazy(() => import("./pages/figurinos").then(m => ({ default: m.Figurinos })));
+const CriarFigurino = lazy(() => import("./pages/criar-figurino").then(m => ({ default: m.CriarFigurino })));
+const AnunciosEscola = lazy(() => import("./pages/anuncios-escola").then(m => ({ default: m.AnunciosEscola })));
+const Reservas = lazy(() => import("./pages/reservas").then(m => ({ default: m.Reservas })));
+const Levantamento = lazy(() => import("./pages/levantamento").then(m => ({ default: m.Levantamento })));
+const Devolucao = lazy(() => import("./pages/devolucao").then(m => ({ default: m.Devolucao })));
+const Marketplace = lazy(() => import("./pages/marketplace").then(m => ({ default: m.Marketplace })));
+const Perfil = lazy(() => import("./pages/perfil").then(m => ({ default: m.Perfil })));
+const Administracao = lazy(() => import("./pages/administracao").then(m => ({ default: m.Administracao })));
+const Ocorrencias = lazy(() => import("./pages/ocorrencias").then(m => ({ default: m.Ocorrencias })));
+const Faturacao = lazy(() => import("./pages/faturacao").then(m => ({ default: m.Faturacao })));
+const NaoEncontrado = lazy(() => import("./pages/nao-encontrado").then(m => ({ default: m.NaoEncontrado })));
+const Carrinho = lazy(() => import("./pages/Carrinho").then(m => ({ default: m.Carrinho })));
+
+function PageLoader() {
+  return (
+    <div className="flex items-center justify-center min-h-[40vh]">
+      <div className="w-8 h-8 border-4 border-fig-purple border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+}
+
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   if (!isAuthenticated()) {
     return <Navigate to="/login" replace />;
@@ -25,7 +34,6 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-// Bloqueia acesso a alunos (apenas funcionário/admin)
 function FuncionarioRoute({ children }: { children: React.ReactNode }) {
   if (getUtilizadorAtual()?.tipo !== "funcionario") {
     return <Navigate to="/" replace />;
@@ -33,10 +41,12 @@ function FuncionarioRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+const s = (el: React.ReactNode) => <Suspense fallback={<PageLoader />}>{el}</Suspense>;
+
 export const router = createBrowserRouter([
   {
     path: "/login",
-    element: <Login />,
+    element: s(<Login />),
   },
   {
     path: "/",
@@ -46,66 +56,27 @@ export const router = createBrowserRouter([
       </ProtectedRoute>
     ),
     children: [
-      { 
-        index: true, 
-        element: <Dashboard />,
-      },
-      { 
-        path: "carrinho", 
-        element: <Carrinho />,
-      },
-      { 
-        path: "figurinos", 
-        element: <Figurinos />,
-      },
-      { 
-        path: "figurinos/criar", 
-        element: <CriarFigurino />,
-      },
-      { 
-        path: "anuncios-escola", 
-        element: <AnunciosEscola />,
-      },
-      { 
-        path: "reservas", 
-        element: <Reservas />,
-      },
-      { 
-        path: "levantamento/:id", 
-        element: <Levantamento />,
-      },
-      { 
-        path: "devolucao/:id", 
-        element: <Devolucao />,
-      },
-      {
-        path: "ocorrencias",
-        element: <Ocorrencias />,
-      },
-      {
-        path: "marketplace",
-        element: <Marketplace />,
-      },
-      { 
-        path: "perfil", 
-        element: <Perfil />,
-      },
+      { index: true, element: s(<Dashboard />) },
+      { path: "carrinho", element: s(<Carrinho />) },
+      { path: "figurinos", element: s(<Figurinos />) },
+      { path: "figurinos/criar", element: s(<CriarFigurino />) },
+      { path: "anuncios-escola", element: s(<AnunciosEscola />) },
+      { path: "reservas", element: s(<Reservas />) },
+      { path: "levantamento/:id", element: s(<Levantamento />) },
+      { path: "devolucao/:id", element: s(<Devolucao />) },
+      { path: "ocorrencias", element: s(<Ocorrencias />) },
+      { path: "marketplace", element: s(<Marketplace />) },
+      { path: "perfil", element: s(<Perfil />) },
       {
         path: "administracao",
-        element: (
+        element: s(
           <FuncionarioRoute>
             <Administracao />
           </FuncionarioRoute>
         ),
       },
-      { 
-        path: "faturacao", 
-        element: <Faturacao />,
-      },
-      { 
-        path: "*", 
-        element: <NaoEncontrado />,
-      },
+      { path: "faturacao", element: s(<Faturacao />) },
+      { path: "*", element: s(<NaoEncontrado />) },
     ],
   },
 ]);

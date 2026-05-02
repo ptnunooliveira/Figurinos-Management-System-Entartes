@@ -1,17 +1,19 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { PlusCircle, Search, Filter, Shirt, Euro, Edit, Trash2, Calendar, X } from "lucide-react";
 import { getUtilizadorAtual } from "../lib/auth";
 import { getAnunciosEscola, getFigurinosRaw, criarAnuncioEscola, atualizarAnuncioEscola, eliminarAnuncioEscola, getCategorias, getTiposFigurino, getSexos, type AnuncioEscolaAPI, type FigurinoAPI, type AuxiliarItem } from "../lib/services";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCart } from "./CartContext";
 import { toast } from "sonner";
 
 export function AnunciosEscola() {
   const utilizadorAtual = getUtilizadorAtual();
-  const [anunciosEscola, setAnunciosEscola] = useState<AnuncioEscolaAPI[]>([]);
-  const [figurinos, setFigurinos] = useState<FigurinoAPI[]>([]);
-  const [categorias, setCategorias] = useState<AuxiliarItem[]>([]);
-  const [tiposFigurino, setTiposFigurino] = useState<AuxiliarItem[]>([]);
-  const [sexos, setSexos] = useState<AuxiliarItem[]>([]);
+  const queryClient = useQueryClient();
+  const { data: anunciosEscola = [] } = useQuery<AnuncioEscolaAPI[]>({ queryKey: ["anunciosEscola"], queryFn: getAnunciosEscola });
+  const { data: figurinos = [] } = useQuery<FigurinoAPI[]>({ queryKey: ["figurinos"], queryFn: getFigurinosRaw });
+  const { data: categorias = [] } = useQuery<AuxiliarItem[]>({ queryKey: ["categorias"], queryFn: getCategorias });
+  const { data: tiposFigurino = [] } = useQuery<AuxiliarItem[]>({ queryKey: ["tiposFigurino"], queryFn: getTiposFigurino });
+  const { data: sexos = [] } = useQuery<AuxiliarItem[]>({ queryKey: ["sexos"], queryFn: getSexos });
   const [searchTerm, setSearchTerm] = useState("");
   const [categoriaSelecionada, setCategoriaSelecionada] = useState<string>("");
   const [tipoSelecionado, setTipoSelecionado] = useState<string>("");
@@ -30,13 +32,6 @@ export function AnunciosEscola() {
   const [dataFimReserva, setDataFimReserva] = useState("");
   const { adicionarAoCarrinho } = useCart();
 
-  useEffect(() => {
-    getAnunciosEscola().then(setAnunciosEscola);
-    getFigurinosRaw().then(setFigurinos);
-    getCategorias().then(setCategorias);
-    getTiposFigurino().then(setTiposFigurino);
-    getSexos().then(setSexos);
-  }, []);
 
   const anunciosFiltrados = anunciosEscola.filter((anuncio) => {
     const fig = anuncio.figurino;
@@ -90,7 +85,7 @@ export function AnunciosEscola() {
       setMostrarDialogo(false);
       setFigurinoSelecionado("");
       setValorDiario("");
-      getAnunciosEscola().then(setAnunciosEscola);
+      queryClient.invalidateQueries({ queryKey: ["anunciosEscola"] });
     } catch (err: any) {
       toast.error(err.message || "Erro ao criar anúncio");
     }
@@ -101,7 +96,7 @@ export function AnunciosEscola() {
     try {
       await eliminarAnuncioEscola(id);
       toast.success(`Anúncio "${descricao}" removido com sucesso!`);
-      setAnunciosEscola(prev => prev.filter(a => a.id !== id));
+      queryClient.invalidateQueries({ queryKey: ["anunciosEscola"] });
     } catch (err: any) {
       toast.error(err.message || "Erro ao remover anúncio");
     }
@@ -120,7 +115,7 @@ export function AnunciosEscola() {
       toast.success("Anúncio atualizado com sucesso!");
       setEditarAnuncio(null);
       setValorDiarioEditar("");
-      getAnunciosEscola().then(setAnunciosEscola);
+      queryClient.invalidateQueries({ queryKey: ["anunciosEscola"] });
     } catch (err: any) {
       toast.error(err.message || "Erro ao atualizar anúncio");
     }

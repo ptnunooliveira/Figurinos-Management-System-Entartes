@@ -1,34 +1,34 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Calendar, Clock, CheckCircle, XCircle, AlertCircle, Shirt, ClipboardCheck, PackageOpen, Search, Filter, Ban, CheckCheck } from "lucide-react";
 import { Link } from "react-router";
 import { getUtilizadorAtual } from "../lib/auth";
 import { getReservas, getMinhasReservas, cancelarReserva, atualizarEstadoReserva, atualizarEstadoLinhaReserva } from "../lib/services";
 import type { Reserva } from "../lib/dados-mock";
 import { calcularDias, formatarMoeda } from "../lib/utils";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 export function Reservas() {
   const utilizadorAtual = getUtilizadorAtual();
-  const [reservas, setReservas] = useState<Reserva[]>([]);
+  const queryClient = useQueryClient();
+  const isStaff = utilizadorAtual?.tipo === 'funcionario' || utilizadorAtual?.perfil === 'ADMIN';
+  const queryKey = isStaff ? ["reservas"] : ["minhasReservas"];
+
+  const { data: reservas = [] } = useQuery<Reserva[]>({
+    queryKey,
+    queryFn: isStaff ? getReservas : getMinhasReservas,
+  });
+
   const [abaAtiva, setAbaAtiva] = useState<"ativas" | "historico">("ativas");
   const [termoPesquisa, setTermoPesquisa] = useState("");
   const [estadoSelecionado, setEstadoSelecionado] = useState<string>("todos");
-
-  const carregarReservas = () => {
-    const fn = utilizadorAtual?.tipo === 'funcionario' || utilizadorAtual?.perfil === 'ADMIN' ? getReservas : getMinhasReservas;
-    fn().then(setReservas);
-  };
-
-  useEffect(() => {
-    carregarReservas();
-  }, [utilizadorAtual?.tipo]);
 
   const handleCancelarReserva = async (id: number) => {
     if (!window.confirm("Tem a certeza que deseja cancelar esta reserva?")) return;
     try {
       await cancelarReserva(id);
       toast.success("Reserva cancelada com sucesso!");
-      carregarReservas();
+      queryClient.invalidateQueries({ queryKey });
     } catch (err: any) {
       toast.error(err.message || "Erro ao cancelar reserva");
     }
@@ -38,7 +38,7 @@ export function Reservas() {
     try {
       await atualizarEstadoLinhaReserva(idReserva, idLinha, 2);
       toast.success("Linha aprovada com sucesso!");
-      carregarReservas();
+      queryClient.invalidateQueries({ queryKey });
     } catch (err: any) {
       toast.error(err.message || "Erro ao aprovar linha");
     }
@@ -49,7 +49,7 @@ export function Reservas() {
     try {
       await atualizarEstadoLinhaReserva(idReserva, idLinha, 5);
       toast.success("Linha recusada com sucesso!");
-      carregarReservas();
+      queryClient.invalidateQueries({ queryKey });
     } catch (err: any) {
       toast.error(err.message || "Erro ao recusar linha");
     }
@@ -273,7 +273,7 @@ export function Reservas() {
                                 onClick={() => {
                                   if (window.confirm("O figurino não está conforme? Tem a certeza que deseja cancelar o pedido?")) {
                                     atualizarEstadoReserva(reserva.id, 5)
-                                      .then(() => { toast.success("Reserva cancelada!"); carregarReservas(); })
+                                      .then(() => { toast.success("Reserva cancelada!"); queryClient.invalidateQueries({ queryKey }); })
                                       .catch((err) => toast.error(err.message));
                                   }
                                 }}

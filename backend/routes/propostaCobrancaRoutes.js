@@ -20,24 +20,24 @@ const perfilMiddleware = require('../middleware/perfilMiddleware.js');
 
 
 // GET /api/propostas-cobranca
-router.get('/', authMiddleware, perfilMiddleware('FUNCIONARIO'), propostaCobrancaController.obterTodasPropostasCobranca);
+router.get('/', authMiddleware, perfilMiddleware(['FUNCIONARIO', 'ADMIN']), propostaCobrancaController.obterTodasPropostasCobranca);
 
 // GET /api/propostas-cobranca/:id
 router.get('/:id', authMiddleware, propostaCobrancaController.obterPropostaCobranca);
 
 // POST /api/propostas-cobranca
-router.post('/', authMiddleware, perfilMiddleware('FUNCIONARIO'), propostaCobrancaController.criarPropostaCobranca);
+router.post('/', authMiddleware, perfilMiddleware(['FUNCIONARIO', 'ADMIN']), propostaCobrancaController.criarPropostaCobranca);
 
 // PATCH /api/propostas-cobranca/:id/estado
-router.patch('/:id/estado', authMiddleware, perfilMiddleware('FUNCIONARIO'), propostaCobrancaController.atualizarEstadoPropostaCobranca);
+router.patch('/:id/estado', authMiddleware, perfilMiddleware(['FUNCIONARIO', 'ADMIN']), propostaCobrancaController.atualizarEstadoPropostaCobranca);
 
 // POST /api/propostas-cobranca/:id/finalizar-conta-corrente
-router.post('/:id/finalizar-conta-corrente', authMiddleware, perfilMiddleware('FUNCIONARIO'), propostaCobrancaController.finalizarPropostaEmContaCorrente);
+router.post('/:id/finalizar-conta-corrente', authMiddleware, perfilMiddleware(['FUNCIONARIO', 'ADMIN']), propostaCobrancaController.finalizarPropostaEmContaCorrente);
 
 // POST /api/propostas-cobranca/:id/aceitar (aluno aceita a proposta)
 router.post('/:id/aceitar', authMiddleware, propostaCobrancaController.aceitarPropostaAluno);
 
 // POST /api/propostas-cobranca/ocorrencia/:idOcorrencia/resolver-contraproposta (funcionário aceita valor do aluno)
-router.post('/ocorrencia/:idOcorrencia/resolver-contraproposta', authMiddleware, perfilMiddleware('FUNCIONARIO'), propostaCobrancaController.resolverComContraproposta);
+router.post('/ocorrencia/:idOcorrencia/resolver-contraproposta', authMiddleware, perfilMiddleware(['FUNCIONARIO', 'ADMIN']), propostaCobrancaController.resolverComContraproposta);
 
 module.exports = router;

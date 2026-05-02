@@ -11,17 +11,16 @@ import { toast } from "sonner";
 export function Reservas() {
   const utilizadorAtual = getUtilizadorAtual();
   const queryClient = useQueryClient();
-  const isStaff = utilizadorAtual?.tipo === 'funcionario' || utilizadorAtual?.perfil === 'ADMIN';
+  const isStaff = utilizadorAtual?.tipo === 'funcionario' || utilizadorAtual?.tipo === 'admin';
   const queryKey = isStaff ? ["reservas"] : ["minhasReservas"];
-
-  const { data: reservas = [] } = useQuery<Reserva[]>({
-    queryKey,
-    queryFn: isStaff ? getReservas : getMinhasReservas,
-  });
 
   const [abaAtiva, setAbaAtiva] = useState<"ativas" | "historico">("ativas");
   const [termoPesquisa, setTermoPesquisa] = useState("");
   const [estadoSelecionado, setEstadoSelecionado] = useState<string>("todos");
+  const { data: reservas = [] } = useQuery<Reserva[]>({
+    queryKey,
+    queryFn: isStaff ? getReservas : getMinhasReservas,
+  });
 
   const handleCancelarReserva = async (id: number) => {
     if (!window.confirm("Tem a certeza que deseja cancelar esta reserva?")) return;
@@ -108,7 +107,7 @@ export function Reservas() {
       {/* Cabeçalho */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900 mb-0.5">
-          {utilizadorAtual?.tipo === 'funcionario' || utilizadorAtual?.perfil === 'ADMIN' ? 'Gestão de Reservas' : 'Minhas Reservas'}
+          {isStaff ? 'Gestão de Reservas' : 'Minhas Reservas'}
         </h1>
         <p className="text-gray-600 text-sm">Gerencie as reservas de figurinos</p>
       </div>
@@ -181,7 +180,7 @@ export function Reservas() {
       <div className="space-y-2">
         {reservasFiltradas.length > 0 ? (
           reservasFiltradas.map((reserva) => {
-            const eStaff = utilizadorAtual?.tipo === 'funcionario' || utilizadorAtual?.perfil === 'ADMIN';
+            const eStaff = isStaff;
             const eAtiva = abaAtiva === "ativas";
             const estadoRes = reserva.estado?.toUpperCase();
 
@@ -326,12 +325,12 @@ export function Reservas() {
             </h3>
             <p className="text-sm text-gray-600 mb-4">
               {abaAtiva === "ativas"
-                ? (utilizadorAtual?.tipo === 'funcionario' || utilizadorAtual?.perfil === 'ADMIN')
+                ? isStaff
                   ? "Não há reservas ativas no momento."
                   : "Ainda não tem reservas ativas. Explore o catálogo!"
                 : "Ainda não há histórico de reservas."}
             </p>
-            {abaAtiva === "ativas" && utilizadorAtual?.tipo !== 'funcionario' && utilizadorAtual?.perfil !== 'ADMIN' && (
+            {abaAtiva === "ativas" && !isStaff && (
               <Link
                 to="/figurinos"
                 className="bg-purple-600 hover:bg-purple-700 text-white px-5 py-2 rounded-lg text-sm transition-colors inline-block"

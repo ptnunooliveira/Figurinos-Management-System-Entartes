@@ -35,7 +35,8 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 function FuncionarioRoute({ children }: { children: React.ReactNode }) {
-  if (getUtilizadorAtual()?.tipo !== "funcionario") {
+  const tipo = getUtilizadorAtual()?.tipo;
+  if (tipo !== "funcionario" && tipo !== "admin") {
     return <Navigate to="/" replace />;
   }
   return <>{children}</>;

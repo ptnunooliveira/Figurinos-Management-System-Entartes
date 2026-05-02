@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Calendar, Shirt, ShoppingBag, AlertCircle, Bell, Trash2 } from "lucide-react";
 import { Link } from "react-router";
 import { getUtilizadorAtual } from "../lib/auth";
@@ -12,13 +12,15 @@ interface NotificacaoDashboard {
   lida: boolean;
 }
 
+const EMPTY_ANUNCIOS: any[] = [];
+
 const DASHBOARD_NOTIF_KEY = "fighappens_notificacoes_vistas";
 const MARKETPLACE_INTERESSE_NOTIF_KEY = "fighappens_marketplace_interesses";
 const DASHBOARD_NOTIF_REMOVIDAS_KEY = "fighappens_notificacoes_removidas";
 
 export function Dashboard() {
   const utilizadorAtual = getUtilizadorAtual();
-  const isFuncionario = utilizadorAtual?.tipo === "funcionario";
+  const isFuncionario = utilizadorAtual?.tipo === "funcionario" || utilizadorAtual?.tipo === "admin";
 
   const [mostrarNotificacoes, setMostrarNotificacoes] = useState(false);
   const [notificacoesExtra, setNotificacoesExtra] = useState<NotificacaoDashboard[]>([]);
@@ -130,54 +132,62 @@ export function Dashboard() {
     enabled: !isFuncionario,
   });
 
-  useQuery({
+  const { data: meusAnunciosDashboardData } = useQuery({
     queryKey: ["marketplaceDoUtilizador", utilizadorAtual?.id],
     queryFn: () => getMarketplaceDoUtilizador(utilizadorAtual!.id),
     enabled: !isFuncionario && !!utilizadorAtual?.id,
-    select: (anuncios) => {
-      const vistas = obterChavesVistas();
-      const removidas = obterChavesRemovidas();
-
-      const interesse: NotificacaoDashboard[] = (() => {
-        try {
-          const raw = localStorage.getItem(MARKETPLACE_INTERESSE_NOTIF_KEY);
-          if (!raw) return [];
-          const parsed = JSON.parse(raw);
-          const lista = Array.isArray(parsed) ? parsed : [];
-          return lista
-            .filter((item: any) => Number(item?.idDono) === utilizadorAtual!.id && typeof item?.mensagem === "string")
-            .filter((item: any) => !removidas.includes(String(item.chave ?? `interesse:${item.idAnuncio}:${item.idInteressado}`)))
-            .map((item: any) => ({
-              chave: String(item.chave ?? `interesse:${item.idAnuncio}:${item.idInteressado}`),
-              mensagem: item.mensagem,
-              lida: vistas.includes(String(item.chave ?? `interesse:${item.idAnuncio}:${item.idInteressado}`)),
-            }));
-        } catch {
-          return [];
-        }
-      })();
-
-      const geradas = anuncios
-        .map((a) => {
-          const estado = (a.estado || "").toLowerCase();
-          const dataRef = a.data_aprovacao || a.data_anuncio || "";
-          const chave = `${a.id}:${estado}:${dataRef}`;
-          if (estado === "aprovado" || estado === "publicado") {
-            return { chave, mensagem: `O seu anúncio "${a.titulo}" foi aprovado.`, lida: vistas.includes(chave) };
-          }
-          if (estado === "rejeitado" || estado === "reprovado") {
-            return { chave, mensagem: `O seu anúncio "${a.titulo}" foi rejeitado. Tem 3 dias para ressubmeter o anúncio.`, lida: vistas.includes(chave) };
-          }
-          return null;
-        })
-        .filter((n): n is NotificacaoDashboard => n !== null)
-        .filter((n) => !removidas.includes(n.chave));
-
-      setNotificacoesInteresse(interesse);
-      setNotificacoesExtra(geradas);
-      return anuncios;
-    },
   });
+
+  const meusAnunciosDashboard = meusAnunciosDashboardData ?? EMPTY_ANUNCIOS;
+
+  useEffect(() => {
+    if (isFuncionario || !utilizadorAtual?.id) {
+      setNotificacoesInteresse([]);
+      setNotificacoesExtra([]);
+      return;
+    }
+
+    const vistas = obterChavesVistas();
+    const removidas = obterChavesRemovidas();
+
+    const interesse: NotificacaoDashboard[] = (() => {
+      try {
+        const raw = localStorage.getItem(MARKETPLACE_INTERESSE_NOTIF_KEY);
+        if (!raw) return [];
+        const parsed = JSON.parse(raw);
+        const lista = Array.isArray(parsed) ? parsed : [];
+        return lista
+          .filter((item: any) => Number(item?.idDono) === utilizadorAtual.id && typeof item?.mensagem === "string")
+          .filter((item: any) => !removidas.includes(String(item.chave ?? `interesse:${item.idAnuncio}:${item.idInteressado}`)))
+          .map((item: any) => ({
+            chave: String(item.chave ?? `interesse:${item.idAnuncio}:${item.idInteressado}`),
+            mensagem: item.mensagem,
+            lida: vistas.includes(String(item.chave ?? `interesse:${item.idAnuncio}:${item.idInteressado}`)),
+          }));
+      } catch {
+        return [];
+      }
+    })();
+
+    const geradas = meusAnunciosDashboard
+      .map((a) => {
+        const estado = (a.estado || "").toLowerCase();
+        const dataRef = a.data_aprovacao || a.data_anuncio || "";
+        const chave = `${a.id}:${estado}:${dataRef}`;
+        if (estado === "aprovado" || estado === "publicado") {
+          return { chave, mensagem: `O seu anúncio "${a.titulo}" foi aprovado.`, lida: vistas.includes(chave) };
+        }
+        if (estado === "rejeitado" || estado === "reprovado") {
+          return { chave, mensagem: `O seu anúncio "${a.titulo}" foi rejeitado. Tem 3 dias para ressubmeter o anúncio.`, lida: vistas.includes(chave) };
+        }
+        return null;
+      })
+      .filter((n): n is NotificacaoDashboard => n !== null)
+      .filter((n) => !removidas.includes(n.chave));
+
+    setNotificacoesInteresse(interesse);
+    setNotificacoesExtra(geradas);
+  }, [isFuncionario, meusAnunciosDashboard, utilizadorAtual?.id]);
 
   // --- Derived counts ---
 

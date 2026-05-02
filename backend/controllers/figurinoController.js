@@ -21,6 +21,7 @@ const parseId = (value) => {
     return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
 };
 
+
 // Adicionado Nelson em 20-04-2026: controller do POST /figurinos/:id/acessorios.
 const associarAcessorio = async (req, res) => {
     try {

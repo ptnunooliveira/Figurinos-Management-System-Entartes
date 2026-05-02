@@ -58,7 +58,7 @@ const TITULOS_ACAO: Record<AcaoTipo, string> = {
 
 export function Ocorrencias() {
   const utilizador = getUtilizadorAtual();
-  const isFuncionario = utilizador?.tipo === "funcionario";
+  const isFuncionario = utilizador?.tipo === "funcionario" || utilizador?.tipo === "admin";
 
   const queryClient = useQueryClient();
   const ocorrenciasQueryKey = isFuncionario ? ["ocorrencias"] : ["minhasOcorrencias"];

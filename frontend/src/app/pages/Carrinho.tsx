@@ -11,7 +11,7 @@ export function Carrinho() {
   const { items, removerDoCarrinho, limparCarrinho } = useCart();
   const [submetendo, setSubmetendo] = useState(false);
   const [alunoSelecionado, setAlunoSelecionado] = useState("");
-  const isFuncionario = utilizadorAtual?.tipo === 'funcionario';
+  const isFuncionario = utilizadorAtual?.tipo === 'funcionario' || utilizadorAtual?.tipo === 'admin';
 
   const { data: utilizadores = [] } = useQuery({
     queryKey: ["utilizadores"],
@@ -25,7 +25,7 @@ export function Carrinho() {
       return;
     }
 
-    if (utilizadorAtual?.tipo === 'funcionario' && !alunoSelecionado) {
+    if (isFuncionario && !alunoSelecionado) {
       toast.error("Por favor, selecione um aluno para a reserva.");
       return;
     }
@@ -43,7 +43,7 @@ export function Carrinho() {
       // O backend usará o ID do utilizador autenticado (a partir do token).
       await criarReserva(
         linhasParaReserva,
-        utilizadorAtual?.tipo === 'funcionario' ? parseInt(alunoSelecionado) : undefined
+        isFuncionario ? parseInt(alunoSelecionado) : undefined
       );
 
       toast.success("Reserva criada com sucesso!");
@@ -104,7 +104,7 @@ export function Carrinho() {
               </div>
             ))}
 
-          {utilizadorAtual?.tipo === 'funcionario' && (
+          {isFuncionario && (
             <div className="pt-4 border-t">
               <label className="block text-sm font-medium text-gray-700 mb-2">Aluno *</label>
               <select

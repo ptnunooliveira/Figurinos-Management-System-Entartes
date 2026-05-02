@@ -13,6 +13,7 @@ import { toast } from "sonner";
 
 export function Figurinos() {
   const utilizadorAtual = getUtilizadorAtual();
+  const isStaff = utilizadorAtual?.tipo === 'funcionario' || utilizadorAtual?.tipo === 'admin';
   const queryClient = useQueryClient();
   const [termoPesquisa, setTermoPesquisa] = useState("");
   const [categoriaSelecionada, setCategoriaSelecionada] = useState<string>("todas");
@@ -227,7 +228,7 @@ export function Figurinos() {
 
   const categoriasUnicas = [...new Set(figurinos.map((f) => f.categoria?.nomecategoria ?? '').filter(Boolean))].sort();
   const tiposUnicos = [...new Set(figurinos.map((f) => f.tipo_figurino?.nome ?? '').filter(Boolean))].sort();
-  const tamanhosUnicos = [...new Set(figurinos.map((f) => f.tamanho ?? '').filter(Boolean))].sort();
+  const tamanhosUnicos = ["XS", "S", "M", "L", "XL", "XXL"];
   const generosUnicos = [...new Set(figurinos.map((f) => f.sexo?.nome ?? '').filter(Boolean))].sort();
   const estadosUnicos = [...new Set(figurinos.map((f) => f.estado_condicao?.nome ?? '').filter(Boolean))].sort();
 
@@ -239,7 +240,7 @@ export function Figurinos() {
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Catálogo de Figurinos</h1>
           <p className="text-gray-600">Explore a nossa coleção completa de figurinos disponíveis</p>
         </div>
-        {(utilizadorAtual?.tipo === 'funcionario' || utilizadorAtual?.perfil === 'ADMIN') && (
+        {isStaff && (
           <div className="flex items-center gap-3">
             <button
               onClick={() => setMostrarModalAcessorio(true)}
@@ -413,7 +414,7 @@ export function Figurinos() {
                   )}
 
                   <div className="mt-auto pt-3 border-t">
-                    {utilizadorAtual?.tipo === 'funcionario' || utilizadorAtual?.perfil === 'ADMIN' ? (
+                    {isStaff ? (
                       <div className="flex items-center justify-end gap-4 text-sm">
                         <button
                           onClick={() => handleAbrirVer(figurino)}

@@ -33,6 +33,7 @@ export function AnunciosEscola() {
   const { adicionarAoCarrinho } = useCart();
 
 
+
   const anunciosFiltrados = anunciosEscola.filter((anuncio) => {
     const fig = anuncio.figurino;
     const descricao = fig?.descricao ?? '';
@@ -56,7 +57,7 @@ export function AnunciosEscola() {
       (!dataInicio || (dataAnuncio && dataAnuncio >= dataInicio)) &&
       (!dataFim || (dataAnuncio && dataAnuncio <= dataFim));
 
-    return (
+      return (
       correspondePesquisa &&
       dentroIntervalo &&
       (!categoriaSelecionada || fig?.categoria?.id?.toString() === categoriaSelecionada) &&
@@ -172,7 +173,7 @@ export function AnunciosEscola() {
           <h1 className="text-2xl font-bold text-gray-900">Anúncios da Escola</h1>
           <p className="text-gray-600 text-sm mt-0.5">Gerir anúncios de aluguer de figurinos da escola</p>
         </div>
-        {utilizadorAtual?.tipo === 'funcionario' && (
+        {(utilizadorAtual?.tipo === 'funcionario' || utilizadorAtual?.tipo === 'admin') && (
           <button
             onClick={() => setMostrarDialogo(true)}
             className="flex items-center gap-1.5 bg-gradient-to-r from-fig-purple to-fig-magenta text-white px-4 py-2 text-sm rounded-lg hover:shadow-lg transition-all whitespace-nowrap"
@@ -329,7 +330,7 @@ export function AnunciosEscola() {
 
               {/* Ações */}
               <div className="flex items-center gap-2 flex-shrink-0">
-                {utilizadorAtual?.tipo === 'funcionario' ? (
+                {(utilizadorAtual?.tipo === 'funcionario' || utilizadorAtual?.tipo === 'admin') ? (
                   <>
                     <button
                       className="flex items-center gap-1 px-2.5 py-1 text-xs border border-yellow-200 bg-yellow-50 text-yellow-700 hover:bg-yellow-100 rounded-lg transition-colors whitespace-nowrap"

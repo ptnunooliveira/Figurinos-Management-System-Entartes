@@ -98,7 +98,7 @@ export function Marketplace() {
     return false;
   };
 
-  const anunciosFiltrados = anunciosAMostrar.filter(anuncio => {
+  const anunciosFiltradosBase = anunciosAMostrar.filter(anuncio => {
     const matchTermo = anuncio.titulo.toLowerCase().includes(termoPesquisa.toLowerCase()) ||
                        anuncio.descricao.toLowerCase().includes(termoPesquisa.toLowerCase());
     const matchCategoria = categoriaSelecionada === "todas" || anuncio.categoria === categoriaSelecionada;
@@ -117,6 +117,36 @@ export function Marketplace() {
 
     return matchTermo && matchCategoria && matchEstado && matchTamanho && matchTipo && matchSexo && matchDataInicio && matchDataFim;
   });
+
+  const prioridadeEstadoHistoricoAluno = (estado: string) => {
+    const normalizado = normalizarEstado(estado);
+    if (normalizado === "rejeitado" || normalizado === "reprovado") return 0;
+    if (normalizado === "pendenterenovacao" || normalizado === "pendente renovacao" || normalizado === "pendente_renovacao") return 1;
+    if (normalizado === "submetido" || normalizado === "pendente") return 2;
+    if (normalizado === "publicado" || normalizado === "aprovado") return 3;
+    if (normalizado === "arquivado") return 4;
+    return 5;
+  };
+
+  const aplicarOrdenacaoPorEstado =
+    (!isStaff && utilizadorAtual?.tipo === "aluno" && abaAtiva === "meusAnuncios") ||
+    (isStaff && abaAtiva === "historico");
+
+  const anunciosFiltrados = aplicarOrdenacaoPorEstado
+    ? [...anunciosFiltradosBase].sort((a, b) => {
+        const prioridadeA = prioridadeEstadoHistoricoAluno(a.estado || "");
+        const prioridadeB = prioridadeEstadoHistoricoAluno(b.estado || "");
+        if (prioridadeA !== prioridadeB) return prioridadeA - prioridadeB;
+
+        const dataA = new Date(a.data_anuncio || "").getTime();
+        const dataB = new Date(b.data_anuncio || "").getTime();
+        return dataB - dataA;
+      })
+    : (!isStaff && abaAtiva === "explorar")
+      ? [...anunciosFiltradosBase].sort((a, b) =>
+          (a.titulo || "").localeCompare((b.titulo || ""), "pt-PT", { sensitivity: "base" })
+        )
+    : anunciosFiltradosBase;
 
   const tamanhosDisponiveis = ["XS", "S", "M", "L", "XL", "XXL"];
 

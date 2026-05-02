@@ -32,6 +32,7 @@ export interface AnuncioEscolaAPI {
   estado_anuncio: { id: number; nome: string } | null;
 }
 
+
 // Converte FigurinoAPI → interface Figurino usada nas páginas
 export function mapFigurino(f: FigurinoAPI): Figurino {
   return {

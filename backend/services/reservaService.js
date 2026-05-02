@@ -197,15 +197,9 @@ const criarReserva = async (idUtilizador, idFuncionario, dadosBody) => {
         throw erro;
     }
 
-    // Estado inicial por defeito é 'PENDENTE'
-    let ID_ESTADO_RESERVA = 1;
-    let ID_ESTADO_LINHA_RESERVA = 1;
-
-    // BPMN PN01: Se a reserva for efetuada presencialmente por um funcionário, salta a aprovação
-    if (idFuncionario) {
-        ID_ESTADO_RESERVA = 2; // CONFIRMADA
-        ID_ESTADO_LINHA_RESERVA = 2; // CONFIRMADA
-    }
+    // Estado inicial é sempre 'PENDENTE', independentemente de quem cria a reserva
+    const ID_ESTADO_RESERVA = 1;
+    const ID_ESTADO_LINHA_RESERVA = 1;
 
     // 1. Verificar conflitos de datas internamente no array do carrinho
     for (let i = 0; i < linhasArray.length; i++) {

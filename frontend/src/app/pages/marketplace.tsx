@@ -39,7 +39,7 @@ export function Marketplace() {
   const [estadosAnuncioLista, setEstadosAnuncioLista] = useState<AuxiliarItem[]>([]);
   const [tiposLista, setTiposLista] = useState<AuxiliarItem[]>([]);
   const [sexosLista, setSexosLista] = useState<AuxiliarItem[]>([]);
-  const isStaff = utilizadorAtual?.tipo === "funcionario" || utilizadorAtual?.tipo === "admin";
+  const isStaff = utilizadorAtual?.tipo === "funcionario"
 
   const [formulario, setFormulario] = useState({
     titulo: "",

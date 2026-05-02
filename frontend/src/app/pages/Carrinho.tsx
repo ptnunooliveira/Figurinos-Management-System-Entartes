@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useCart } from './CartContext';
 import { Trash2, ShoppingCart, Calendar } from 'lucide-react';
 import { criarReserva, getUtilizadores } from '../lib/services';
 import { getUtilizadorAtual } from '../lib/auth';
+import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
 export function Carrinho() {
@@ -10,13 +11,13 @@ export function Carrinho() {
   const { items, removerDoCarrinho, limparCarrinho } = useCart();
   const [submetendo, setSubmetendo] = useState(false);
   const [alunoSelecionado, setAlunoSelecionado] = useState("");
-  const [utilizadores, setUtilizadores] = useState<any[]>([]);
+  const isFuncionario = utilizadorAtual?.tipo === 'funcionario';
 
-  useEffect(() => {
-    if (utilizadorAtual?.tipo === 'funcionario') {
-      getUtilizadores().then(setUtilizadores).catch(console.error);
-    }
-  }, [utilizadorAtual?.tipo]);
+  const { data: utilizadores = [] } = useQuery({
+    queryKey: ["utilizadores"],
+    queryFn: getUtilizadores,
+    enabled: isFuncionario,
+  });
 
   const handleFinalizarReserva = async () => {
     if (items.length === 0) {

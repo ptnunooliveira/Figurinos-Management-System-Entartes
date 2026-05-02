@@ -4,10 +4,10 @@ import { getUtilizadorAtual } from "../lib/auth";
 import { getMarketplace, getMarketplaceGestao, getMarketplaceDoUtilizador, criarAnuncioMarketplace, getCategorias, getEstadosAnuncio, getTiposFigurino, getSexos, ressubmeterAnuncioMarketplace, eliminarAnuncioMarketplace, continuarAnuncioMarketplace, aprovarAnuncioMarketplace } from "../lib/services";
 import type { AuxiliarItem } from "../lib/services";
 import type { AnuncioMarketplace } from "../lib/dados-mock";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 export function Marketplace() {
-  const REQUEST_TIMEOUT_MS = 12000;
   const MARKETPLACE_INTERESSE_NOTIF_KEY = "fighappens_marketplace_interesses";
   const utilizadorAtual = getUtilizadorAtual();
   const [abaAtiva, setAbaAtiva] = useState<"explorar" | "meusAnuncios" | "pendentes" | "historico">("explorar");
@@ -31,14 +31,7 @@ export function Marketplace() {
   const [dataSubmissaoInicio, setDataSubmissaoInicio] = useState<string>("");
   const [dataSubmissaoFim, setDataSubmissaoFim] = useState<string>("");
 
-  const [todosAnuncios, setTodosAnuncios] = useState<AnuncioMarketplace[]>([]);
-  const [meusAnunciosLista, setMeusAnunciosLista] = useState<AnuncioMarketplace[]>([]);
-  const [meusAnunciosCarregados, setMeusAnunciosCarregados] = useState(false);
-  const [aCarregarMeusAnuncios, setACarregarMeusAnuncios] = useState(false);
-  const [categoriasLista, setCategoriasLista] = useState<AuxiliarItem[]>([]);
-  const [estadosAnuncioLista, setEstadosAnuncioLista] = useState<AuxiliarItem[]>([]);
-  const [tiposLista, setTiposLista] = useState<AuxiliarItem[]>([]);
-  const [sexosLista, setSexosLista] = useState<AuxiliarItem[]>([]);
+  const queryClient = useQueryClient();
   const isStaff = utilizadorAtual?.tipo === "funcionario" || utilizadorAtual?.tipo === "admin";
 
   const [formulario, setFormulario] = useState({
@@ -50,82 +43,25 @@ export function Marketplace() {
     sexo: "",
   });
 
-  const executarComTimeout = async <T,>(promise: Promise<T>, mensagemErro: string): Promise<T> => {
-    let timeoutId: number | undefined;
-
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      timeoutId = window.setTimeout(() => {
-        reject(new Error(mensagemErro));
-      }, REQUEST_TIMEOUT_MS);
-    });
-
-    try {
-      return await Promise.race([promise, timeoutPromise]);
-    } finally {
-      if (timeoutId !== undefined) {
-        window.clearTimeout(timeoutId);
-      }
-    }
-  };
-
-  const carregarMeusAnuncios = async (force = false) => {
-    if (!utilizadorAtual?.id || utilizadorAtual?.tipo !== "aluno") return;
-    if (aCarregarMeusAnuncios) return;
-    if (!force && meusAnunciosCarregados) return;
-
-    setACarregarMeusAnuncios(true);
-    try {
-      const anuncios = await executarComTimeout(
-        getMarketplaceDoUtilizador(utilizadorAtual.id),
-        "A carregar os seus anúncios está a demorar. Tente novamente."
-      );
-      setMeusAnunciosLista(anuncios);
-      setMeusAnunciosCarregados(true);
-    } catch (err: any) {
-      toast.error(err?.message || "Erro ao carregar os seus anúncios");
-    } finally {
-      setACarregarMeusAnuncios(false);
-    }
-  };
-
   const mudarAba = (aba: "explorar" | "meusAnuncios") => {
     setAbaAtiva(aba);
-    if (aba === "meusAnuncios") {
-      carregarMeusAnuncios();
-    }
   };
 
-  useEffect(() => {
-    getCategorias().then(setCategoriasLista);
-    getEstadosAnuncio().then(setEstadosAnuncioLista);
-    getTiposFigurino().then(setTiposLista);
-    getSexos().then(setSexosLista);
+  const { data: categoriasLista = [] } = useQuery<AuxiliarItem[]>({ queryKey: ["categorias"], queryFn: getCategorias });
+  const { data: estadosAnuncioLista = [] } = useQuery<AuxiliarItem[]>({ queryKey: ["estadosAnuncio"], queryFn: getEstadosAnuncio });
+  const { data: tiposLista = [] } = useQuery<AuxiliarItem[]>({ queryKey: ["tiposFigurino"], queryFn: getTiposFigurino });
+  const { data: sexosLista = [] } = useQuery<AuxiliarItem[]>({ queryKey: ["sexos"], queryFn: getSexos });
 
-    const carregarMarketplace = async () => {
-      try {
-        if (isStaff) {
-          const anuncios = await executarComTimeout(
-            getMarketplaceGestao(),
-            "A carregar os anúncios de gestão está a demorar. Tente novamente."
-          );
-          setTodosAnuncios(anuncios);
-          return;
-        }
+  const { data: todosAnuncios = [] } = useQuery<AnuncioMarketplace[]>({
+    queryKey: isStaff ? ["marketplaceGestao"] : ["marketplace"],
+    queryFn: isStaff ? () => getMarketplaceGestao() : getMarketplace,
+  });
 
-        const anuncios = await executarComTimeout(
-          getMarketplace(),
-          "A carregar os anúncios está a demorar. Tente novamente."
-        );
-        setTodosAnuncios(anuncios);
-      } catch (err: any) {
-        toast.error(err?.message || "Erro ao carregar anúncios");
-      }
-    };
-
-    carregarMarketplace();
-    setMeusAnunciosCarregados(false);
-    setMeusAnunciosLista([]);
-  }, [utilizadorAtual?.tipo, utilizadorAtual?.id]);
+  const { data: meusAnunciosLista = [] } = useQuery<AnuncioMarketplace[]>({
+    queryKey: ["marketplaceDoUtilizador", utilizadorAtual?.id],
+    queryFn: () => getMarketplaceDoUtilizador(utilizadorAtual!.id),
+    enabled: !isStaff && !!utilizadorAtual?.id && abaAtiva === "meusAnuncios",
+  });
 
   useEffect(() => {
     if (isStaff) {
@@ -349,7 +285,7 @@ export function Marketplace() {
       setFormulario({ titulo: "", descricao: "", tamanho: "", categoria: "", tipo: "", sexo: "" });
       setImagensPreview([]);
       setImagensFicheiro([]);
-      await carregarMeusAnuncios(true);
+      queryClient.invalidateQueries({ queryKey: ["marketplaceDoUtilizador", utilizadorAtual?.id] });
     } catch (err: any) {
       toast.error(err.message || "Erro ao criar anúncio");
     }
@@ -452,21 +388,8 @@ export function Marketplace() {
       await eliminarAnuncioMarketplace(anuncioParaRemover.id);
       toast.success("Anúncio removido com sucesso.");
       fecharConfirmacaoRemocao();
-
-      if (utilizadorAtual?.tipo === 'funcionario') {
-        const anuncios = await executarComTimeout(
-          getMarketplaceGestao(),
-          "A atualizar anúncios de gestão está a demorar. Tente novamente."
-        );
-        setTodosAnuncios(anuncios);
-      } else {
-        const anuncios = await executarComTimeout(
-          getMarketplace(),
-          "A atualizar anúncios está a demorar. Tente novamente."
-        );
-        setTodosAnuncios(anuncios);
-        await carregarMeusAnuncios(true);
-      }
+      queryClient.invalidateQueries({ queryKey: isStaff ? ["marketplaceGestao"] : ["marketplace"] });
+      if (!isStaff) queryClient.invalidateQueries({ queryKey: ["marketplaceDoUtilizador", utilizadorAtual?.id] });
     } catch (err: any) {
       toast.error(err.message || "Erro ao remover anúncio");
     }
@@ -490,10 +413,8 @@ export function Marketplace() {
     try {
       await aprovarAnuncioMarketplace(id, true);
       toast.success("Anúncio aprovado com sucesso!");
-      setTimeout(() => {
-        fecharDetalhes();
-        window.location.reload();
-      }, 800);
+      fecharDetalhes();
+      queryClient.invalidateQueries({ queryKey: ["marketplaceGestao"] });
     } catch (err: any) {
       toast.error(err?.message || "Erro ao aprovar anúncio");
     }
@@ -511,10 +432,8 @@ export function Marketplace() {
       await aprovarAnuncioMarketplace(anuncioParaRejeitar.id, false, motivo);
       toast.success("Anúncio rejeitado");
       fecharModalRejeicao();
-      setTimeout(() => {
-        fecharDetalhes();
-        window.location.reload();
-      }, 800);
+      fecharDetalhes();
+      queryClient.invalidateQueries({ queryKey: ["marketplaceGestao"] });
     } catch (err: any) {
       toast.error(err?.message || "Erro ao rejeitar anúncio");
     }
@@ -531,21 +450,8 @@ export function Marketplace() {
       await continuarAnuncioMarketplace(anuncioParaRenovar.id);
       toast.success("Anúncio renovado por mais 30 dias.");
       fecharConfirmacaoRenovacao();
-
-      if (utilizadorAtual?.tipo === 'funcionario') {
-        const anuncios = await executarComTimeout(
-          getMarketplaceGestao(),
-          "A atualizar anúncios de gestão está a demorar. Tente novamente."
-        );
-        setTodosAnuncios(anuncios);
-      } else {
-        const anuncios = await executarComTimeout(
-          getMarketplace(),
-          "A atualizar anúncios está a demorar. Tente novamente."
-        );
-        setTodosAnuncios(anuncios);
-        await carregarMeusAnuncios(true);
-      }
+      queryClient.invalidateQueries({ queryKey: isStaff ? ["marketplaceGestao"] : ["marketplace"] });
+      if (!isStaff) queryClient.invalidateQueries({ queryKey: ["marketplaceDoUtilizador", utilizadorAtual?.id] });
     } catch (err: any) {
       toast.error(err.message || "Erro ao renovar anúncio");
     }

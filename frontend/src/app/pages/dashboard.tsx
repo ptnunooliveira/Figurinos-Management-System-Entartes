@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
-import { Calendar, Shirt, ShoppingBag, AlertCircle, TrendingUp, FileText, Bell, Trash2 } from "lucide-react";
+import { useState } from "react";
+import { Calendar, Shirt, ShoppingBag, AlertCircle, Bell, Trash2 } from "lucide-react";
 import { Link } from "react-router";
 import { getUtilizadorAtual } from "../lib/auth";
-import { getReservas, getMinhasReservas, getOcorrencias, getMarketplace, getMarketplaceGestao, getAnunciosEscola, getMarketplaceDoUtilizador, getPropostasCobranca } from "../lib/services";
-import { getMinhasOcorrencias } from "../lib/services";
+import { useQuery } from "@tanstack/react-query";
+import { getReservas, getMinhasReservas, getOcorrencias, getMarketplace, getMarketplaceGestao, getAnunciosEscola, getMarketplaceDoUtilizador, getPropostasCobranca, getMinhasOcorrencias } from "../lib/services";
 import type { LinhaReserva } from "../lib/dados-mock";
 
 interface NotificacaoDashboard {
@@ -18,16 +18,11 @@ const DASHBOARD_NOTIF_REMOVIDAS_KEY = "fighappens_notificacoes_removidas";
 
 export function Dashboard() {
   const utilizadorAtual = getUtilizadorAtual();
+  const isFuncionario = utilizadorAtual?.tipo === "funcionario";
 
-  const [reservasAtivas, setReservasAtivas] = useState(0);
-  const [figurinosDisponiveis, setFigurinosDisponiveis] = useState(0);
-  const [ocorrenciasPendentes, setOcorrenciasPendentes] = useState(0);
-  const [anunciosPendentes, setAnunciosPendentes] = useState(0);
-  const [propostasPendentes, setPropostasPendentes] = useState(0);
-  const [totalMarketplace, setTotalMarketplace] = useState(0);
-  const [proximasReservas, setProximasReservas] = useState<LinhaReserva[]>([]);
   const [mostrarNotificacoes, setMostrarNotificacoes] = useState(false);
-  const [notificacoes, setNotificacoes] = useState<NotificacaoDashboard[]>([]);
+  const [notificacoesExtra, setNotificacoesExtra] = useState<NotificacaoDashboard[]>([]);
+  const [notificacoesInteresse, setNotificacoesInteresse] = useState<NotificacaoDashboard[]>([]);
 
   const obterChavesVistas = (): string[] => {
     try {
@@ -64,7 +59,8 @@ export function Dashboard() {
     if (!vistas.includes(chave)) {
       guardarChavesVistas([...vistas, chave]);
     }
-    setNotificacoes((prev) => prev.map((n) => (n.chave === chave ? { ...n, lida: true } : n)));
+    setNotificacoesExtra((prev) => prev.map((n) => (n.chave === chave ? { ...n, lida: true } : n)));
+    setNotificacoesInteresse((prev) => prev.map((n) => (n.chave === chave ? { ...n, lida: true } : n)));
   };
 
   const eliminarNotificacao = (chave: string) => {
@@ -72,9 +68,8 @@ export function Dashboard() {
     if (!removidas.includes(chave)) {
       guardarChavesRemovidas([...removidas, chave]);
     }
-
-    setNotificacoes((prev) => prev.filter((n) => n.chave !== chave));
-
+    setNotificacoesExtra((prev) => prev.filter((n) => n.chave !== chave));
+    setNotificacoesInteresse((prev) => prev.filter((n) => n.chave !== chave));
     try {
       const raw = localStorage.getItem(MARKETPLACE_INTERESSE_NOTIF_KEY);
       const parsed = raw ? JSON.parse(raw) : [];
@@ -86,191 +81,182 @@ export function Dashboard() {
     }
   };
 
-  const obterNotificacoesInteresseMarketplace = (idDono: number): NotificacaoDashboard[] => {
-    try {
-      const raw = localStorage.getItem(MARKETPLACE_INTERESSE_NOTIF_KEY);
-      if (!raw) return [];
+  // --- Queries ---
 
-      const parsed = JSON.parse(raw);
-      const lista = Array.isArray(parsed) ? parsed : [];
+  const { data: anunciosEscola = [] } = useQuery({
+    queryKey: ["anunciosEscola"],
+    queryFn: getAnunciosEscola,
+  });
+
+  const { data: reservasFuncionario = [] } = useQuery({
+    queryKey: ["reservas"],
+    queryFn: getReservas,
+    enabled: isFuncionario,
+  });
+
+  const { data: minhasReservas = [] } = useQuery({
+    queryKey: ["minhasReservas"],
+    queryFn: getMinhasReservas,
+    enabled: !isFuncionario,
+  });
+
+  const { data: ocorrencias = [] } = useQuery({
+    queryKey: ["ocorrencias"],
+    queryFn: getOcorrencias,
+    enabled: isFuncionario,
+  });
+
+  const { data: minhasOcorrencias = [] } = useQuery({
+    queryKey: ["minhasOcorrencias"],
+    queryFn: getMinhasOcorrencias,
+    enabled: !isFuncionario,
+  });
+
+  const { data: marketplaceGestao = [] } = useQuery({
+    queryKey: ["marketplaceGestao"],
+    queryFn: getMarketplaceGestao,
+    enabled: isFuncionario,
+  });
+
+  const { data: propostas = [] } = useQuery({
+    queryKey: ["propostasCobranca"],
+    queryFn: getPropostasCobranca,
+    enabled: isFuncionario,
+  });
+
+  const { data: marketplace = [] } = useQuery({
+    queryKey: ["marketplace"],
+    queryFn: getMarketplace,
+    enabled: !isFuncionario,
+  });
+
+  useQuery({
+    queryKey: ["marketplaceDoUtilizador", utilizadorAtual?.id],
+    queryFn: () => getMarketplaceDoUtilizador(utilizadorAtual!.id),
+    enabled: !isFuncionario && !!utilizadorAtual?.id,
+    select: (anuncios) => {
       const vistas = obterChavesVistas();
       const removidas = obterChavesRemovidas();
 
-      return lista
-        .filter((item: any) => Number(item?.idDono) === idDono && typeof item?.mensagem === "string")
-        .filter((item: any) => !removidas.includes(String(item.chave ?? `interesse:${item.idAnuncio}:${item.idInteressado}`)))
-        .map((item: any) => ({
-          chave: String(item.chave ?? `interesse:${item.idAnuncio}:${item.idInteressado}`),
-          mensagem: item.mensagem,
-          lida: vistas.includes(String(item.chave ?? `interesse:${item.idAnuncio}:${item.idInteressado}`)),
-        }));
-    } catch {
-      return [];
-    }
-  };
+      const interesse: NotificacaoDashboard[] = (() => {
+        try {
+          const raw = localStorage.getItem(MARKETPLACE_INTERESSE_NOTIF_KEY);
+          if (!raw) return [];
+          const parsed = JSON.parse(raw);
+          const lista = Array.isArray(parsed) ? parsed : [];
+          return lista
+            .filter((item: any) => Number(item?.idDono) === utilizadorAtual!.id && typeof item?.mensagem === "string")
+            .filter((item: any) => !removidas.includes(String(item.chave ?? `interesse:${item.idAnuncio}:${item.idInteressado}`)))
+            .map((item: any) => ({
+              chave: String(item.chave ?? `interesse:${item.idAnuncio}:${item.idInteressado}`),
+              mensagem: item.mensagem,
+              lida: vistas.includes(String(item.chave ?? `interesse:${item.idAnuncio}:${item.idInteressado}`)),
+            }));
+        } catch {
+          return [];
+        }
+      })();
 
-  useEffect(() => {
-    getAnunciosEscola().then(anuncios => {
-      setFigurinosDisponiveis(anuncios.filter(a => a.estado_anuncio?.nome === 'Disponível').length);
-    });
-
-    if (utilizadorAtual?.tipo === 'funcionario') {
-      getReservas().then(reservas => {
-        const ativas = reservas.filter(r => {
-          const e = r.estado?.toUpperCase();
-          return e === 'CONFIRMADA' || e === 'EM CURSO';
-        });
-        setReservasAtivas(ativas.length);
-      });
-      Promise.all([getOcorrencias(), getMarketplaceGestao(), getPropostasCobranca()]).then(([ocs, anuncios, propostas]) => {
-        const ocorrenciasAResponder = ocs.filter((o) => {
-          const e = o.estado?.toLowerCase();
-          return e === 'em análise' || e === 'pendente' || e === 'a aguardar' || e === 'a aguardar orçamento';
-        }).length;
-
-        const anunciosAResponder = anuncios.filter((a) => {
+      const geradas = anuncios
+        .map((a) => {
           const estado = (a.estado || "").toLowerCase();
-          return estado === "submetido" || estado === "pendente";
-        }).length;
+          const dataRef = a.data_aprovacao || a.data_anuncio || "";
+          const chave = `${a.id}:${estado}:${dataRef}`;
+          if (estado === "aprovado" || estado === "publicado") {
+            return { chave, mensagem: `O seu anúncio "${a.titulo}" foi aprovado.`, lida: vistas.includes(chave) };
+          }
+          if (estado === "rejeitado" || estado === "reprovado") {
+            return { chave, mensagem: `O seu anúncio "${a.titulo}" foi rejeitado. Tem 3 dias para ressubmeter o anúncio.`, lida: vistas.includes(chave) };
+          }
+          return null;
+        })
+        .filter((n): n is NotificacaoDashboard => n !== null)
+        .filter((n) => !removidas.includes(n.chave));
 
-        const propostasAResponder = propostas.filter((p) => {
-          const estado = (p.estado || "").toLowerCase();
-          return estado !== "aceite" && estado !== "rejeitada" && estado !== "finalizada";
-        }).length;
+      setNotificacoesInteresse(interesse);
+      setNotificacoesExtra(geradas);
+      return anuncios;
+    },
+  });
 
-        setOcorrenciasPendentes(ocorrenciasAResponder);
-        setAnunciosPendentes(anunciosAResponder);
-        setPropostasPendentes(propostasAResponder);
-        setTotalMarketplace(anuncios.length);
+  // --- Derived counts ---
 
+  const figurinosDisponiveis = anunciosEscola.filter(
+    (a) => a.estado_anuncio?.nome === "Disponível"
+  ).length;
+
+  const reservasAtivas = isFuncionario
+    ? reservasFuncionario.filter((r) => {
+        const e = r.estado?.toUpperCase();
+        return e === "CONFIRMADA" || e === "EM CURSO";
+      }).length
+    : minhasReservas.filter((r) => {
+        const e = r.estado?.toUpperCase();
+        return e === "CONFIRMADA" || e === "EM CURSO";
+      }).length;
+
+  const proximasReservas: LinhaReserva[] = isFuncionario
+    ? []
+    : minhasReservas
+        .filter((r) => r.estado?.toUpperCase() === "CONFIRMADA")
+        .flatMap((r) => r.linhas)
+        .slice(0, 3);
+
+  const ocorrenciasPendentes = isFuncionario
+    ? ocorrencias.filter((o) => {
+        const e = o.estado?.toLowerCase();
+        return e === "em análise" || e === "pendente" || e === "a aguardar" || e === "a aguardar orçamento";
+      }).length
+    : minhasOcorrencias.filter((o) => {
+        const e = o.estado?.toLowerCase();
+        return e === "a aguardar" || e === "a aguardar orçamento";
+      }).length;
+
+  const anunciosPendentes = marketplaceGestao.filter((a) => {
+    const estado = (a.estado || "").toLowerCase();
+    return estado === "submetido" || estado === "pendente";
+  }).length;
+
+  const propostasPendentes = propostas.filter((p) => {
+    const estado = (p.estado || "").toLowerCase();
+    return estado !== "aceite" && estado !== "rejeitada" && estado !== "finalizada";
+  }).length;
+
+  const totalMarketplace = isFuncionario ? marketplaceGestao.length : marketplace.length;
+
+  // --- Notificações funcionário ---
+  const notificacoesFuncionario: NotificacaoDashboard[] = isFuncionario
+    ? (() => {
         const vistas = obterChavesVistas();
-        const notificacoesGeradas: NotificacaoDashboard[] = [];
-
-        if (anunciosAResponder > 0) {
-          const chave = `admin:anuncios:${anunciosAResponder}`;
-          notificacoesGeradas.push({
-            chave,
-            mensagem: `Tem ${anunciosAResponder} anúncio${anunciosAResponder !== 1 ? "s" : ""} para responder.`,
-            lida: vistas.includes(chave),
-          });
+        const result: NotificacaoDashboard[] = [];
+        if (anunciosPendentes > 0) {
+          const chave = `admin:anuncios:${anunciosPendentes}`;
+          result.push({ chave, mensagem: `Tem ${anunciosPendentes} anúncio${anunciosPendentes !== 1 ? "s" : ""} para responder.`, lida: vistas.includes(chave) });
         }
-
-        if (ocorrenciasAResponder > 0) {
-          const chave = `admin:ocorrencias:${ocorrenciasAResponder}`;
-          notificacoesGeradas.push({
-            chave,
-            mensagem: `Tem ${ocorrenciasAResponder} ocorrência${ocorrenciasAResponder !== 1 ? "s" : ""} para analisar.`,
-            lida: vistas.includes(chave),
-          });
+        if (ocorrenciasPendentes > 0) {
+          const chave = `admin:ocorrencias:${ocorrenciasPendentes}`;
+          result.push({ chave, mensagem: `Tem ${ocorrenciasPendentes} ocorrência${ocorrenciasPendentes !== 1 ? "s" : ""} para analisar.`, lida: vistas.includes(chave) });
         }
-
-        if (propostasAResponder > 0) {
-          const chave = `admin:propostas:${propostasAResponder}`;
-          notificacoesGeradas.push({
-            chave,
-            mensagem: `Tem ${propostasAResponder} proposta${propostasAResponder !== 1 ? "s" : ""} para responder.`,
-            lida: vistas.includes(chave),
-          });
+        if (propostasPendentes > 0) {
+          const chave = `admin:propostas:${propostasPendentes}`;
+          result.push({ chave, mensagem: `Tem ${propostasPendentes} proposta${propostasPendentes !== 1 ? "s" : ""} para responder.`, lida: vistas.includes(chave) });
         }
+        return result;
+      })()
+    : [];
 
-        setNotificacoes(notificacoesGeradas);
-      });
-    } else {
-      getMinhasReservas().then(reservas => {
-        const ativas = reservas.filter(r => {
-          const e = r.estado?.toUpperCase();
-          return e === 'CONFIRMADA' || e === 'EM CURSO';
-        });
-        setReservasAtivas(ativas.length);
-        const proximas = reservas
-          .filter(r => r.estado?.toUpperCase() === 'CONFIRMADA')
-          .flatMap(r => r.linhas)
-          .slice(0, 3);
-        setProximasReservas(proximas);
-      });
-      getMinhasOcorrencias().then(ocs => {
-        setOcorrenciasPendentes(ocs.filter(o => {
-          const e = o.estado?.toLowerCase();
-          return e === 'a aguardar' || e === 'a aguardar orçamento';
-        }).length);
-      });
-      getMarketplace().then(anuncios => {
-        setTotalMarketplace(anuncios.length);
-      });
-
-      if (utilizadorAtual?.id) {
-        const notificacoesInteresse = obterNotificacoesInteresseMarketplace(utilizadorAtual.id);
-        setNotificacoes(notificacoesInteresse);
-
-        getMarketplaceDoUtilizador(utilizadorAtual.id).then((anuncios) => {
-          const vistas = obterChavesVistas();
-          const removidas = obterChavesRemovidas();
-          const notificacoesGeradas = anuncios
-            .map((a) => {
-              const estado = (a.estado || "").toLowerCase();
-              const dataRef = a.data_aprovacao || a.data_anuncio || "";
-              const chave = `${a.id}:${estado}:${dataRef}`;
-
-              if (estado === "aprovado" || estado === "publicado") {
-                return {
-                  chave,
-                  mensagem: `O seu anúncio "${a.titulo}" foi aprovado.`,
-                  lida: vistas.includes(chave),
-                };
-              }
-
-              if (estado === "rejeitado" || estado === "reprovado") {
-                return {
-                  chave,
-                  mensagem: `O seu anúncio "${a.titulo}" foi rejeitado. Tem 3 dias para ressubmeter o anúncio.`,
-                  lida: vistas.includes(chave),
-                };
-              }
-
-              return null;
-            })
-            .filter((n): n is NotificacaoDashboard => n !== null)
-            .filter((n) => !removidas.includes(n.chave));
-
-          setNotificacoes([...notificacoesInteresse, ...notificacoesGeradas]);
-        });
-      }
-    }
-  }, [utilizadorAtual?.tipo]);
+  const notificacoes: NotificacaoDashboard[] = isFuncionario
+    ? notificacoesFuncionario
+    : [...notificacoesInteresse, ...notificacoesExtra];
 
   const notificacoesNaoLidas = notificacoes.filter((n) => !n.lida).length;
 
   const estatisticas = [
-    {
-      nome: "Reservas Ativas",
-      valor: reservasAtivas,
-      icon: Calendar,
-      cor: "bg-blue-500",
-      link: "/reservas",
-    },
-    {
-      nome: "Figurinos Disponíveis",
-      valor: figurinosDisponiveis,
-      icon: Shirt,
-      cor: "bg-green-500",
-      link: "/figurinos",
-    },
-    {
-      nome: "Marketplace",
-      valor: totalMarketplace,
-      icon: ShoppingBag,
-      cor: "bg-purple-500",
-      link: "/marketplace",
-    },
-    {
-      nome: "Ocorrências Pendentes",
-      valor: ocorrenciasPendentes,
-      icon: AlertCircle,
-      cor: "bg-orange-500",
-      link: "/ocorrencias",
-    },
+    { nome: "Reservas Ativas", valor: reservasAtivas, icon: Calendar, cor: "bg-blue-500", link: "/reservas" },
+    { nome: "Figurinos Disponíveis", valor: figurinosDisponiveis, icon: Shirt, cor: "bg-green-500", link: "/figurinos" },
+    { nome: "Marketplace", valor: totalMarketplace, icon: ShoppingBag, cor: "bg-purple-500", link: "/marketplace" },
+    { nome: "Ocorrências Pendentes", valor: ocorrenciasPendentes, icon: AlertCircle, cor: "bg-orange-500", link: "/ocorrencias" },
   ];
-
 
   return (
     <div className="space-y-8">
@@ -279,9 +265,9 @@ export function Dashboard() {
         <div className="flex items-start justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold mb-2">
-              Bem-vindo ao FigHappens, {utilizadorAtual?.nome.split(' ')[0]}! 👋
+              Bem-vindo ao FigHappens, {utilizadorAtual?.nome.split(" ")[0]}! 👋
             </h1>
-            {utilizadorAtual?.tipo === 'aluno' && (
+            {utilizadorAtual?.tipo === "aluno" && (
               <p className="text-fig-green-light text-lg">
                 Explore o catálogo e faça as suas reservas de figurinos.
               </p>
@@ -378,16 +364,16 @@ export function Dashboard() {
         <div className="bg-white rounded-xl shadow-sm p-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-lg font-semibold text-gray-900">
-              {utilizadorAtual?.tipo === 'funcionario' ? 'Alertas' : 'Próximas Reservas'}
+              {isFuncionario ? "Alertas" : "Próximas Reservas"}
             </h2>
-            {utilizadorAtual?.tipo === 'funcionario' ? (
+            {isFuncionario ? (
               <AlertCircle className="w-5 h-5 text-orange-500" />
             ) : (
               <Calendar className="w-5 h-5 text-gray-400" />
             )}
           </div>
           <div className="space-y-4">
-            {utilizadorAtual?.tipo === 'funcionario' ? (
+            {isFuncionario ? (
               <>
                 {anunciosPendentes > 0 && (
                   <Link
@@ -398,7 +384,7 @@ export function Dashboard() {
                       <ShoppingBag className="w-5 h-5 text-yellow-600 mt-0.5" />
                       <div>
                         <p className="text-sm font-medium text-yellow-900">
-                          {anunciosPendentes} anúncio{anunciosPendentes !== 1 ? 's' : ''} pendente{anunciosPendentes !== 1 ? 's' : ''}
+                          {anunciosPendentes} anúncio{anunciosPendentes !== 1 ? "s" : ""} pendente{anunciosPendentes !== 1 ? "s" : ""}
                         </p>
                         <p className="text-xs text-yellow-700">Clique para aprovar ou rejeitar</p>
                       </div>
@@ -414,7 +400,7 @@ export function Dashboard() {
                       <AlertCircle className="w-5 h-5 text-orange-600 mt-0.5" />
                       <div>
                         <p className="text-sm font-medium text-orange-900">
-                          {ocorrenciasPendentes} ocorrência{ocorrenciasPendentes !== 1 ? 's' : ''} em análise
+                          {ocorrenciasPendentes} ocorrência{ocorrenciasPendentes !== 1 ? "s" : ""} em análise
                         </p>
                         <p className="text-xs text-orange-700">Requer atenção</p>
                       </div>
@@ -437,15 +423,12 @@ export function Dashboard() {
                         <Shirt className="w-6 h-6 text-purple-600" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-gray-900 truncate">
-                          {linha.anuncio.figurino.nome}
-                        </p>
+                        <p className="font-medium text-gray-900 truncate">{linha.anuncio.figurino.nome}</p>
                         <p className="text-sm text-gray-600">
-                          {new Date(linha.data_inicio).toLocaleDateString('pt-PT')} - {new Date(linha.data_fim).toLocaleDateString('pt-PT')}
+                          {new Date(linha.data_inicio).toLocaleDateString("pt-PT")} -{" "}
+                          {new Date(linha.data_fim).toLocaleDateString("pt-PT")}
                         </p>
-                        <p className="text-sm text-purple-600 mt-1">
-                          €{linha.valor_diario}/dia
-                        </p>
+                        <p className="text-sm text-purple-600 mt-1">€{linha.valor_diario}/dia</p>
                       </div>
                     </div>
                   ))
@@ -465,7 +448,7 @@ export function Dashboard() {
       </div>
 
       {/* Ações Rápidas */}
-      {utilizadorAtual?.tipo === 'aluno' && (
+      {utilizadorAtual?.tipo === "aluno" && (
         <div className="bg-white rounded-xl shadow-sm p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Ações Rápidas</h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

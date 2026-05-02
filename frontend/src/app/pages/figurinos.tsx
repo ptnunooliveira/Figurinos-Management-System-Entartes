@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Search, Filter, Shirt, Plus, Trash2, Eye, Edit, Calendar, X } from "lucide-react";
 import { Link } from "react-router";
 import { getUtilizadorAtual } from "../lib/auth";
@@ -7,18 +7,13 @@ import {
   getCategorias, getTiposFigurino, getSexos, getEstadosCondicao, getAcessorios,
   type FigurinoAPI, type AnuncioEscolaAPI, type AuxiliarItem,
 } from "../lib/services";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCart } from "./CartContext";
 import { toast } from "sonner";
 
 export function Figurinos() {
   const utilizadorAtual = getUtilizadorAtual();
-  const [figurinos, setFigurinos] = useState<FigurinoAPI[]>([]);
-  const [anunciosEscola, setAnunciosEscola] = useState<AnuncioEscolaAPI[]>([]);
-  const [categorias, setCategorias] = useState<AuxiliarItem[]>([]);
-  const [tipos, setTipos] = useState<AuxiliarItem[]>([]);
-  const [sexos, setSexos] = useState<AuxiliarItem[]>([]);
-  const [estadosCondicao, setEstadosCondicao] = useState<AuxiliarItem[]>([]);
-  const [acessorios, setAcessorios] = useState<AuxiliarItem[]>([]);
+  const queryClient = useQueryClient();
   const [termoPesquisa, setTermoPesquisa] = useState("");
   const [categoriaSelecionada, setCategoriaSelecionada] = useState<string>("todas");
   const [tipoSelecionado, setTipoSelecionado] = useState<string>("todos");
@@ -47,18 +42,13 @@ export function Figurinos() {
   const [acessoriosEditacao, setAcessoriosEditacao] = useState<number[]>([]);
   const { adicionarAoCarrinho } = useCart();
 
-  useEffect(() => {
-    getFigurinosRaw().then(setFigurinos);
-    getAnunciosEscola().then(setAnunciosEscola);
-  }, [utilizadorAtual?.tipo]);
-
-  useEffect(() => {
-    getCategorias().then(setCategorias);
-    getTiposFigurino().then(setTipos);
-    getSexos().then(setSexos);
-    getEstadosCondicao().then(setEstadosCondicao);
-    getAcessorios().then(setAcessorios);
-  }, []);
+  const { data: figurinos = [] } = useQuery<FigurinoAPI[]>({ queryKey: ["figurinos"], queryFn: getFigurinosRaw });
+  const { data: anunciosEscola = [] } = useQuery<AnuncioEscolaAPI[]>({ queryKey: ["anunciosEscola"], queryFn: getAnunciosEscola });
+  const { data: categorias = [] } = useQuery<AuxiliarItem[]>({ queryKey: ["categorias"], queryFn: getCategorias });
+  const { data: tipos = [] } = useQuery<AuxiliarItem[]>({ queryKey: ["tiposFigurino"], queryFn: getTiposFigurino });
+  const { data: sexos = [] } = useQuery<AuxiliarItem[]>({ queryKey: ["sexos"], queryFn: getSexos });
+  const { data: estadosCondicao = [] } = useQuery<AuxiliarItem[]>({ queryKey: ["estadosCondicao"], queryFn: getEstadosCondicao });
+  const { data: acessorios = [] } = useQuery<AuxiliarItem[]>({ queryKey: ["acessorios"], queryFn: getAcessorios });
 
   const handleCriarAcessorio = async () => {
     if (!nomeNovoAcessorio.trim()) return;
@@ -77,7 +67,7 @@ export function Figurinos() {
     try {
       await eliminarFigurino(id);
       toast.success(`Figurino "${descricao}" removido com sucesso!`);
-      setFigurinos(prev => prev.filter(f => f.id !== id));
+      queryClient.invalidateQueries({ queryKey: ["figurinos"] });
     } catch (err: any) {
       toast.error(err.message || "Erro ao remover figurino");
     }
@@ -144,8 +134,7 @@ export function Figurinos() {
         substituir_acessorios: true,
       });
       toast.success("Figurino atualizado com sucesso!");
-      const figurinosAtualizados = await getFigurinosRaw();
-      setFigurinos(figurinosAtualizados);
+      queryClient.invalidateQueries({ queryKey: ["figurinos"] });
       handleFecharEditar();
     } catch (err: any) {
       toast.error(err.message || "Erro ao atualizar figurino");

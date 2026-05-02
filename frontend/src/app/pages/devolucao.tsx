@@ -6,6 +6,7 @@ import { getUtilizadorAtual } from "../lib/auth";
 import { getReservaDetalhes, getEstadosCondicao, criarChecklist, getChecklistsReserva, criarOcorrencia } from "../lib/services";
 import type { AuxiliarItem, ChecklistAPI } from "../lib/services";
 import type { Reserva } from "../lib/dados-mock";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 export function Devolucao() {
@@ -15,9 +16,17 @@ export function Devolucao() {
   const assinaturaClienteRef = useRef<SignatureCanvas>(null);
   const utilizadorAtual = getUtilizadorAtual();
 
-  const [reserva, setReserva] = useState<Reserva | null>(null);
-  const [carregando, setCarregando] = useState(true);
-  const [estadosCondicao, setEstadosCondicao] = useState<AuxiliarItem[]>([]);
+  const { data: reserva = null, isFetching: carregando } = useQuery<Reserva | null>({
+    queryKey: ["reservaDetalhes", id],
+    queryFn: () => getReservaDetalhes(Number(id)),
+    enabled: !!id,
+  });
+  const { data: estadosCondicao = [] } = useQuery<AuxiliarItem[]>({ queryKey: ["estadosCondicao"], queryFn: getEstadosCondicao });
+  const { data: checklistsData = [] } = useQuery<ChecklistAPI[]>({
+    queryKey: ["checklistsReserva", id],
+    queryFn: () => getChecklistsReserva(Number(id)) as Promise<ChecklistAPI[]>,
+    enabled: !!id,
+  });
   const [checklist, setChecklist] = useState<Array<{
     id: number;
     nome: string;
@@ -28,33 +37,13 @@ export function Devolucao() {
   const [idEstadoLevantamento, setIdEstadoLevantamento] = useState<number | null>(null);
   const [observacoesGerais, setObservacoesGerais] = useState("");
   const [ocorrenciaAlerta, setOcorrenciaAlerta] = useState<{ id: number } | null>(null);
-  const [checklistsData, setChecklistsData] = useState<ChecklistAPI[]>([]);
   const [linhaSelecionadaId, setLinhaSelecionadaId] = useState<number | null>(null);
 
   useEffect(() => {
-    if (!id) return;
-
-    Promise.all([
-      getReservaDetalhes(Number(id)),
-      getEstadosCondicao(),
-      getChecklistsReserva(Number(id)),
-    ])
-      .then(([r, estados, checklists]) => {
-        if (r && r.linhas.length > 0) {
-          setReserva(r);
-          setLinhaSelecionadaId(r.linhas[0].id);
-        }
-
-        setEstadosCondicao(estados);
-        setChecklistsData(checklists as ChecklistAPI[]);
-      })
-      .catch(() => {
-        toast.error("Erro ao carregar dados da reserva");
-      })
-      .finally(() => {
-        setCarregando(false);
-      });
-  }, [id]);
+    if (reserva && reserva.linhas.length > 0 && !linhaSelecionadaId) {
+      setLinhaSelecionadaId(reserva.linhas[0].id);
+    }
+  }, [reserva]);
 
   useEffect(() => {
     if (!reserva || !linhaSelecionadaId) return;

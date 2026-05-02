@@ -114,7 +114,7 @@ export function Dashboard() {
 
   const { data: marketplaceGestao = [] } = useQuery({
     queryKey: ["marketplaceGestao"],
-    queryFn: getMarketplaceGestao,
+    queryFn: () => getMarketplaceGestao(),
     enabled: isFuncionario,
   });
 

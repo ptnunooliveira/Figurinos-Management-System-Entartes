@@ -32,6 +32,7 @@ const criarAnuncioEscola = async (dados) => {
             id_figurino: dados.id_figurino ?? null,
             valordiarioaluguer: dados.valordiarioaluguer ?? null,
             id_estado: dados.id_estado ?? null,
+            dataanuncio: new Date(),
         },
     });
 };

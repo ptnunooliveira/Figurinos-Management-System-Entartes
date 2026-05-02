@@ -27,6 +27,7 @@ export interface AnuncioEscolaAPI {
   id_figurino: number | null;
   valordiarioaluguer: number | null;
   id_estado: number | null;
+  dataanuncio: string | null;
   figurino: FigurinoAPI | null;
   estado_anuncio: { id: number; nome: string } | null;
 }

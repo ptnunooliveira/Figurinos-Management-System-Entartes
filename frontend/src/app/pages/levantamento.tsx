@@ -31,7 +31,8 @@ export function Levantamento() {
 
   useEffect(() => {
     if (reserva && reserva.linhas.length > 0 && !linhaSelecionadaId) {
-      setLinhaSelecionadaId(reserva.linhas[0].id);
+      const primeiraLinhaValida = reserva.linhas.find(l => l.estado?.toUpperCase() !== 'CANCELADA');
+      if (primeiraLinhaValida) setLinhaSelecionadaId(primeiraLinhaValida.id);
     }
   }, [reserva]);
 
@@ -159,7 +160,7 @@ export function Levantamento() {
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Seletor de Item da Reserva */}
-        {reserva && reserva.linhas.length > 1 && (
+        {reserva && reserva.linhas.filter(l => l.estado?.toUpperCase() !== 'CANCELADA').length > 1 && (
           <div className="bg-white rounded-xl shadow-sm p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Selecione o Item a Levantar</h2>
             <select
@@ -167,11 +168,13 @@ export function Levantamento() {
               onChange={(e) => setLinhaSelecionadaId(Number(e.target.value))}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             >
-              {reserva.linhas.map(linha => (
-                <option key={linha.id} value={linha.id}>
-                  {linha.anuncio.figurino.nome} (De {new Date(linha.data_inicio).toLocaleDateString('pt-PT')} a {new Date(linha.data_fim).toLocaleDateString('pt-PT')}) - {linha.estado}
-                </option>
-              ))}
+              {reserva.linhas
+                .filter(linha => linha.estado?.toUpperCase() !== 'CANCELADA')
+                .map(linha => (
+                  <option key={linha.id} value={linha.id}>
+                    {linha.anuncio.figurino.nome} (De {new Date(linha.data_inicio).toLocaleDateString('pt-PT')} a {new Date(linha.data_fim).toLocaleDateString('pt-PT')}) - {linha.estado}
+                  </option>
+                ))}
             </select>
           </div>
         )}

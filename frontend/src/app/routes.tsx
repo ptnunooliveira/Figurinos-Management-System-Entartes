@@ -64,7 +64,7 @@ export const router = createBrowserRouter([
       { path: "anuncios-escola", element: s(<AnunciosEscola />) },
       { path: "reservas", element: s(<Reservas />) },
       { path: "levantamento/:id", element: s(<Levantamento />) },
-      { path: "devolucao/:id", element: s(<Devolucao />) },
+      { path: "devolucao/:id/:linhaId", element: s(<Devolucao />) },
       { path: "ocorrencias", element: s(<Ocorrencias />) },
       { path: "marketplace", element: s(<Marketplace />) },
       { path: "perfil", element: s(<Perfil />) },

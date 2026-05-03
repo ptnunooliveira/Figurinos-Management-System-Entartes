@@ -10,7 +10,7 @@ import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 export function Devolucao() {
-  const { id } = useParams();
+  const { id, linhaId } = useParams();
   const navigate = useNavigate();
   const assinaturaFuncionarioRef = useRef<SignatureCanvas>(null);
   const assinaturaClienteRef = useRef<SignatureCanvas>(null);
@@ -37,17 +37,12 @@ export function Devolucao() {
   const [idEstadoLevantamento, setIdEstadoLevantamento] = useState<number | null>(null);
   const [observacoesGerais, setObservacoesGerais] = useState("");
   const [ocorrenciaAlerta, setOcorrenciaAlerta] = useState<{ id: number } | null>(null);
-  const [linhaSelecionadaId, setLinhaSelecionadaId] = useState<number | null>(null);
 
-  useEffect(() => {
-    if (reserva && reserva.linhas.length > 0 && !linhaSelecionadaId) {
-      setLinhaSelecionadaId(reserva.linhas[0].id);
-    }
-  }, [reserva]);
+  const linhaSelecionadaId = linhaId ? Number(linhaId) : null;
 
   useEffect(() => {
     if (!reserva || !linhaSelecionadaId) return;
-    
+
     const linha = reserva.linhas.find(l => l.id === linhaSelecionadaId);
     if (!linha) return;
 
@@ -67,7 +62,7 @@ export function Devolucao() {
     setIdEstadoLevantamento(idLev);
     setIdEstadoFigurinoSel(idLev ?? estadosCondicao[0]?.id ?? null);
     setObservacoesGerais("");
-    setOcorrenciaAlerta(null); // Reseta alerta se trocar de peça
+    setOcorrenciaAlerta(null);
   }, [linhaSelecionadaId, reserva, checklistsData, estadosCondicao]);
 
   const linhaReserva = reserva?.linhas.find(l => l.id === linhaSelecionadaId);
@@ -207,24 +202,6 @@ export function Devolucao() {
 
       {!ocorrenciaAlerta && (
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Seletor de Item da Reserva */}
-          {reserva && reserva.linhas.length > 1 && (
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Selecione o Item a Devolver</h2>
-              <select
-                value={linhaSelecionadaId ?? ""}
-                onChange={(e) => setLinhaSelecionadaId(Number(e.target.value))}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-              >
-                {reserva.linhas.map(linha => (
-                  <option key={linha.id} value={linha.id}>
-                    {linha.anuncio.figurino.nome} (De {new Date(linha.data_inicio).toLocaleDateString('pt-PT')} a {new Date(linha.data_fim).toLocaleDateString('pt-PT')}) - {linha.estado}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
           <div className="bg-white rounded-xl shadow-sm p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Informacao do Figurino</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

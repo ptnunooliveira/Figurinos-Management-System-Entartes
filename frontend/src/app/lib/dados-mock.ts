@@ -7,7 +7,7 @@ export interface Utilizador {
   contacto: string;
   data_registo: string;
   ativo: boolean;
-  tipo: 'aluno' | 'funcionario' | 'encarregado';
+  tipo: 'aluno' | 'funcionario' | 'admin';
   perfil?: string;
   numero_aluno?: number;
   n_mecanografico?: number;
@@ -32,6 +32,7 @@ export interface Figurino {
   imagens: string[];
   acessorios: Acessorio[];
   valor_diario: number;
+  quantidade_stock?: number;
 }
 
 export interface AnuncioEscola {

@@ -48,7 +48,7 @@ export function Layout() {
 
   const navegacaoAluno = [
     { nome: "Painel", href: "/", icon: Home },
-    { nome: "Figurinos Escola", href: "/figurinos", icon: Shirt },
+    { nome: "Anúncios Escola", href: "/anuncios-escola", icon: Megaphone },
     { nome: "Reservas", href: "/reservas", icon: Calendar },
     { nome: "Ocorrências", href: "/ocorrencias", icon: AlertTriangle },
     { nome: "Marketplace", href: "/marketplace", icon: ShoppingBag },
@@ -56,7 +56,9 @@ export function Layout() {
     { nome: "Perfil", href: "/perfil", icon: User },
   ];
 
-  const navegacao = utilizadorAtual?.tipo === "funcionario"
+  const isStaff = utilizadorAtual?.tipo === "funcionario" || utilizadorAtual?.tipo === "admin";
+
+  const navegacao = isStaff
     ? navegacaoFuncionario
     : navegacaoAluno;
 
@@ -154,7 +156,7 @@ export function Layout() {
       {/* Conteúdo Principal */}
       <div className="flex-1 flex flex-col min-h-screen relative lg:min-h-0 lg:h-screen">
         {/* Botão Carrinho Desktop (Superior Direito) */}
-        {(utilizadorAtual?.tipo === "aluno" || utilizadorAtual?.tipo === "funcionario") && (
+        {(utilizadorAtual?.tipo === "aluno" || isStaff) && (
           <div className="hidden lg:block absolute top-6 right-8 z-40">
             <Link to="/carrinho" className="relative p-3 bg-white border border-gray-200 shadow-sm rounded-full flex items-center justify-center hover:bg-fig-purple/5 hover:border-fig-purple/30 hover:text-fig-purple transition-all text-gray-600" title="Ver Carrinho">
               <ShoppingCart className="w-6 h-6" />
@@ -182,7 +184,7 @@ export function Layout() {
               </Link>
 
               <div className="flex items-center gap-2">
-                {(utilizadorAtual?.tipo === "aluno" || utilizadorAtual?.tipo === "funcionario") && (
+                {(utilizadorAtual?.tipo === "aluno" || isStaff) && (
                   <Link to="/carrinho" className="relative p-2 text-gray-600 hover:text-fig-purple transition-colors">
                     <ShoppingCart className="w-6 h-6" />
                     {totalItems > 0 && (

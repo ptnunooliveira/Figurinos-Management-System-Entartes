@@ -10,7 +10,7 @@ type FiltroExportado = 'todos' | 'sim' | 'nao';
 
 export function Faturacao() {
   const utilizadorAtual = getUtilizadorAtual();
-  const isFuncionario = utilizadorAtual?.tipo === 'funcionario';
+  const isFuncionario = utilizadorAtual?.tipo === 'funcionario' || utilizadorAtual?.tipo === 'admin';
 
   const [contaCorrente, setContaCorrente] = useState<ContaCorrente[]>([]);
   const [selecionados, setSelecionados] = useState<Set<number>>(new Set());

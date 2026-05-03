@@ -145,20 +145,22 @@ const criarChecklist = async (idFuncionario, dadosChecklist, idReserva) => {
         const ID_ESTADO_RESERVA_EM_CURSO = 3;
         const ID_ESTADO_LINHA_EM_CURSO = 3;
 
+        const idsLinhasChecklist = dadosChecklist.itens.map(item => parseInt(item.id_linha_reserva));
+
         await prisma.linha_reserva.updateMany({
-            where: { id_reserva: idReserva, id_estado_linha_reserva: { not: 5 } },
+            where: { id: { in: idsLinhasChecklist }, id_estado_linha_reserva: { not: 5 } },
             data: { id_estado_linha_reserva: ID_ESTADO_LINHA_EM_CURSO }
         });
 
         await prisma.reserva.update({
-            where: {id: idReserva },
+            where: { id: idReserva },
             data: {
                 id_estado: ID_ESTADO_RESERVA_EM_CURSO,
                 id_funcionario: idFuncionario
             }
         });
 
-        console.log(`Automação: Reserva ${dadosChecklist.id_reserva} passou a EM CURSO.`);
+        console.log(`Automação: Reserva ${idReserva} passou a EM CURSO.`);
     }
 
     // Checklist de devolução
@@ -204,15 +206,30 @@ const criarChecklist = async (idFuncionario, dadosChecklist, idReserva) => {
             select: { id_estado_linha_reserva: true }
         });
 
-        const tudoDevolvido = todasAsLinhas.every((linha) =>
+        const ID_ESTADO_LINHA_CANCELADA = 5;
+
+        const tudoTerminado = todasAsLinhas.every((linha) =>
+            linha.id_estado_linha_reserva === ID_ESTADO_LINHA_CONCLUIDA ||
+            linha.id_estado_linha_reserva === ID_ESTADO_LINHA_CANCELADA
+        );
+        const algumaConcluida = todasAsLinhas.some((linha) =>
             linha.id_estado_linha_reserva === ID_ESTADO_LINHA_CONCLUIDA
         );
 
-        if(tudoDevolvido){
+        if (tudoTerminado && algumaConcluida) {
             await prisma.reserva.update({
                 where: { id: idReserva },
                 data: {
                     id_estado: ID_ESTADO_RESERVA_CONCLUIDA,
+                    id_funcionario: idFuncionario
+                }
+            });
+        } else if (tudoTerminado && !algumaConcluida) {
+            // Todas canceladas — marcar reserva como cancelada
+            await prisma.reserva.update({
+                where: { id: idReserva },
+                data: {
+                    id_estado: ID_ESTADO_LINHA_CANCELADA,
                     id_funcionario: idFuncionario
                 }
             });

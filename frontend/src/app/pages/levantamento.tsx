@@ -6,6 +6,7 @@ import { getUtilizadorAtual } from "../lib/auth";
 import { getReservaDetalhes, getEstadosCondicao, criarChecklist } from "../lib/services";
 import type { AuxiliarItem } from "../lib/services";
 import type { Reserva } from "../lib/dados-mock";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 export function Levantamento() {
@@ -15,9 +16,12 @@ export function Levantamento() {
   const assinaturaClienteRef = useRef<SignatureCanvas>(null);
   const utilizadorAtual = getUtilizadorAtual();
 
-  const [reserva, setReserva] = useState<Reserva | null>(null);
-  const [carregando, setCarregando] = useState(true);
-  const [estadosCondicao, setEstadosCondicao] = useState<AuxiliarItem[]>([]);
+  const { data: reserva = null, isFetching: carregando } = useQuery<Reserva | null>({
+    queryKey: ["reservaDetalhes", id],
+    queryFn: () => getReservaDetalhes(Number(id)),
+    enabled: !!id,
+  });
+  const { data: estadosCondicao = [] } = useQuery<AuxiliarItem[]>({ queryKey: ["estadosCondicao"], queryFn: getEstadosCondicao });
   const [checklist, setChecklist] = useState<Array<{
     id: number; nome: string; observacoes: string; verificado: boolean;
   }>>([]);
@@ -26,19 +30,11 @@ export function Levantamento() {
   const [linhaSelecionadaId, setLinhaSelecionadaId] = useState<number | null>(null);
 
   useEffect(() => {
-    if (!id) return;
-    Promise.all([
-      getReservaDetalhes(Number(id)),
-      getEstadosCondicao(),
-    ]).then(([r, estados]) => {
-      if (r && r.linhas.length > 0) {
-        setReserva(r);
-        setLinhaSelecionadaId(r.linhas[0].id);
-      }
-      setEstadosCondicao(estados);
-      setCarregando(false);
-    });
-  }, [id]);
+    if (reserva && reserva.linhas.length > 0 && !linhaSelecionadaId) {
+      const primeiraLinhaValida = reserva.linhas.find(l => l.estado?.toUpperCase() !== 'CANCELADA');
+      if (primeiraLinhaValida) setLinhaSelecionadaId(primeiraLinhaValida.id);
+    }
+  }, [reserva]);
 
   // Atualiza os detalhes exibidos sempre que a linha selecionada muda
   useEffect(() => {
@@ -164,7 +160,7 @@ export function Levantamento() {
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Seletor de Item da Reserva */}
-        {reserva && reserva.linhas.length > 1 && (
+        {reserva && reserva.linhas.filter(l => l.estado?.toUpperCase() !== 'CANCELADA').length > 1 && (
           <div className="bg-white rounded-xl shadow-sm p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Selecione o Item a Levantar</h2>
             <select
@@ -172,11 +168,13 @@ export function Levantamento() {
               onChange={(e) => setLinhaSelecionadaId(Number(e.target.value))}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             >
-              {reserva.linhas.map(linha => (
-                <option key={linha.id} value={linha.id}>
-                  {linha.anuncio.figurino.nome} (De {new Date(linha.data_inicio).toLocaleDateString('pt-PT')} a {new Date(linha.data_fim).toLocaleDateString('pt-PT')}) - {linha.estado}
-                </option>
-              ))}
+              {reserva.linhas
+                .filter(linha => linha.estado?.toUpperCase() !== 'CANCELADA')
+                .map(linha => (
+                  <option key={linha.id} value={linha.id}>
+                    {linha.anuncio.figurino.nome} (De {new Date(linha.data_inicio).toLocaleDateString('pt-PT')} a {new Date(linha.data_fim).toLocaleDateString('pt-PT')}) - {linha.estado}
+                  </option>
+                ))}
             </select>
           </div>
         )}

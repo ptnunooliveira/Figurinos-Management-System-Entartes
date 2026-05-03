@@ -1,24 +1,21 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Search, Filter, Shirt, Plus, Trash2, Eye, Edit, Calendar, X } from "lucide-react";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { getUtilizadorAtual } from "../lib/auth";
 import {
   getFigurinosRaw, getAnunciosEscola, eliminarFigurino, atualizarFigurino, criarAcessorio,
   getCategorias, getTiposFigurino, getSexos, getEstadosCondicao, getAcessorios,
   type FigurinoAPI, type AnuncioEscolaAPI, type AuxiliarItem,
 } from "../lib/services";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCart } from "./CartContext";
 import { toast } from "sonner";
 
 export function Figurinos() {
   const utilizadorAtual = getUtilizadorAtual();
-  const [figurinos, setFigurinos] = useState<FigurinoAPI[]>([]);
-  const [anunciosEscola, setAnunciosEscola] = useState<AnuncioEscolaAPI[]>([]);
-  const [categorias, setCategorias] = useState<AuxiliarItem[]>([]);
-  const [tipos, setTipos] = useState<AuxiliarItem[]>([]);
-  const [sexos, setSexos] = useState<AuxiliarItem[]>([]);
-  const [estadosCondicao, setEstadosCondicao] = useState<AuxiliarItem[]>([]);
-  const [acessorios, setAcessorios] = useState<AuxiliarItem[]>([]);
+  const isStaff = utilizadorAtual?.tipo === 'funcionario' || utilizadorAtual?.tipo === 'admin';
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [termoPesquisa, setTermoPesquisa] = useState("");
   const [categoriaSelecionada, setCategoriaSelecionada] = useState<string>("todas");
   const [tipoSelecionado, setTipoSelecionado] = useState<string>("todos");
@@ -43,22 +40,18 @@ export function Figurinos() {
     tipo: "",
     sexo: "",
     estado: "",
+    quantidade_stock: "1",
   });
   const [acessoriosEditacao, setAcessoriosEditacao] = useState<number[]>([]);
   const { adicionarAoCarrinho } = useCart();
 
-  useEffect(() => {
-    getFigurinosRaw().then(setFigurinos);
-    getAnunciosEscola().then(setAnunciosEscola);
-  }, [utilizadorAtual?.tipo]);
-
-  useEffect(() => {
-    getCategorias().then(setCategorias);
-    getTiposFigurino().then(setTipos);
-    getSexos().then(setSexos);
-    getEstadosCondicao().then(setEstadosCondicao);
-    getAcessorios().then(setAcessorios);
-  }, []);
+  const { data: figurinos = [] } = useQuery<FigurinoAPI[]>({ queryKey: ["figurinos"], queryFn: getFigurinosRaw });
+  const { data: anunciosEscola = [] } = useQuery<AnuncioEscolaAPI[]>({ queryKey: ["anunciosEscola"], queryFn: getAnunciosEscola });
+  const { data: categorias = [] } = useQuery<AuxiliarItem[]>({ queryKey: ["categorias"], queryFn: getCategorias });
+  const { data: tipos = [] } = useQuery<AuxiliarItem[]>({ queryKey: ["tiposFigurino"], queryFn: getTiposFigurino });
+  const { data: sexos = [] } = useQuery<AuxiliarItem[]>({ queryKey: ["sexos"], queryFn: getSexos });
+  const { data: estadosCondicao = [] } = useQuery<AuxiliarItem[]>({ queryKey: ["estadosCondicao"], queryFn: getEstadosCondicao });
+  const { data: acessorios = [] } = useQuery<AuxiliarItem[]>({ queryKey: ["acessorios"], queryFn: getAcessorios });
 
   const handleCriarAcessorio = async () => {
     if (!nomeNovoAcessorio.trim()) return;
@@ -77,7 +70,7 @@ export function Figurinos() {
     try {
       await eliminarFigurino(id);
       toast.success(`Figurino "${descricao}" removido com sucesso!`);
-      setFigurinos(prev => prev.filter(f => f.id !== id));
+      queryClient.invalidateQueries({ queryKey: ["figurinos"] });
     } catch (err: any) {
       toast.error(err.message || "Erro ao remover figurino");
     }
@@ -104,6 +97,7 @@ export function Figurinos() {
       tipo: figurino.tipo_figurino?.id ? String(figurino.tipo_figurino.id) : "",
       sexo: figurino.sexo?.id ? String(figurino.sexo.id) : "",
       estado: figurino.estado_condicao?.id ? String(figurino.estado_condicao.id) : "",
+      quantidade_stock: String(figurino.quantidade_stock ?? 1),
     });
     setAcessoriosEditacao((figurino.figurino_acessorio ?? []).map((fa) => fa.id_acessorio));
     setMostrarModalEditar(true);
@@ -112,7 +106,7 @@ export function Figurinos() {
   const handleFecharEditar = () => {
     setMostrarModalEditar(false);
     setFigurinoEditando(null);
-    setFormEditacao({ titulo: "", descricao: "", tamanho: "", localizacao: "", categoria: "", tipo: "", sexo: "", estado: "" });
+    setFormEditacao({ titulo: "", descricao: "", tamanho: "", localizacao: "", categoria: "", tipo: "", sexo: "", estado: "", quantidade_stock: "1" });
     setAcessoriosEditacao([]);
   };
 
@@ -140,15 +134,28 @@ export function Figurinos() {
         id_tipo: formEditacao.tipo ? parseInt(formEditacao.tipo) : null,
         id_sexo: formEditacao.sexo ? parseInt(formEditacao.sexo) : null,
         id_estado_figurino: formEditacao.estado ? parseInt(formEditacao.estado) : null,
+        quantidade_stock: Math.max(0, parseInt(formEditacao.quantidade_stock) || 0),
         id_acessorios: acessoriosEditacao,
         substituir_acessorios: true,
       });
       toast.success("Figurino atualizado com sucesso!");
-      const figurinosAtualizados = await getFigurinosRaw();
-      setFigurinos(figurinosAtualizados);
+      queryClient.invalidateQueries({ queryKey: ["figurinos"] });
       handleFecharEditar();
     } catch (err: any) {
       toast.error(err.message || "Erro ao atualizar figurino");
+    }
+  };
+
+  const handleAtualizarStock = async (figurino: FigurinoAPI, valor: number) => {
+    const quantidade = Math.max(0, Math.floor(valor));
+    if ((figurino.quantidade_stock ?? 1) === quantidade) return;
+
+    try {
+      await atualizarFigurino(figurino.id, { quantidade_stock: quantidade });
+      toast.success("Stock atualizado com sucesso!");
+      queryClient.invalidateQueries({ queryKey: ["figurinos"] });
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao atualizar stock");
     }
   };
 
@@ -172,7 +179,7 @@ export function Figurinos() {
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
   };
 
-  const handleConfirmarReserva = async () => {
+  const handleConfirmarReserva = async (irParaCarrinho = false) => {
     if (!figurinoSelecionado || !dataInicio || !dataFim) {
       toast.error("Por favor, preencha todas as datas");
       return;
@@ -194,15 +201,20 @@ export function Figurinos() {
       return;
     }
 
-    adicionarAoCarrinho({
+    const adicionado = adicionarAoCarrinho({
       id_anuncio: anuncio.id,
       figurino_nome: figurinoSelecionado.titulo ?? figurinoSelecionado.descricao ?? "Figurino",
       datainicio: dataInicio,
       datafim: dataFim,
     });
 
+    if (!adicionado) return;
+
     toast.success("Adicionado ao carrinho com sucesso!");
     handleFecharModalReserva();
+    if (irParaCarrinho) {
+      navigate("/carrinho");
+    }
   };
 
   const figurinosFiltrados = figurinos.filter((figurino) => {
@@ -238,7 +250,7 @@ export function Figurinos() {
 
   const categoriasUnicas = [...new Set(figurinos.map((f) => f.categoria?.nomecategoria ?? '').filter(Boolean))].sort();
   const tiposUnicos = [...new Set(figurinos.map((f) => f.tipo_figurino?.nome ?? '').filter(Boolean))].sort();
-  const tamanhosUnicos = [...new Set(figurinos.map((f) => f.tamanho ?? '').filter(Boolean))].sort();
+  const tamanhosUnicos = ["XS", "S", "M", "L", "XL", "XXL"];
   const generosUnicos = [...new Set(figurinos.map((f) => f.sexo?.nome ?? '').filter(Boolean))].sort();
   const estadosUnicos = [...new Set(figurinos.map((f) => f.estado_condicao?.nome ?? '').filter(Boolean))].sort();
 
@@ -250,7 +262,7 @@ export function Figurinos() {
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Catálogo de Figurinos</h1>
           <p className="text-gray-600">Explore a nossa coleção completa de figurinos disponíveis</p>
         </div>
-        {(utilizadorAtual?.tipo === 'funcionario' || utilizadorAtual?.perfil === 'ADMIN') && (
+        {isStaff && (
           <div className="flex items-center gap-3">
             <button
               onClick={() => setMostrarModalAcessorio(true)}
@@ -424,8 +436,40 @@ export function Figurinos() {
                   )}
 
                   <div className="mt-auto pt-3 border-t">
-                    {utilizadorAtual?.tipo === 'funcionario' || utilizadorAtual?.perfil === 'ADMIN' ? (
-                      <div className="flex items-center justify-end gap-4 text-sm">
+                    {isStaff ? (
+                      <div className="flex items-center justify-between gap-4 text-sm flex-wrap">
+                        <div className="flex items-center gap-2">
+                          <span className="text-gray-600 font-medium">Stock</span>
+                          <button
+                            onClick={() => handleAtualizarStock(figurino, (figurino.quantidade_stock ?? 1) - 1)}
+                            className="w-8 h-8 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-40"
+                            disabled={(figurino.quantidade_stock ?? 1) <= 0}
+                            title="Diminuir stock"
+                          >
+                            -
+                          </button>
+                          <input
+                            type="number"
+                            min="0"
+                            defaultValue={figurino.quantidade_stock ?? 1}
+                            onBlur={(e) => handleAtualizarStock(figurino, parseInt(e.target.value) || 0)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.currentTarget.blur();
+                              }
+                            }}
+                            className="w-20 px-2 py-1.5 border border-gray-300 rounded-lg text-center"
+                            title="Quantidade em stock"
+                          />
+                          <button
+                            onClick={() => handleAtualizarStock(figurino, (figurino.quantidade_stock ?? 1) + 1)}
+                            className="w-8 h-8 border border-gray-300 rounded-lg hover:bg-gray-50"
+                            title="Aumentar stock"
+                          >
+                            +
+                          </button>
+                        </div>
+                        <div className="flex items-center justify-end gap-4">
                         <button
                           onClick={() => handleAbrirVer(figurino)}
                           className="flex items-center gap-1.5 text-gray-600 hover:text-gray-900 transition-colors"
@@ -447,6 +491,7 @@ export function Figurinos() {
                           <Trash2 className="w-4 h-4" />
                           Remover
                         </button>
+                        </div>
                       </div>
                     ) : (
                       <div className="flex items-center justify-between flex-wrap gap-4">
@@ -560,11 +605,18 @@ export function Figurinos() {
                 Cancelar
               </button>
               <button
-                onClick={handleConfirmarReserva}
+                onClick={() => handleConfirmarReserva()}
+                disabled={!dataInicio || !dataFim}
+                className="px-6 py-3 border border-fig-purple text-fig-purple bg-white hover:bg-fig-purple/5 rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Adicionar ao Carrinho
+              </button>
+              <button
+                onClick={() => handleConfirmarReserva(true)}
                 disabled={!dataInicio || !dataFim}
                 className="px-6 py-3 bg-gradient-to-r from-fig-purple to-fig-magenta hover:shadow-lg text-white rounded-lg transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Adicionar ao Carrinho
+                Finalizar reserva
               </button>
             </div>
           </div>
@@ -620,6 +672,12 @@ export function Figurinos() {
                 <div>
                   <label className="text-sm font-medium text-gray-700">Estado</label>
                   <p className="mt-1 text-gray-900">{figurinoSelecionado.estado_condicao?.nome ?? '—'}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Stock total</label>
+                  <p className="mt-1 text-gray-900">{figurinoSelecionado.quantidade_stock ?? 1}</p>
                 </div>
               </div>
               <div>
@@ -696,6 +754,19 @@ export function Figurinos() {
                     type="text"
                     value={formEditacao.localizacao}
                     onChange={(e) => setFormEditacao({...formEditacao, localizacao: e.target.value})}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Stock</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={formEditacao.quantidade_stock}
+                    onChange={(e) => setFormEditacao({...formEditacao, quantidade_stock: e.target.value})}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   />
                 </div>

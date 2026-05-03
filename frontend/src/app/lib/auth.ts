@@ -3,8 +3,9 @@ import { apiFetch, setToken, removeToken } from './api';
 
 const AUTH_KEY = 'fighappens_auth';
 
-function perfilToTipo(perfil: string): 'aluno' | 'funcionario' | 'encarregado' {
+function perfilToTipo(perfil: string): 'aluno' | 'funcionario' | 'admin' {
   if (perfil === 'ALUNO') return 'aluno';
+  if (perfil === 'ADMIN') return 'admin';
   return 'funcionario';
 }
 

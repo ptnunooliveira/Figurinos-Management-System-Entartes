@@ -162,12 +162,12 @@ const obterDetalhesReserva = async (idReserva) => {
 
 
 // Foi adicionado o parâmetro "tx" (transaction) com valor por defeito "prisma" para manter compatibilidade
-const verificarDisponibilidade = async (idAnuncio, dataInicioPedida, dataFimPedida, tx = prisma) => {
+const verificarDisponibilidade = async (idAnuncio, dataInicioPedida, dataFimPedida, quantidadeStock = 1, tx = prisma) => {
 
     const inicio = new Date(dataInicioPedida);
     const fim = new Date(dataFimPedida);
 
-    const conflito = await tx.linha_reserva.findFirst({
+    const reservasSobrepostas = await tx.linha_reserva.count({
         where: {
             id_anuncio: idAnuncio,
             datainicio: { lte: fim },
@@ -176,8 +176,34 @@ const verificarDisponibilidade = async (idAnuncio, dataInicioPedida, dataFimPedi
         }
     });
 
-    return conflito;
+    return reservasSobrepostas >= Math.max(0, quantidadeStock || 0);
 }
+
+const obterNomeFigurinoPorAnuncio = async (idAnuncio, tx = prisma) => {
+
+    const anuncio = await tx.anuncio_escola.findUnique({
+        where: { id: idAnuncio },
+        include: {
+            figurino: {
+                select: { titulo: true, descricao: true }
+            }
+        }
+    });
+
+    return anuncio?.figurino?.titulo || anuncio?.figurino?.descricao || `anÃºncio ${idAnuncio}`;
+};
+
+const obterStockFigurinoPorAnuncio = async (idAnuncio, tx = prisma) => {
+    const rows = await tx.$queryRawUnsafe(
+        `SELECT COALESCE(f.quantidade_stock, 1) AS quantidade_stock
+         FROM anuncio_escola ae
+         LEFT JOIN figurino f ON f.id = ae.id_figurino
+         WHERE ae.id = ${Number(idAnuncio)}
+         LIMIT 1`
+    );
+
+    return Number(rows?.[0]?.quantidade_stock ?? 1);
+};
 
 
 /////////////////////////////////////////////////////////////////////////////////
@@ -198,6 +224,17 @@ const criarReserva = async (idUtilizador, idFuncionario, dadosBody) => {
     }
 
     // Estado inicial é sempre 'PENDENTE', independentemente de quem cria a reserva
+    const aluno = await prisma.utilizador.findUnique({
+        where: { id: idUtilizador },
+        select: { id: true, perfil: true, ativo: true }
+    });
+
+    if (!aluno || aluno.perfil !== 'ALUNO' || aluno.ativo === false) {
+        const erro = new Error("O ID indicado nÃ£o corresponde a um aluno ativo.");
+        erro.status = 400;
+        throw erro;
+    }
+
     const ID_ESTADO_RESERVA = 1;
     const ID_ESTADO_LINHA_RESERVA = 1;
 
@@ -208,7 +245,8 @@ const criarReserva = async (idUtilizador, idFuncionario, dadosBody) => {
         const fimAtual = new Date(linhaAtual.datafim);
 
         if (inicioAtual > fimAtual) {
-            const erro = new Error(`A data de início não pode ser posterior à data de fim para o anúncio ${linhaAtual.id_anuncio}.`);
+            const nomeFigurino = await obterNomeFigurinoPorAnuncio(linhaAtual.id_anuncio);
+            const erro = new Error(`A data de início não pode ser posterior à data de fim para o figurino "${nomeFigurino}".`);
             erro.status = 400;
             throw erro;
         }
@@ -221,7 +259,8 @@ const criarReserva = async (idUtilizador, idFuncionario, dadosBody) => {
 
                 // Se o mesmo anúncio estiver em conflito de datas no próprio pedido do carrinho
                 if (inicioAtual <= fimOutra && fimAtual >= inicioOutra) {
-                    const erro = new Error(`Conflito no carrinho: O anúncio com o ID ${linhaAtual.id_anuncio} tem datas sobrepostas no mesmo pedido.`);
+                    const nomeFigurino = await obterNomeFigurinoPorAnuncio(linhaAtual.id_anuncio);
+                    const erro = new Error(`Conflito no carrinho: o figurino "${nomeFigurino}" tem datas sobrepostas no mesmo pedido.`);
                     erro.status = 409;
                     throw erro;
                 }
@@ -236,22 +275,29 @@ const criarReserva = async (idUtilizador, idFuncionario, dadosBody) => {
         const linhasComPreco = [];
 
         for(const linha of linhasArray){
-            const ocupado = await verificarDisponibilidade(linha.id_anuncio, linha.datainicio, linha.datafim, tx);
-
-            if(ocupado){
-                const erro = new Error(`O anúncio com o ID ${linha.id_anuncio} já se encontra reservado para as datas selecionadas.`);
-                erro.status = 409;
-                throw erro;
-            }
-
             // Obter os detalhes do anúncio para "congelar" o preço no momento da reserva (valordiarioaluguer)
             const anuncio = await tx.anuncio_escola.findUnique({
-                where: { id: linha.id_anuncio }
+                where: { id: linha.id_anuncio },
+                include: {
+                    figurino: {
+                        select: { titulo: true, descricao: true }
+                    }
+                }
             });
 
             if (!anuncio) {
                 const erro = new Error(`O anúncio com o ID ${linha.id_anuncio} não foi encontrado.`);
                 erro.status = 404;
+                throw erro;
+            }
+
+            const quantidadeStock = await obterStockFigurinoPorAnuncio(linha.id_anuncio, tx);
+            const ocupado = await verificarDisponibilidade(linha.id_anuncio, linha.datainicio, linha.datafim, quantidadeStock, tx);
+
+            if(ocupado){
+                const nomeFigurino = anuncio.figurino?.titulo || anuncio.figurino?.descricao || `anúncio ${linha.id_anuncio}`;
+                const erro = new Error(`O figurino "${nomeFigurino}" já se encontra reservado para as datas selecionadas.`);
+                erro.status = 409;
                 throw erro;
             }
 

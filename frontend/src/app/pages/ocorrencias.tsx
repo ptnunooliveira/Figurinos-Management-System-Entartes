@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import {
   AlertTriangle,
   CheckCircle,
@@ -33,6 +33,7 @@ import {
   type AuxiliarItem,
 } from "../lib/services";
 import { getUtilizadorAtual } from "../lib/auth";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 // Ids da tabela estado_ocorrencia (sincronizados com a BD)
@@ -57,10 +58,14 @@ const TITULOS_ACAO: Record<AcaoTipo, string> = {
 
 export function Ocorrencias() {
   const utilizador = getUtilizadorAtual();
-  const isFuncionario = utilizador?.tipo === "funcionario";
+  const isFuncionario = utilizador?.tipo === "funcionario" || utilizador?.tipo === "admin";
 
-  const [ocorrencias, setOcorrencias] = useState<OcorrenciaDetalhada[]>([]);
-  const [carregando, setCarregando] = useState(true);
+  const queryClient = useQueryClient();
+  const ocorrenciasQueryKey = isFuncionario ? ["ocorrencias"] : ["minhasOcorrencias"];
+  const { data: ocorrencias = [], isFetching: carregando } = useQuery<OcorrenciaDetalhada[]>({
+    queryKey: ocorrenciasQueryKey,
+    queryFn: isFuncionario ? getOcorrencias : getMinhasOcorrencias,
+  });
   const [selecionada, setSelecionada] = useState<OcorrenciaDetalhada | null>(null);
 
   // Filtros
@@ -96,36 +101,18 @@ export function Ocorrencias() {
   const [figTamanho, setFigTamanho] = useState("");
   const [figLocalizacao, setFigLocalizacao] = useState("");
   const [figEstadoId, setFigEstadoId] = useState<number | null>(null);
-  const [estadosCondicao, setEstadosCondicao] = useState<AuxiliarItem[]>([]);
+  const { data: estadosCondicao = [] } = useQuery<AuxiliarItem[]>({ queryKey: ["estadosCondicao"], queryFn: getEstadosCondicao });
   const [submetendoFigurino, setSubmetendoFigurino] = useState(false);
 
-  useEffect(() => {
-    getEstadosCondicao().then(setEstadosCondicao);
-  }, []);
-
-  const carregar = () => {
-    setCarregando(true);
-    const fn = isFuncionario ? getOcorrencias : getMinhasOcorrencias;
-    fn()
-      .then(setOcorrencias)
-      .finally(() => setCarregando(false));
-  };
-
-  useEffect(() => {
-    carregar();
-  }, [isFuncionario]);
-
   const recarregarSelecionada = async (id: number) => {
+    queryClient.invalidateQueries({ queryKey: ocorrenciasQueryKey });
     if (isFuncionario) {
       const detalhe = await getOcorrencia(id);
       setSelecionada(detalhe);
     } else {
       const lista = await getMinhasOcorrencias();
-      setOcorrencias(lista);
       setSelecionada(lista.find((o) => o.id === id) ?? null);
-      return;
     }
-    carregar();
   };
 
   const corEstado = (estado: string) => {

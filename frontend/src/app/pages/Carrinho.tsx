@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useCart } from './CartContext';
 import { Trash2, ShoppingCart, Calendar } from 'lucide-react';
 import { criarReserva, getUtilizadores } from '../lib/services';
 import { getUtilizadorAtual } from '../lib/auth';
+import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
 export function Carrinho() {
@@ -10,13 +11,24 @@ export function Carrinho() {
   const { items, removerDoCarrinho, limparCarrinho } = useCart();
   const [submetendo, setSubmetendo] = useState(false);
   const [alunoSelecionado, setAlunoSelecionado] = useState("");
-  const [utilizadores, setUtilizadores] = useState<any[]>([]);
+  const isFuncionario = utilizadorAtual?.tipo === 'funcionario' || utilizadorAtual?.tipo === 'admin';
 
-  useEffect(() => {
-    if (utilizadorAtual?.tipo === 'funcionario') {
-      getUtilizadores().then(setUtilizadores).catch(console.error);
-    }
-  }, [utilizadorAtual?.tipo]);
+  const { data: utilizadores = [] } = useQuery({
+    queryKey: ["utilizadores"],
+    queryFn: getUtilizadores,
+    enabled: isFuncionario,
+  });
+
+  const formatarErroReserva = (mensagem: string) => {
+    const match = mensagem.match(/O an[uú]ncio com o ID (\d+) j[aá] se encontra reservado para as datas selecionadas/i);
+    if (!match) return mensagem;
+
+    const idAnuncio = Number(match[1]);
+    const item = items.find((i) => i.id_anuncio === idAnuncio);
+    if (!item) return mensagem;
+
+    return `O figurino "${item.figurino_nome}" já se encontra reservado para as datas selecionadas.`;
+  };
 
   const handleFinalizarReserva = async () => {
     if (items.length === 0) {
@@ -24,7 +36,7 @@ export function Carrinho() {
       return;
     }
 
-    if (utilizadorAtual?.tipo === 'funcionario' && !alunoSelecionado) {
+    if (isFuncionario && !alunoSelecionado) {
       toast.error("Por favor, selecione um aluno para a reserva.");
       return;
     }
@@ -42,14 +54,14 @@ export function Carrinho() {
       // O backend usará o ID do utilizador autenticado (a partir do token).
       await criarReserva(
         linhasParaReserva,
-        utilizadorAtual?.tipo === 'funcionario' ? parseInt(alunoSelecionado) : undefined
+        isFuncionario ? parseInt(alunoSelecionado) : undefined
       );
 
       toast.success("Reserva criada com sucesso!");
       limparCarrinho();
     } catch (error: any) {
       // A função de serviço (apiFetch) já deve tratar o erro e lançar uma exceção com a mensagem correta.
-      toast.error(error.message || "Erro ao criar a reserva.");
+      toast.error(formatarErroReserva(error.message || "Erro ao criar a reserva."));
     } finally {
       setSubmetendo(false);
     }
@@ -103,18 +115,18 @@ export function Carrinho() {
               </div>
             ))}
 
-          {utilizadorAtual?.tipo === 'funcionario' && (
+          {isFuncionario && (
             <div className="pt-4 border-t">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Aluno *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">ID do aluno *</label>
               <select
                 value={alunoSelecionado}
                 onChange={(e) => setAlunoSelecionado(e.target.value)}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 required
               >
-                <option value="">Selecione um aluno</option>
+                <option value="">Selecione o ID do aluno</option>
                 {utilizadores.map((u) => (
-                  <option key={u.id} value={u.id}>{u.nome}</option>
+                  <option key={u.id} value={u.id}>#{u.id} - {u.nome}</option>
                 ))}
               </select>
             </div>

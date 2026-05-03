@@ -14,6 +14,7 @@
 
 const anunciosEscolaService = require('../services/anunciosEscolaService');
 
+
 // Função do controller responsável por criar um anúncio da escola
 const criarAnuncioEscola = async (req, res) => {
     try {

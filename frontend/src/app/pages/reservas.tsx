@@ -1,34 +1,33 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Calendar, Clock, CheckCircle, XCircle, AlertCircle, Shirt, ClipboardCheck, PackageOpen, Search, Filter, Ban, CheckCheck } from "lucide-react";
 import { Link } from "react-router";
 import { getUtilizadorAtual } from "../lib/auth";
 import { getReservas, getMinhasReservas, cancelarReserva, atualizarEstadoReserva, atualizarEstadoLinhaReserva } from "../lib/services";
 import type { Reserva } from "../lib/dados-mock";
 import { calcularDias, formatarMoeda } from "../lib/utils";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 export function Reservas() {
   const utilizadorAtual = getUtilizadorAtual();
-  const [reservas, setReservas] = useState<Reserva[]>([]);
+  const queryClient = useQueryClient();
+  const isStaff = utilizadorAtual?.tipo === 'funcionario' || utilizadorAtual?.tipo === 'admin';
+  const queryKey = isStaff ? ["reservas"] : ["minhasReservas"];
+
   const [abaAtiva, setAbaAtiva] = useState<"ativas" | "historico">("ativas");
   const [termoPesquisa, setTermoPesquisa] = useState("");
   const [estadoSelecionado, setEstadoSelecionado] = useState<string>("todos");
-
-  const carregarReservas = () => {
-    const fn = utilizadorAtual?.tipo === 'funcionario' || utilizadorAtual?.perfil === 'ADMIN' ? getReservas : getMinhasReservas;
-    fn().then(setReservas);
-  };
-
-  useEffect(() => {
-    carregarReservas();
-  }, [utilizadorAtual?.tipo]);
+  const { data: reservas = [] } = useQuery<Reserva[]>({
+    queryKey,
+    queryFn: isStaff ? getReservas : getMinhasReservas,
+  });
 
   const handleCancelarReserva = async (id: number) => {
     if (!window.confirm("Tem a certeza que deseja cancelar esta reserva?")) return;
     try {
       await cancelarReserva(id);
       toast.success("Reserva cancelada com sucesso!");
-      carregarReservas();
+      queryClient.invalidateQueries({ queryKey });
     } catch (err: any) {
       toast.error(err.message || "Erro ao cancelar reserva");
     }
@@ -38,7 +37,7 @@ export function Reservas() {
     try {
       await atualizarEstadoLinhaReserva(idReserva, idLinha, 2);
       toast.success("Linha aprovada com sucesso!");
-      carregarReservas();
+      queryClient.invalidateQueries({ queryKey });
     } catch (err: any) {
       toast.error(err.message || "Erro ao aprovar linha");
     }
@@ -49,28 +48,41 @@ export function Reservas() {
     try {
       await atualizarEstadoLinhaReserva(idReserva, idLinha, 5);
       toast.success("Linha recusada com sucesso!");
-      carregarReservas();
+      queryClient.invalidateQueries({ queryKey });
     } catch (err: any) {
       toast.error(err.message || "Erro ao recusar linha");
     }
   };
 
+  const derivarEstadoReserva = (reserva: Reserva): string => {
+    const linhas = reserva.linhas ?? [];
+    if (linhas.length === 0) return reserva.estado ?? "PENDENTE";
+    const estados = linhas.map(l => l.estado?.toUpperCase() ?? "");
+    if (estados.every(e => e === "CANCELADA")) return "CANCELADA";
+    if (estados.every(e => e === "CONCLUIDA" || e === "CANCELADA")) return "CONCLUIDA";
+    if (estados.some(e => e === "ATRASADA")) return "ATRASADA";
+    if (estados.some(e => e === "EM CURSO")) return "EM CURSO";
+    if (estados.some(e => e === "CONFIRMADA")) return "CONFIRMADA";
+    return "PENDENTE";
+  };
+
   const sortDesc = (arr: Reserva[]) =>
     [...arr].sort((a, b) => (b.id ?? 0) - (a.id ?? 0));
 
-  const reservasAtivas = sortDesc(reservas.filter(r =>
-    r.estado === "CONFIRMADA" || r.estado === "EM CURSO" ||
-    r.estado === "PENDENTE"
-  ));
+  const reservasAtivas = sortDesc(reservas.filter(r => {
+    const estado = derivarEstadoReserva(r);
+    return estado === "CONFIRMADA" || estado === "EM CURSO" || estado === "PENDENTE";
+  }));
 
-  const reservasHistorico = sortDesc(reservas.filter(r =>
-    r.estado === "CONCLUIDA" || r.estado === "CANCELADA" ||
-    r.estado === "Devolvida" || r.estado === "Cancelada" || r.estado === "ATRASADA"
-  ));
+  const reservasHistorico = sortDesc(reservas.filter(r => {
+    const estado = derivarEstadoReserva(r);
+    return estado === "CONCLUIDA" || estado === "CANCELADA" || estado === "ATRASADA";
+  }));
 
   const reservasExibir = abaAtiva === "ativas" ? reservasAtivas : reservasHistorico;
 
   const reservasFiltradas = reservasExibir.filter(reserva => {
+    const estadoDerived = derivarEstadoReserva(reserva);
     const matchTermo =
       (reserva.id?.toString() || '').includes(termoPesquisa) ||
       (reserva.utilizador?.nome || '').toLowerCase().includes(termoPesquisa.toLowerCase()) ||
@@ -80,7 +92,7 @@ export function Reservas() {
         linha.anuncio?.figurino?.categoria?.toLowerCase().includes(termoPesquisa.toLowerCase()) ||
         linha.anuncio?.figurino?.tamanho?.toLowerCase().includes(termoPesquisa.toLowerCase())
       );
-    const matchEstado = estadoSelecionado === "todos" || reserva.estado === estadoSelecionado;
+    const matchEstado = estadoSelecionado === "todos" || estadoDerived === estadoSelecionado;
     return matchTermo && matchEstado;
   });
 
@@ -108,7 +120,7 @@ export function Reservas() {
       {/* Cabeçalho */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900 mb-0.5">
-          {utilizadorAtual?.tipo === 'funcionario' || utilizadorAtual?.perfil === 'ADMIN' ? 'Gestão de Reservas' : 'Minhas Reservas'}
+          {isStaff ? 'Gestão de Reservas' : 'Minhas Reservas'}
         </h1>
         <p className="text-gray-600 text-sm">Gerencie as reservas de figurinos</p>
       </div>
@@ -181,9 +193,9 @@ export function Reservas() {
       <div className="space-y-2">
         {reservasFiltradas.length > 0 ? (
           reservasFiltradas.map((reserva) => {
-            const eStaff = utilizadorAtual?.tipo === 'funcionario' || utilizadorAtual?.perfil === 'ADMIN';
+            const eStaff = isStaff;
             const eAtiva = abaAtiva === "ativas";
-            const estadoRes = reserva.estado?.toUpperCase();
+            const estadoRes = derivarEstadoReserva(reserva);
 
             return (
               <div key={reserva.id} className="bg-white rounded-xl shadow-sm overflow-hidden flex">
@@ -200,8 +212,8 @@ export function Reservas() {
                     {reserva.utilizador.nome}
                   </p>
                   <div className="mt-auto pt-1">
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getCorEstado(reserva.estado)}`}>
-                      {reserva.estado}
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getCorEstado(estadoRes)}`}>
+                      {estadoRes}
                     </span>
                   </div>
                 </div>
@@ -267,41 +279,25 @@ export function Reservas() {
                               </button>
                             </>
                           )}
-                          {eStaff && eAtiva && estadoRes === 'CONFIRMADA' && estadoLinha !== 'PENDENTE' && (
-                            <>
-                              <button
-                                onClick={() => {
-                                  if (window.confirm("O figurino não está conforme? Tem a certeza que deseja cancelar o pedido?")) {
-                                    atualizarEstadoReserva(reserva.id, 5)
-                                      .then(() => { toast.success("Reserva cancelada!"); carregarReservas(); })
-                                      .catch((err) => toast.error(err.message));
-                                  }
-                                }}
-                                className="flex items-center justify-center gap-1 w-24 py-1 text-xs rounded-lg border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 transition-colors whitespace-nowrap"
-                                title="Cancelar caso artigo não conforme"
-                              >
-                                <Ban className="w-3 h-3" />
-                                Cancelar
-                              </button>
-                              <Link
-                                to={`/levantamento/${reserva.id}`}
-                                className="flex items-center justify-center gap-1 w-24 py-1 text-xs rounded-lg border border-green-200 bg-green-50 text-green-700 hover:bg-green-100 transition-colors whitespace-nowrap"
-                              >
-                                <ClipboardCheck className="w-3 h-3" />
-                                Levantamento
-                              </Link>
-                            </>
-                          )}
-                          {eStaff && eAtiva && estadoRes === 'EM CURSO' && (
+                          {eStaff && eAtiva && estadoLinha === 'CONFIRMADA' && (
                             <Link
-                              to={`/devolucao/${reserva.id}`}
+                              to={`/levantamento/${reserva.id}`}
+                              className="flex items-center justify-center gap-1 w-24 py-1 text-xs rounded-lg border border-green-200 bg-green-50 text-green-700 hover:bg-green-100 transition-colors whitespace-nowrap"
+                            >
+                              <ClipboardCheck className="w-3 h-3" />
+                              Levantamento
+                            </Link>
+                          )}
+                          {eStaff && eAtiva && estadoLinha === 'EM CURSO' && (
+                            <Link
+                              to={`/devolucao/${reserva.id}/${linha.id}`}
                               className="flex items-center justify-center gap-1 w-24 py-1 text-xs rounded-lg border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors whitespace-nowrap"
                             >
                               <PackageOpen className="w-3 h-3" />
                               Devolução
                             </Link>
                           )}
-                          {!eStaff && eAtiva && (estadoRes === 'CONFIRMADA' || estadoRes === 'PENDENTE') && (
+                          {!eStaff && eAtiva && estadoLinha === 'PENDENTE' && (
                             <button
                               onClick={() => handleCancelarReserva(reserva.id)}
                               className="flex items-center justify-center gap-1 w-24 py-1 text-xs rounded-lg border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 transition-colors whitespace-nowrap"
@@ -326,12 +322,12 @@ export function Reservas() {
             </h3>
             <p className="text-sm text-gray-600 mb-4">
               {abaAtiva === "ativas"
-                ? (utilizadorAtual?.tipo === 'funcionario' || utilizadorAtual?.perfil === 'ADMIN')
+                ? isStaff
                   ? "Não há reservas ativas no momento."
                   : "Ainda não tem reservas ativas. Explore o catálogo!"
                 : "Ainda não há histórico de reservas."}
             </p>
-            {abaAtiva === "ativas" && utilizadorAtual?.tipo !== 'funcionario' && utilizadorAtual?.perfil !== 'ADMIN' && (
+            {abaAtiva === "ativas" && !isStaff && (
               <Link
                 to="/figurinos"
                 className="bg-purple-600 hover:bg-purple-700 text-white px-5 py-2 rounded-lg text-sm transition-colors inline-block"

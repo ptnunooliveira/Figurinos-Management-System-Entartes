@@ -27,6 +27,7 @@ const normalizarTexto = (value) => {
   return texto || null;
 };
 
+
 // Mapeia erros de domínio para códigos HTTP consistentes.
 const mapearErro = (res, error, mensagemGenerica) => {
   if (error.code === "P2025") {

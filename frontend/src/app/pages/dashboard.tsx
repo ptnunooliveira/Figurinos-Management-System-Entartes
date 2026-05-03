@@ -3,7 +3,7 @@ import { Calendar, Shirt, ShoppingBag, AlertCircle, Bell, Trash2 } from "lucide-
 import { Link } from "react-router";
 import { getUtilizadorAtual } from "../lib/auth";
 import { useQuery } from "@tanstack/react-query";
-import { getReservas, getMinhasReservas, getOcorrencias, getMarketplace, getMarketplaceGestao, getAnunciosEscola, getMarketplaceDoUtilizador, getPropostasCobranca, getMinhasOcorrencias } from "../lib/services";
+import { getReservas, getMinhasReservas, getOcorrencias, getMarketplace, getMarketplaceGestao, getMarketplaceDoUtilizador, getPropostasCobranca, getMinhasOcorrencias, getFigurinosRaw } from "../lib/services";
 import type { LinhaReserva } from "../lib/dados-mock";
 
 interface NotificacaoDashboard {
@@ -85,9 +85,9 @@ export function Dashboard() {
 
   // --- Queries ---
 
-  const { data: anunciosEscola = [] } = useQuery({
-    queryKey: ["anunciosEscola"],
-    queryFn: getAnunciosEscola,
+  const { data: figurinos = [] } = useQuery({
+    queryKey: ["figurinos"],
+    queryFn: getFigurinosRaw,
   });
 
   const { data: reservasFuncionario = [] } = useQuery({
@@ -191,9 +191,7 @@ export function Dashboard() {
 
   // --- Derived counts ---
 
-  const figurinosDisponiveis = anunciosEscola.filter(
-    (a) => a.estado_anuncio?.nome === "Disponível"
-  ).length;
+  const figurinosDisponiveis = figurinos.length;
 
   const reservasAtivas = isFuncionario
     ? reservasFuncionario.filter((r) => {

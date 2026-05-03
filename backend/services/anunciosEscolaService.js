@@ -82,6 +82,111 @@ const obterAnuncioEscolaPorId = async (id) => {
     });
 };
 
+const criarDataUTC = (valor) => {
+    const data = new Date(`${valor}T00:00:00.000Z`);
+    return Number.isNaN(data.getTime()) ? null : data;
+};
+
+const formatarData = (data) => data.toISOString().slice(0, 10);
+
+const adicionarDias = (data, dias) => {
+    const novaData = new Date(data);
+    novaData.setUTCDate(novaData.getUTCDate() + dias);
+    return novaData;
+};
+
+const obterDisponibilidadeAnuncio = async (id, dataInicio, dataFim) => {
+    const inicio = criarDataUTC(dataInicio);
+    const fim = criarDataUTC(dataFim);
+
+    if (!inicio || !fim || inicio > fim) {
+        const erro = new Error('Intervalo de datas invÃ¡lido.');
+        erro.status = 400;
+        throw erro;
+    }
+
+    const anuncio = await prisma.anuncio_escola.findUnique({
+        where: { id },
+        include: {
+            figurino: {
+                select: { id: true, titulo: true, descricao: true }
+            }
+        }
+    });
+
+    if (!anuncio) {
+        const erro = new Error('AnÃºncio nÃ£o encontrado.');
+        erro.status = 404;
+        throw erro;
+    }
+
+    const stockRows = await prisma.$queryRawUnsafe(
+        `SELECT COALESCE(f.quantidade_stock, 1) AS quantidade_stock
+         FROM anuncio_escola ae
+         LEFT JOIN figurino f ON f.id = ae.id_figurino
+         WHERE ae.id = ${Number(id)}
+         LIMIT 1`
+    );
+    const quantidadeStock = Math.max(0, Number(stockRows?.[0]?.quantidade_stock ?? 1));
+
+    const linhasReserva = await prisma.linha_reserva.findMany({
+        where: {
+            anuncio_escola: {
+                id_figurino: anuncio.id_figurino
+            },
+            datainicio: { lte: fim },
+            datafim: { gte: inicio },
+            OR: [
+                { id_estado_linha_reserva: null },
+                { id_estado_linha_reserva: { notIn: [4, 5] } }
+            ]
+        },
+        select: {
+            id: true,
+            id_anuncio: true,
+            datainicio: true,
+            datafim: true
+        }
+    });
+
+    const datas = [];
+    const datasIndisponiveis = [];
+
+    for (let cursor = new Date(inicio); cursor <= fim; cursor = adicionarDias(cursor, 1)) {
+        const ocupadas = linhasReserva.filter((linha) => {
+            if (!linha.datainicio || !linha.datafim) return false;
+            const linhaInicio = new Date(linha.datainicio);
+            const linhaFim = new Date(linha.datafim);
+            return linhaInicio <= cursor && linhaFim >= cursor;
+        }).length;
+
+        const disponivel = ocupadas < quantidadeStock;
+        const data = formatarData(cursor);
+
+        datas.push({
+            data,
+            ocupadas,
+            stock: quantidadeStock,
+            disponivel
+        });
+
+        if (!disponivel) {
+            datasIndisponiveis.push(data);
+        }
+    }
+
+    return {
+        id_anuncio: id,
+        id_figurino: anuncio.id_figurino,
+        figurino_nome: anuncio.figurino?.titulo || anuncio.figurino?.descricao || '',
+        quantidade_stock: quantidadeStock,
+        data_inicio: dataInicio,
+        data_fim: dataFim,
+        datas_indisponiveis: datasIndisponiveis,
+        datas
+    };
+};
+
 const atualizarAnuncioEscola = async (id, dados) => {
     return await prisma.anuncio_escola.update({
         where: { id },
@@ -103,6 +208,7 @@ module.exports = {
     criarAnuncioEscola,
     obterTodosAnunciosEscola,
     obterAnuncioEscolaPorId,
+    obterDisponibilidadeAnuncio,
     atualizarAnuncioEscola,
     eliminarAnuncioEscola
 };

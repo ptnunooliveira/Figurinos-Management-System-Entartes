@@ -30,6 +30,13 @@ router.post('/', authMiddleware, verificarPerfil(['FUNCIONARIO', 'ADMIN']), anun
 router.get('/', anunciosEscolaController.listarAnunciosEscola);
 
 /**
+ * @route   GET /anuncios-escola/:id/disponibilidade
+ * @desc    Obter disponibilidade diária do anúncio
+ * @access  Público
+ */
+router.get('/:id/disponibilidade', anunciosEscolaController.obterDisponibilidadeAnuncio);
+
+/**
  * @route   GET /anuncios-escola/:id
  * @desc    Obter anúncio da escola por ID
  * @access  Público

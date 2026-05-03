@@ -10,6 +10,7 @@ import {
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCart } from "./CartContext";
 import { toast } from "sonner";
+import { CalendarioReserva } from "../components/calendario-reserva";
 
 export function Figurinos() {
   const utilizadorAtual = getUtilizadorAtual();
@@ -559,30 +560,13 @@ export function Figurinos() {
                   Período da Reserva
                 </h4>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Data de Início *</label>
-                    <input
-                      type="date"
-                      value={dataInicio}
-                      onChange={(e) => setDataInicio(e.target.value)}
-                      min={new Date().toISOString().split('T')[0]}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Data de Fim *</label>
-                    <input
-                      type="date"
-                      value={dataFim}
-                      onChange={(e) => setDataFim(e.target.value)}
-                      min={dataInicio || new Date().toISOString().split('T')[0]}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                      required
-                    />
-                  </div>
-                </div>
+                <CalendarioReserva
+                  idAnuncio={anunciosEscola.find(a => a.id_figurino === figurinoSelecionado.id)?.id ?? null}
+                  dataInicio={dataInicio}
+                  dataFim={dataFim}
+                  onDataInicioChange={setDataInicio}
+                  onDataFimChange={setDataFim}
+                />
 
                 {dataInicio && dataFim && new Date(dataFim) >= new Date(dataInicio) && (
                   <div className="p-4 bg-fig-green/5 border border-fig-green/20 rounded-lg">

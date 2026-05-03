@@ -193,9 +193,14 @@ const criarReserva = async (req, res) => {
             }
 
             idUtilizador = parseInt(dadosBody.id_aluno);
+
+            if (isNaN(idUtilizador)) {
+
+                return res.status(400).json({ erro: "Pedido invÃ¡lido. O ID do aluno tem que ser um nÃºmero vÃ¡lido." });
+            }
         }
 
-        if(dadosBody.linhas.length === 0 || !dadosBody.linhas){
+        if(!dadosBody.linhas || dadosBody.linhas.length === 0){
 
             return res.status(400).json({ erro: "Pedido inválido. A reserva tem que conter pelo menos uma linha. "});
         }

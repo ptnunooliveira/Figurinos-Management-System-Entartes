@@ -168,6 +168,7 @@ model figurino {
   id_tipo            Int?
   id_sexo            Int?
   id_estado_figurino Int?
+  quantidade_stock   Int?                 @default(1)
   ativo              Boolean?             @default(true)
   anuncio_escola     anuncio_escola[]
   checklist_item     checklist_item[]

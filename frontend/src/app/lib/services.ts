@@ -12,6 +12,7 @@ export interface FigurinoAPI {
   id: number;
   titulo?: string | null;
   descricao: string | null;
+  quantidade_stock?: number | null;
   tamanho: string | null;
   localizacao: string | null;
   ativo?: boolean | null;
@@ -48,6 +49,7 @@ export function mapFigurino(f: FigurinoAPI): Figurino {
     imagens: [],
     acessorios: f.figurino_acessorio.map((fa) => fa.acessorio),
     valor_diario: 0,
+    quantidade_stock: f.quantidade_stock ?? 1,
   };
 }
 
@@ -102,6 +104,7 @@ export async function atualizarFigurino(
     id_tipo?: number | null;
     id_sexo?: number | null;
     id_estado_figurino?: number | null;
+    quantidade_stock?: number | null;
     id_acessorios?: number[];
     substituir_acessorios?: boolean;
   },

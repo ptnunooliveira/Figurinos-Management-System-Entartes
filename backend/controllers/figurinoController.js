@@ -207,6 +207,7 @@ const criarFigurino = async (req, res) => {
             id_tipo,
             id_sexo,
             id_estado_figurino,
+            quantidade_stock,
             id_acessorios,
             substituir_acessorios
         } = req.body;
@@ -220,6 +221,7 @@ const criarFigurino = async (req, res) => {
             id_tipo: id_tipo !== undefined && id_tipo !== null ? parseInt(id_tipo) : null,
             id_sexo: id_sexo !== undefined && id_sexo !== null ? parseInt(id_sexo) : null,
             id_estado_figurino: id_estado_figurino !== undefined && id_estado_figurino !== null ? parseInt(id_estado_figurino) : null,
+            quantidade_stock: quantidade_stock !== undefined && quantidade_stock !== null ? parseInt(quantidade_stock) : 1,
             id_acessorios: Array.isArray(id_acessorios)
                 ? [...new Set(id_acessorios.map((id) => parseInt(id)).filter((id) => !isNaN(id)))]
                 : []
@@ -239,6 +241,10 @@ const criarFigurino = async (req, res) => {
 
         if (dadosFigurino.id_estado_figurino !== null && isNaN(dadosFigurino.id_estado_figurino)) {
             return res.status(400).json({ erro: "O campo 'id_estado_figurino' tem que ser numérico." });
+        }
+
+        if (isNaN(dadosFigurino.quantidade_stock) || dadosFigurino.quantidade_stock < 0) {
+            return res.status(400).json({ erro: "O campo 'quantidade_stock' tem que ser um nÃºmero inteiro maior ou igual a zero." });
         }
 
         if (Array.isArray(id_acessorios) && dadosFigurino.id_acessorios.length !== id_acessorios.length) {
@@ -290,6 +296,7 @@ const atualizarFigurino = async (req, res) => {
             id_tipo,
             id_sexo,
             id_estado_figurino,
+            quantidade_stock,
             id_acessorios,
             substituir_acessorios
         } = req.body;
@@ -305,6 +312,7 @@ const atualizarFigurino = async (req, res) => {
         if (id_tipo !== undefined) dadosFigurino.id_tipo = id_tipo === null ? null : parseInt(id_tipo);
         if (id_sexo !== undefined) dadosFigurino.id_sexo = id_sexo === null ? null : parseInt(id_sexo);
         if (id_estado_figurino !== undefined) dadosFigurino.id_estado_figurino = id_estado_figurino === null ? null : parseInt(id_estado_figurino);
+        if (quantidade_stock !== undefined) dadosFigurino.quantidade_stock = quantidade_stock === null ? 0 : parseInt(quantidade_stock);
         if (id_acessorios !== undefined) {
             if (!Array.isArray(id_acessorios)) {
                 return res.status(400).json({ erro: "O campo 'id_acessorios' deve ser uma lista." });
@@ -332,6 +340,10 @@ const atualizarFigurino = async (req, res) => {
 
         if (Array.isArray(id_acessorios) && dadosFigurino.id_acessorios.length !== id_acessorios.length) {
             return res.status(400).json({ erro: "O campo 'id_acessorios' deve conter apenas IDs numéricos." });
+        }
+
+        if (dadosFigurino.quantidade_stock !== undefined && (isNaN(dadosFigurino.quantidade_stock) || dadosFigurino.quantidade_stock < 0)) {
+            return res.status(400).json({ erro: "O campo 'quantidade_stock' tem que ser um nÃºmero inteiro maior ou igual a zero." });
         }
 
         if (Object.keys(dadosFigurino).length === 0) {

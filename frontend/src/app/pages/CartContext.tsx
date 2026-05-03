@@ -15,7 +15,7 @@ type AddToCartItem = Omit<CartItem, 'cartItemId'>;
 
 interface CartContextData {
   items: CartItem[];
-  adicionarAoCarrinho: (item: AddToCartItem) => void;
+  adicionarAoCarrinho: (item: AddToCartItem) => boolean;
   removerDoCarrinho: (cartItemId: string) => void;
   limparCarrinho: () => void;
   totalItems: number;
@@ -27,6 +27,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
 
   const adicionarAoCarrinho = (item: AddToCartItem) => {
+    let adicionado = false;
+
     setItems((prev) => {
       // Evitar adicionar o mesmo anúncio com datas sobrepostas no carrinho
       const temConflitoDatas = prev.some(i => {
@@ -45,8 +47,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
         return prev;
       }
       const newItem: CartItem = { ...item, cartItemId: `${item.id_anuncio}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}` };
+      adicionado = true;
       return [...prev, newItem];
     });
+
+    return adicionado;
   };
 
   const removerDoCarrinho = (cartItemId: string) => {

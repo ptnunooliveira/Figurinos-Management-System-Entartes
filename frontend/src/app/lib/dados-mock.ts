@@ -32,6 +32,7 @@ export interface Figurino {
   imagens: string[];
   acessorios: Acessorio[];
   valor_diario: number;
+  quantidade_stock?: number;
 }
 
 export interface AnuncioEscola {

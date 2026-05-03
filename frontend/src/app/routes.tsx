@@ -59,8 +59,22 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: s(<Dashboard />) },
       { path: "carrinho", element: s(<Carrinho />) },
-      { path: "figurinos", element: s(<Figurinos />) },
-      { path: "figurinos/criar", element: s(<CriarFigurino />) },
+      {
+        path: "figurinos",
+        element: s(
+          <FuncionarioRoute>
+            <Figurinos />
+          </FuncionarioRoute>
+        ),
+      },
+      {
+        path: "figurinos/criar",
+        element: s(
+          <FuncionarioRoute>
+            <CriarFigurino />
+          </FuncionarioRoute>
+        ),
+      },
       { path: "anuncios-escola", element: s(<AnunciosEscola />) },
       { path: "reservas", element: s(<Reservas />) },
       { path: "levantamento/:id", element: s(<Levantamento />) },

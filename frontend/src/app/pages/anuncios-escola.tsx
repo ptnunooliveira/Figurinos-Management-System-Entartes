@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { PlusCircle, Search, Filter, Shirt, Euro, Edit, Trash2, Calendar, X } from "lucide-react";
+import { useNavigate } from "react-router";
 import { getUtilizadorAtual } from "../lib/auth";
 import { getAnunciosEscola, getFigurinosRaw, criarAnuncioEscola, atualizarAnuncioEscola, eliminarAnuncioEscola, getCategorias, getTiposFigurino, getSexos, type AnuncioEscolaAPI, type FigurinoAPI, type AuxiliarItem } from "../lib/services";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -8,9 +9,15 @@ import { toast } from "sonner";
 
 export function AnunciosEscola() {
   const utilizadorAtual = getUtilizadorAtual();
+  const isStaff = utilizadorAtual?.tipo === 'funcionario' || utilizadorAtual?.tipo === 'admin';
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { data: anunciosEscola = [] } = useQuery<AnuncioEscolaAPI[]>({ queryKey: ["anunciosEscola"], queryFn: getAnunciosEscola });
-  const { data: figurinos = [] } = useQuery<FigurinoAPI[]>({ queryKey: ["figurinos"], queryFn: getFigurinosRaw });
+  const { data: figurinos = [] } = useQuery<FigurinoAPI[]>({
+    queryKey: ["figurinos"],
+    queryFn: getFigurinosRaw,
+    enabled: isStaff,
+  });
   const { data: categorias = [] } = useQuery<AuxiliarItem[]>({ queryKey: ["categorias"], queryFn: getCategorias });
   const { data: tiposFigurino = [] } = useQuery<AuxiliarItem[]>({ queryKey: ["tiposFigurino"], queryFn: getTiposFigurino });
   const { data: sexos = [] } = useQuery<AuxiliarItem[]>({ queryKey: ["sexos"], queryFn: getSexos });
@@ -36,6 +43,7 @@ export function AnunciosEscola() {
 
   const anunciosFiltrados = anunciosEscola.filter((anuncio) => {
     const fig = anuncio.figurino;
+    const titulo = fig?.titulo ?? '';
     const descricao = fig?.descricao ?? '';
     const categoria = fig?.categoria?.nomecategoria ?? '';
     const tipo = fig?.tipo_figurino?.nome ?? '';
@@ -45,6 +53,7 @@ export function AnunciosEscola() {
 
     const correspondePesquisa =
       !searchTerm ||
+      titulo.toLowerCase().includes(searchTerm.toLowerCase()) ||
       descricao.toLowerCase().includes(searchTerm.toLowerCase()) ||
       categoria.toLowerCase().includes(searchTerm.toLowerCase()) ||
       tamanho.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -136,7 +145,7 @@ export function AnunciosEscola() {
     setDataFimReserva("");
   };
 
-  const handleConfirmarReserva = async () => {
+  const handleConfirmarReserva = async (irParaCarrinho = false) => {
     if (!anuncioReserva || !dataInicioReserva || !dataFimReserva) {
       toast.error("Por favor, preencha todas as datas");
       return;
@@ -152,15 +161,20 @@ export function AnunciosEscola() {
       return;
     }
 
-    adicionarAoCarrinho({
+    const adicionado = adicionarAoCarrinho({
       id_anuncio: anuncioReserva.id,
-      figurino_nome: anuncioReserva.figurino?.descricao ?? "Figurino",
+      figurino_nome: anuncioReserva.figurino?.titulo ?? anuncioReserva.figurino?.descricao ?? "Figurino",
       datainicio: dataInicioReserva,
       datafim: dataFimReserva,
     });
 
+    if (!adicionado) return;
+
     toast.success("Adicionado ao carrinho com sucesso!");
     handleFecharReserva();
+    if (irParaCarrinho) {
+      navigate("/carrinho");
+    }
   };
 
   const figurinoObj = figurinos.find((f) => f.id === parseInt(figurinoSelecionado));
@@ -173,7 +187,7 @@ export function AnunciosEscola() {
           <h1 className="text-2xl font-bold text-gray-900">Anúncios da Escola</h1>
           <p className="text-gray-600 text-sm mt-0.5">Gerir anúncios de aluguer de figurinos da escola</p>
         </div>
-        {(utilizadorAtual?.tipo === 'funcionario' || utilizadorAtual?.tipo === 'admin') && (
+        {isStaff && (
           <button
             onClick={() => setMostrarDialogo(true)}
             className="flex items-center gap-1.5 bg-gradient-to-r from-fig-purple to-fig-magenta text-white px-4 py-2 text-sm rounded-lg hover:shadow-lg transition-all whitespace-nowrap"
@@ -277,7 +291,7 @@ export function AnunciosEscola() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-3 mb-1">
                   <p className="font-semibold text-gray-900 text-sm truncate">
-                    {anuncio.figurino?.descricao ?? '—'}
+                    {anuncio.figurino?.titulo ?? anuncio.figurino?.descricao ?? '—'}
                   </p>
                   <span className="flex items-center gap-1 text-xs text-gray-400 whitespace-nowrap flex-shrink-0">
                     <Calendar className="w-3 h-3" />
@@ -330,7 +344,7 @@ export function AnunciosEscola() {
 
               {/* Ações */}
               <div className="flex items-center gap-2 flex-shrink-0">
-                {(utilizadorAtual?.tipo === 'funcionario' || utilizadorAtual?.tipo === 'admin') ? (
+                {isStaff ? (
                   <>
                     <button
                       className="flex items-center gap-1 px-2.5 py-1 text-xs border border-yellow-200 bg-yellow-50 text-yellow-700 hover:bg-yellow-100 rounded-lg transition-colors whitespace-nowrap"
@@ -341,7 +355,7 @@ export function AnunciosEscola() {
                     </button>
                     <button
                       className="flex items-center gap-1 px-2.5 py-1 text-xs border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg transition-colors whitespace-nowrap"
-                      onClick={() => handleRemoverAnuncio(anuncio.id, anuncio.figurino?.descricao ?? '')}
+                      onClick={() => handleRemoverAnuncio(anuncio.id, anuncio.figurino?.titulo ?? anuncio.figurino?.descricao ?? '')}
                     >
                       <Trash2 className="w-3 h-3" />
                       Remover
@@ -380,7 +394,7 @@ export function AnunciosEscola() {
           <div className="bg-white rounded-2xl max-w-md w-full">
             <div className="p-6 border-b">
               <h2 className="text-xl font-bold text-gray-900">Editar Anúncio</h2>
-              <p className="text-sm text-gray-600 mt-1">{editarAnuncio.figurino?.descricao ?? `Anúncio #${editarAnuncio.id}`}</p>
+              <p className="text-sm text-gray-600 mt-1">{editarAnuncio.figurino?.titulo ?? editarAnuncio.figurino?.descricao ?? `Anúncio #${editarAnuncio.id}`}</p>
             </div>
             <form onSubmit={handleEditarAnuncio} className="p-6 space-y-4">
               <div>
@@ -440,7 +454,7 @@ export function AnunciosEscola() {
                   <option value="">Selecione um figurino</option>
                   {figurinos.map((fig) => (
                     <option key={fig.id} value={fig.id}>
-                      {fig.descricao ?? `Figurino #${fig.id}`} — {fig.categoria?.nomecategoria ?? ''} (Tamanho: {fig.tamanho ?? '—'})
+                      {fig.titulo ?? fig.descricao ?? `Figurino #${fig.id}`} — {fig.categoria?.nomecategoria ?? ''} (Tamanho: {fig.tamanho ?? '—'})
                     </option>
                   ))}
                 </select>
@@ -448,7 +462,7 @@ export function AnunciosEscola() {
 
               {figurinoObj && (
                 <div className="bg-fig-purple/5 rounded-lg p-4 border-2 border-fig-purple/20">
-                  <p className="font-medium text-gray-900 mb-2">{figurinoObj.descricao ?? '—'}</p>
+                  <p className="font-medium text-gray-900 mb-2">{figurinoObj.titulo ?? figurinoObj.descricao ?? '—'}</p>
                   {figurinoObj.figurino_acessorio.length > 0 && (
                     <div>
                       <p className="text-xs font-medium text-gray-700 mb-2">
@@ -525,7 +539,7 @@ export function AnunciosEscola() {
                   <Shirt className="w-10 h-10 text-fig-purple/40" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-semibold text-gray-900 text-lg mb-1">{anuncioReserva.figurino?.descricao ?? '—'}</h3>
+                  <h3 className="font-semibold text-gray-900 text-lg mb-1">{anuncioReserva.figurino?.titulo ?? anuncioReserva.figurino?.descricao ?? '—'}</h3>
                   <p className="text-sm text-gray-600">€ {(anuncioReserva.valordiarioaluguer ?? 0).toFixed(2)} /dia</p>
                 </div>
               </div>
@@ -570,11 +584,18 @@ export function AnunciosEscola() {
                 Cancelar
               </button>
               <button
-                onClick={handleConfirmarReserva}
+                onClick={() => handleConfirmarReserva()}
+                disabled={!dataInicioReserva || !dataFimReserva}
+                className="px-6 py-3 border border-fig-purple text-fig-purple bg-white hover:bg-fig-purple/5 rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Adicionar ao Carrinho
+              </button>
+              <button
+                onClick={() => handleConfirmarReserva(true)}
                 disabled={!dataInicioReserva || !dataFimReserva}
                 className="px-6 py-3 bg-gradient-to-r from-fig-purple to-fig-magenta hover:shadow-lg text-white rounded-lg transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Adicionar ao Carrinho
+                Finalizar reserva
               </button>
             </div>
           </div>

@@ -19,6 +19,17 @@ export function Carrinho() {
     enabled: isFuncionario,
   });
 
+  const formatarErroReserva = (mensagem: string) => {
+    const match = mensagem.match(/O an[uú]ncio com o ID (\d+) j[aá] se encontra reservado para as datas selecionadas/i);
+    if (!match) return mensagem;
+
+    const idAnuncio = Number(match[1]);
+    const item = items.find((i) => i.id_anuncio === idAnuncio);
+    if (!item) return mensagem;
+
+    return `O figurino "${item.figurino_nome}" já se encontra reservado para as datas selecionadas.`;
+  };
+
   const handleFinalizarReserva = async () => {
     if (items.length === 0) {
       toast.error("O carrinho está vazio.");
@@ -50,7 +61,7 @@ export function Carrinho() {
       limparCarrinho();
     } catch (error: any) {
       // A função de serviço (apiFetch) já deve tratar o erro e lançar uma exceção com a mensagem correta.
-      toast.error(error.message || "Erro ao criar a reserva.");
+      toast.error(formatarErroReserva(error.message || "Erro ao criar a reserva."));
     } finally {
       setSubmetendo(false);
     }
@@ -106,16 +117,16 @@ export function Carrinho() {
 
           {isFuncionario && (
             <div className="pt-4 border-t">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Aluno *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">ID do aluno *</label>
               <select
                 value={alunoSelecionado}
                 onChange={(e) => setAlunoSelecionado(e.target.value)}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 required
               >
-                <option value="">Selecione um aluno</option>
+                <option value="">Selecione o ID do aluno</option>
                 {utilizadores.map((u) => (
-                  <option key={u.id} value={u.id}>{u.nome}</option>
+                  <option key={u.id} value={u.id}>#{u.id} - {u.nome}</option>
                 ))}
               </select>
             </div>

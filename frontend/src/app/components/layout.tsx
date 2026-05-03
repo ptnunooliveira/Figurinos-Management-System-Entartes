@@ -48,7 +48,7 @@ export function Layout() {
 
   const navegacaoAluno = [
     { nome: "Painel", href: "/", icon: Home },
-    { nome: "Figurinos Escola", href: "/figurinos", icon: Shirt },
+    { nome: "Anúncios Escola", href: "/anuncios-escola", icon: Megaphone },
     { nome: "Reservas", href: "/reservas", icon: Calendar },
     { nome: "Ocorrências", href: "/ocorrencias", icon: AlertTriangle },
     { nome: "Marketplace", href: "/marketplace", icon: ShoppingBag },

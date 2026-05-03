@@ -40,7 +40,7 @@ router.get('/mine', authMiddleware, perfilMiddleware('ALUNO'), reservaController
 router.get('/aluno/:id', authMiddleware, perfilMiddleware(['FUNCIONARIO', 'ADMIN']), reservaController.obterReservasDoAluno);
 router.get('/:id', authMiddleware, reservaController.obterDetalhesReserva);
 
-router.post('/', authMiddleware, perfilMiddleware(["FUNCIONARIO", "ALUNO"]), reservaController.criarReserva);
+router.post('/', authMiddleware, perfilMiddleware(["FUNCIONARIO", "ADMIN", "ALUNO"]), reservaController.criarReserva);
 
 router.patch('/:id/estado', authMiddleware, perfilMiddleware(['FUNCIONARIO', 'ADMIN']), reservaController.atualizarEstadoReserva);
 router.patch('/:id/linhas/:idLinha/estado', authMiddleware, perfilMiddleware(['FUNCIONARIO', 'ADMIN']), reservaController.atualizarEstadoLinhaReserva);

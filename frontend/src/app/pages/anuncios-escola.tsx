@@ -6,6 +6,7 @@ import { getAnunciosEscola, getFigurinosRaw, criarAnuncioEscola, atualizarAnunci
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCart } from "./CartContext";
 import { toast } from "sonner";
+import { CalendarioReserva } from "../components/calendario-reserva";
 
 export function AnunciosEscola() {
   const utilizadorAtual = getUtilizadorAtual();
@@ -549,30 +550,13 @@ export function AnunciosEscola() {
                   <Calendar className="w-5 h-5 text-fig-purple" />
                   Período da Reserva
                 </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Data de Início *</label>
-                    <input
-                      type="date"
-                      value={dataInicioReserva}
-                      onChange={(e) => setDataInicioReserva(e.target.value)}
-                      min={new Date().toISOString().split('T')[0]}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Data de Fim *</label>
-                    <input
-                      type="date"
-                      value={dataFimReserva}
-                      onChange={(e) => setDataFimReserva(e.target.value)}
-                      min={dataInicioReserva || new Date().toISOString().split('T')[0]}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                      required
-                    />
-                  </div>
-                </div>
+                <CalendarioReserva
+                  idAnuncio={anuncioReserva.id}
+                  dataInicio={dataInicioReserva}
+                  dataFim={dataFimReserva}
+                  onDataInicioChange={setDataInicioReserva}
+                  onDataFimChange={setDataFimReserva}
+                />
               </div>
             </div>
 

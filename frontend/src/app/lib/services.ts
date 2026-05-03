@@ -132,6 +132,37 @@ export async function getAnunciosEscola(): Promise<AnuncioEscolaAPI[]> {
   }
 }
 
+export interface DisponibilidadeAnuncio {
+  id_anuncio: number;
+  id_figurino: number | null;
+  figurino_nome: string;
+  quantidade_stock: number;
+  data_inicio: string;
+  data_fim: string;
+  datas_indisponiveis: string[];
+  datas: Array<{
+    data: string;
+    ocupadas: number;
+    stock: number;
+    disponivel: boolean;
+  }>;
+}
+
+export async function getDisponibilidadeAnuncio(
+  idAnuncio: number,
+  dataInicio: string,
+  dataFim: string,
+): Promise<DisponibilidadeAnuncio | null> {
+  try {
+    const query = `dataInicio=${encodeURIComponent(dataInicio)}&dataFim=${encodeURIComponent(dataFim)}`;
+    const res = await apiFetch(`/anuncios-escola/${idAnuncio}/disponibilidade?${query}`);
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
+}
+
 export interface AuxiliarItem {
   id: number;
   nome: string;

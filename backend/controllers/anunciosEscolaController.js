@@ -74,6 +74,27 @@ const obterAnuncioEscolaPorId = async (req, res) => {
     }
 };
 
+const obterDisponibilidadeAnuncio = async (req, res) => {
+    try {
+        const id = parseInt(req.params.id);
+        const { dataInicio, dataFim } = req.query;
+
+        if (isNaN(id)) {
+            return res.status(400).json({ erro: 'O ID do anÃºncio tem que ser um nÃºmero vÃ¡lido.' });
+        }
+
+        if (!dataInicio || !dataFim) {
+            return res.status(400).json({ erro: "Os parÃ¢metros 'dataInicio' e 'dataFim' sÃ£o obrigatÃ³rios." });
+        }
+
+        const disponibilidade = await anunciosEscolaService.obterDisponibilidadeAnuncio(id, dataInicio, dataFim);
+        return res.status(200).json(disponibilidade);
+    } catch (erro) {
+        console.error('Erro no controller de disponibilidade de anÃºncio:', erro);
+        return res.status(erro.status || 500).json({ erro: erro.message || 'Erro ao obter disponibilidade do anÃºncio.' });
+    }
+};
+
 // Função do controller responsável por atualizar um anúncio da escola
 const atualizarAnuncioEscola = async (req, res) => {
     try {
@@ -107,6 +128,7 @@ module.exports = {
     criarAnuncioEscola,
     listarAnunciosEscola,
     obterAnuncioEscolaPorId,
+    obterDisponibilidadeAnuncio,
     atualizarAnuncioEscola,
     eliminarAnuncioEscola
 };

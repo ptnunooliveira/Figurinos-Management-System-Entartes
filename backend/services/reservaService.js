@@ -162,17 +162,22 @@ const obterDetalhesReserva = async (idReserva) => {
 
 
 // Foi adicionado o parâmetro "tx" (transaction) com valor por defeito "prisma" para manter compatibilidade
-const verificarDisponibilidade = async (idAnuncio, dataInicioPedida, dataFimPedida, quantidadeStock = 1, tx = prisma) => {
+const verificarDisponibilidade = async (idFigurino, dataInicioPedida, dataFimPedida, quantidadeStock = 1, tx = prisma) => {
 
     const inicio = new Date(dataInicioPedida);
     const fim = new Date(dataFimPedida);
 
     const reservasSobrepostas = await tx.linha_reserva.count({
         where: {
-            id_anuncio: idAnuncio,
+            anuncio_escola: {
+                id_figurino: idFigurino
+            },
             datainicio: { lte: fim },
             datafim: { gte: inicio },
-            id_estado_linha_reserva: { notIn: [4, 5] }
+            OR: [
+                { id_estado_linha_reserva: null },
+                { id_estado_linha_reserva: { notIn: [4, 5] } }
+            ]
         }
     });
 
@@ -280,7 +285,7 @@ const criarReserva = async (idUtilizador, idFuncionario, dadosBody) => {
                 where: { id: linha.id_anuncio },
                 include: {
                     figurino: {
-                        select: { titulo: true, descricao: true }
+                        select: { id: true, titulo: true, descricao: true }
                     }
                 }
             });
@@ -292,7 +297,7 @@ const criarReserva = async (idUtilizador, idFuncionario, dadosBody) => {
             }
 
             const quantidadeStock = await obterStockFigurinoPorAnuncio(linha.id_anuncio, tx);
-            const ocupado = await verificarDisponibilidade(linha.id_anuncio, linha.datainicio, linha.datafim, quantidadeStock, tx);
+            const ocupado = await verificarDisponibilidade(anuncio.id_figurino, linha.datainicio, linha.datafim, quantidadeStock, tx);
 
             if(ocupado){
                 const nomeFigurino = anuncio.figurino?.titulo || anuncio.figurino?.descricao || `anúncio ${linha.id_anuncio}`;

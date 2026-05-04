@@ -1,7 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "PowerShell(Get-ChildItem \"c:\\\\VSCode\\\\Figurinos\\\\50plus10\\\\frontend\\\\\" | Where-Object { $_.Name -match \"tsconfig|vite\" })"
-    ]
-  }
-}

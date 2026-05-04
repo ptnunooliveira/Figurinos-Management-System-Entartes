@@ -1,0 +1,54 @@
+@startuml
+title Diagrama de Sequência - Registar Devolução e Gerar Ocorrência (Atualizado)
+
+autonumber
+
+actor Funcionario
+boundary "UI: Devolução\n(devolucao.tsx)" as UI
+control "Service API\n(services.ts)" as APIService
+control "checklistController" as Controller
+control "checklistService" as CheckService
+control "devolucaoService" as DevService
+database "Prisma ORM" as DB
+
+Funcionario -> UI : Preenche checklist e Clica "Confirmar Devolução"
+activate UI
+
+UI -> APIService : criarChecklist(idReserva, dados (tipo=2))
+activate APIService
+
+APIService -> Controller : POST /reservas/{id}/checklists
+activate Controller
+
+Controller -> CheckService : criarChecklist(idFuncionario, dadosChecklist, idReserva)
+activate CheckService
+
+CheckService -> DB : checklist.create()
+activate DB
+DB --> CheckService : novaChecklist
+deactivate DB
+
+loop Para cada item pendente devolvido
+    CheckService -> DB : linha_reserva.update(4 - CONCLUIDA)
+    CheckService -> DevService : criarDevolucao({ id_linha, id_checklist })
+    activate DevService
+    DevService -> DB : devolucao.create()
+    DevService -> DB : conta_corrente.create() (cobrança do aluguer)
+    DevService -> DevService : figurinoTemDanoPorComparacao()
+    alt Se o estado do figurino piorou face ao levantamento
+        DevService -> DB : ocorrencia.create()
+    end
+    DevService --> CheckService : { devolucao, ocorrencia }
+    deactivate DevService
+end
+CheckService -> DB : reserva.update() (estado: 4 - CONCLUIDA)
+
+CheckService --> Controller : { novaChecklist, ocorrenciasGeradas }
+deactivate CheckService
+Controller --> APIService : HTTP 201 Created
+deactivate Controller
+APIService --> UI : Promise <resultado>
+deactivate APIService
+UI --> Funcionario : toast.success("Devolução registada (com/sem ocorrência)")
+deactivate UI
+@enduml

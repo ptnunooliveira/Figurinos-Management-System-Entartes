@@ -1,0 +1,27 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0" version="29.6.1">
+  <diagram name="Anuncio_Marketplace" id="anuncio_marketplace_v2">
+    <mxGraphModel dx="1000" dy="1000" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="start" style="ellipse;fillColor=strokeColor;html=1;" vertex="1" parent="1"><mxGeometry x="40" y="150" width="30" height="30" as="geometry"/></mxCell>
+        <mxCell id="n_submetido" value="Submetido" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;" vertex="1" parent="1"><mxGeometry x="120" y="145" width="120" height="40" as="geometry" /></mxCell>
+        <mxCell id="n_publicado" value="Publicado" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;" vertex="1" parent="1"><mxGeometry x="320" y="60" width="120" height="40" as="geometry" /></mxCell>
+        <mxCell id="n_rejeitado" value="Rejeitado" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;" vertex="1" parent="1"><mxGeometry x="320" y="230" width="120" height="40" as="geometry" /></mxCell>
+        <mxCell id="n_pendente" value="Pendente Renovação" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;" vertex="1" parent="1"><mxGeometry x="520" y="60" width="120" height="40" as="geometry" /></mxCell>
+        <mxCell id="n_arquivado" value="Arquivado" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;" vertex="1" parent="1"><mxGeometry x="720" y="145" width="120" height="40" as="geometry" /></mxCell>
+        <mxCell id="end" style="ellipse;html=1;shape=endState;fillColor=strokeColor;" vertex="1" parent="1"><mxGeometry x="900" y="150" width="30" height="30" as="geometry"/></mxCell>
+        <mxCell id="e_s_sub" edge="1" parent="1" source="start" target="n_submetido"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_sub_pub" value="Funcionário aprova" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="n_submetido" target="n_publicado"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_sub_rej" value="Funcionário rejeita" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="n_submetido" target="n_rejeitado"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_pub_pend" value="Expira 30 dias" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="n_publicado" target="n_pendente"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_pend_pub" value="Aluno renova" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="n_pendente" target="n_publicado"><mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="580" y="30" /><mxPoint x="380" y="30" /></Array></mxGeometry></mxCell>
+        <mxCell id="e_pend_arq" value="Aluno elimina" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="n_pendente" target="n_arquivado"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_pub_arq" value="Aluno elimina" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="n_publicado" target="n_arquivado"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_rej_sub" value="Ressubmetido" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;entryX=0.5;entryY=1;" edge="1" parent="1" source="n_rejeitado" target="n_submetido"><mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="380" y="300" /><mxPoint x="180" y="300" /></Array></mxGeometry></mxCell>
+        <mxCell id="e_rej_arq" value="Expira 3 dias" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="n_rejeitado" target="n_arquivado"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_arq_end" edge="1" parent="1" source="n_arquivado" target="end"><mxGeometry relative="1" as="geometry" /></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -1,0 +1,28 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0" version="29.6.1">
+  <diagram name="Linha_Reserva" id="linha_reserva_v2">
+    <mxGraphModel dx="1000" dy="1000" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="start" style="ellipse;fillColor=strokeColor;html=1;" vertex="1" parent="1"><mxGeometry x="40" y="150" width="30" height="30" as="geometry"/></mxCell>
+        <mxCell id="n_pendente" value="Pendente" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;" vertex="1" parent="1"><mxGeometry x="120" y="145" width="120" height="40" as="geometry" /></mxCell>
+        <mxCell id="n_confirmada" value="Confirmada" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;" vertex="1" parent="1"><mxGeometry x="320" y="80" width="120" height="40" as="geometry" /></mxCell>
+        <mxCell id="n_cancelada" value="Cancelada" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;" vertex="1" parent="1"><mxGeometry x="320" y="230" width="120" height="40" as="geometry" /></mxCell>
+        <mxCell id="n_emcurso" value="Em Curso" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;" vertex="1" parent="1"><mxGeometry x="520" y="80" width="120" height="40" as="geometry" /></mxCell>
+        <mxCell id="n_atrasada" value="Atrasada" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;" vertex="1" parent="1"><mxGeometry x="720" y="10" width="120" height="40" as="geometry" /></mxCell>
+        <mxCell id="n_concluida" value="Concluída" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;" vertex="1" parent="1"><mxGeometry x="720" y="120" width="120" height="40" as="geometry" /></mxCell>
+        <mxCell id="end" style="ellipse;html=1;shape=endState;fillColor=strokeColor;" vertex="1" parent="1"><mxGeometry x="900" y="150" width="30" height="30" as="geometry"/></mxCell>
+        <mxCell id="e1" edge="1" parent="1" source="start" target="n_pendente"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e2" value="Aprovado" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="n_pendente" target="n_confirmada"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e3" value="Recusado/Cancelado" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="n_pendente" target="n_cancelada"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e4" value="Cancelado" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="n_confirmada" target="n_cancelada"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e5" value="Levantado" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="n_confirmada" target="n_emcurso"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e6" value="Prazo excedido" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="n_emcurso" target="n_atrasada"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e7" value="Devolvido" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="n_emcurso" target="n_concluida"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e8" value="Devolvido" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="n_atrasada" target="n_concluida"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e9" edge="1" parent="1" source="n_cancelada" target="end"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e10" edge="1" parent="1" source="n_concluida" target="end"><mxGeometry relative="1" as="geometry" /></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

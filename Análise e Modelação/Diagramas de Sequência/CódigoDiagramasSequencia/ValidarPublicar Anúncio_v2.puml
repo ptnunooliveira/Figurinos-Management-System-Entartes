@@ -1,0 +1,42 @@
+@startuml
+title Diagrama de Sequência - Validar / Publicar Anúncio (Atualizado)
+
+autonumber
+
+actor Funcionario
+boundary "UI: Marketplace\n(marketplace.tsx)" as UI
+control "Service API\n(services.ts)" as APIService
+control "marketplaceController" as Controller
+control "marketplaceService" as Service
+database "Prisma ORM" as DB
+
+Funcionario -> UI : Clica "Aprovar" ou "Rejeitar"
+activate UI
+
+UI -> APIService : aprovarAnuncioMarketplace(id, aprovado, motivorejeicao)
+activate APIService
+
+APIService -> Controller : PATCH /marketplace/{id}/aprovar
+activate Controller
+
+Controller -> Service : atualizarEstadoAnuncioMarketplace(id, aprovado, motivorejeicao)
+activate Service
+
+Service -> DB : anuncio_marketplace.findUnique(id)
+activate DB
+DB --> Service : anuncio (Submetido)
+Service -> DB : obterEstadoAnuncioPorNome("Publicado" ou "Rejeitado")
+Service -> DB : anuncio_marketplace.update(id_estado, dataaprovacao)
+DB --> Service : anuncioAtualizado
+deactivate DB
+
+Service --> Controller : anuncioCompleto
+deactivate Service
+
+Controller --> APIService : HTTP 200 OK (JSON)
+deactivate Controller
+APIService --> UI : Promise <anuncio>
+deactivate APIService
+UI --> Funcionario : toast.success("Anúncio atualizado com sucesso!")
+deactivate UI
+@enduml

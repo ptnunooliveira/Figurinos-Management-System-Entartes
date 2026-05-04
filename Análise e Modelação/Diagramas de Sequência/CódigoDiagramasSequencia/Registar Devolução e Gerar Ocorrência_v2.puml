@@ -1,0 +1,49 @@
+@startuml
+title Diagrama de Sequência - Registar Devolução e Gerar Ocorrência (Atualizado)
+
+autonumber
+
+actor Funcionario
+boundary "UI: Devolução\n(devolucao.tsx)" as UI
+control "Service API\n(services.ts)" as APIService
+control "checklistController" as Controller
+control "checklistService\ndevolucaoService" as Service
+database "Prisma ORM" as DB
+
+Funcionario -> UI : Preenche checklist e Clica "Confirmar Devolução"
+activate UI
+
+UI -> APIService : criarChecklist(idReserva, dados (tipo=2))
+activate APIService
+
+APIService -> Controller : POST /reservas/{id}/checklists
+activate Controller
+
+Controller -> Service : criarChecklist(idFuncionario, dadosChecklist, idReserva)
+activate Service
+
+Service -> DB : checklist.create()
+activate DB
+
+loop Para cada item pendente devolvido
+    Service -> Service : criarDevolucao(...)
+    Service -> DB : devolucao.create() e conta_corrente.create() (valor aluguer)
+    Service -> Service : figurinoTemDanoPorComparacao()
+    alt Se o estado do figurino piorou
+        Service -> DB : ocorrencia.create()
+        DB --> Service : ocorrencia
+    end
+end
+Service -> DB : reserva.update() (estado: 4 - CONCLUIDA)
+DB --> Service : novaChecklist com Ocorrências
+deactivate DB
+
+Service --> Controller : { novaChecklist, ocorrenciasGeradas }
+deactivate Service
+Controller --> APIService : HTTP 201 Created
+deactivate Controller
+APIService --> UI : Promise <resultado>
+deactivate APIService
+UI --> Funcionario : toast.success("Devolução registada (com/sem ocorrência)")
+deactivate UI
+@enduml

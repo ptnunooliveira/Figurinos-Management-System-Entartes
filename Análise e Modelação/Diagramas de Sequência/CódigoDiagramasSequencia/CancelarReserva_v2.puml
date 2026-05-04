@@ -1,0 +1,52 @@
+@startuml
+title Diagrama de Sequência - Cancelar Reserva (Atualizado)
+
+autonumber
+
+actor Aluno
+boundary "UI: Reservas\n(reservas.tsx)" as UI
+control "Service API\n(services.ts)" as APIService
+control "reservaController" as Controller
+control "reservaService" as Service
+database "Prisma ORM" as DB
+
+Aluno -> UI : Clicar em "Cancelar Reserva"
+activate UI
+
+UI -> UI : handleCancelarReserva(id)
+
+UI -> APIService : cancelarReserva(id)
+activate APIService
+
+APIService -> Controller : PATCH /reservas/mine/{id}/cancelar\n(Auth Middleware)
+activate Controller
+
+Controller -> Service : cancelarReserva(idReserva, idUtilizador)
+activate Service
+
+Service -> DB : findUnique({ id: idReserva })
+activate DB
+DB --> Service : reserva (Object)
+deactivate DB
+
+Service -> Service : Validar permissões (id_utilizador) e\nestado (1 - PENDENTE)
+
+Service -> DB : update(id_estado = 5, linha_reserva = 5)
+activate DB
+DB --> Service : reservaAtualizada (Object)
+deactivate DB
+
+Service --> Controller : reservaAtualizada
+deactivate Service
+
+Controller --> APIService : HTTP 200 OK (JSON)
+deactivate Controller
+
+APIService --> UI : Promise <void>
+deactivate APIService
+
+UI -> UI : carregarReservas()
+UI --> Aluno : toast.success("Reserva cancelada!")
+deactivate UI
+
+@enduml

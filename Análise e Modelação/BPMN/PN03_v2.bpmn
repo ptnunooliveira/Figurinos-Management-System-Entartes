@@ -1,0 +1,512 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_PN03_v2" targetNamespace="http://bpmn.io/schema/bpmn" exporter="bpmn-js (https://demo.bpmn.io)" exporterVersion="18.13.1">
+  <bpmn:collaboration id="Collaboration_PN03">
+    <bpmn:participant id="Participant_CoordenadorAluno" name="Sistema de Ocorrências" processRef="Process_Ocorrencias" />
+    <bpmn:participant id="Participant_EntidadeExterna" name="Entidade Externa (Fornecedor)" />
+    <bpmn:messageFlow id="Flow_MsgOrcamento" sourceRef="Activity_SolicitarOrcamento" targetRef="Participant_EntidadeExterna" />
+    <bpmn:messageFlow id="Flow_MsgRespostaOrcamento" sourceRef="Participant_EntidadeExterna" targetRef="Activity_RegistarOrcamento" />
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_Ocorrencias" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_Ocorrencias">
+      <bpmn:lane id="Lane_Coordenador" name="Coordenador">
+        <bpmn:flowNodeRef>Event_StartOcorrencia</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Activity_ConsultaOcorrencia</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_ReparacaoExterna</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Activity_SolicitarOrcamento</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Activity_RegistarOrcamento</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_DanoImpede</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Activity_RegistarBaixa</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Activity_AtualizarEspecificacao</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_MergeAcoes</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Activity_EnviarProposta</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Event_AguardarRespostaAluno</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_AlunoAceitou</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Activity_AnalisarContestacao</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_ConcordaContestacao</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Activity_FinalizarAcordoDebito</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Activity_EncerrarOcorrencia</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Event_EndOcorrencia</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Aluno" name="Aluno / Encarregado de Educação">
+        <bpmn:flowNodeRef>Event_RecebeProposta</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Activity_ConsultarProposta</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_AlunoConcorda</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Activity_ConfirmarAceitacao</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Activity_SubmeterContestacao</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_MergeAluno</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Event_EnviaRespostaAluno</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Event_EndAluno</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+
+    <!-- NÓS DO COORDENADOR -->
+    <bpmn:startEvent id="Event_StartOcorrencia" name="Receção de notificação de ocorrência registada">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <bpmn:task id="Activity_ConsultaOcorrencia" name="Consulta ocorrência">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:exclusiveGateway id="Gateway_ReparacaoExterna" name="Necessita de reparação externa?">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_RepSim</bpmn:outgoing>
+      <bpmn:outgoing>Flow_RepNao</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:sendTask id="Activity_SolicitarOrcamento" name="Solicitar Orçamento">
+      <bpmn:incoming>Flow_RepSim</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+    </bpmn:sendTask>
+
+    <bpmn:task id="Activity_RegistarOrcamento" name="Registar Orçamento">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToMergeAcoes1</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:exclusiveGateway id="Gateway_DanoImpede" name="Dano impede a utilização do figurino?">
+      <bpmn:incoming>Flow_RepNao</bpmn:incoming>
+      <bpmn:outgoing>Flow_ImpedeSim</bpmn:outgoing>
+      <bpmn:outgoing>Flow_ImpedeNao</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:task id="Activity_RegistarBaixa" name="Registar Baixa do Figurino">
+      <bpmn:incoming>Flow_ImpedeSim</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToMergeAcoes2</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Activity_AtualizarEspecificacao" name="Atualizar Especificação do Figurino">
+      <bpmn:incoming>Flow_ImpedeNao</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToMergeAcoes3</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:exclusiveGateway id="Gateway_MergeAcoes">
+      <bpmn:incoming>Flow_ToMergeAcoes1</bpmn:incoming>
+      <bpmn:incoming>Flow_ToMergeAcoes2</bpmn:incoming>
+      <bpmn:incoming>Flow_ToMergeAcoes3</bpmn:incoming>
+      <bpmn:incoming>Flow_ContestacaoNaoConcorda</bpmn:incoming>
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:task id="Activity_EnviarProposta" name="Definir e Enviar Proposta de Valor ao Cliente">
+      <bpmn:incoming>Flow_4</bpmn:incoming>
+      <bpmn:outgoing>Flow_PropostaParaAluno</bpmn:outgoing>
+      <bpmn:outgoing>Flow_PropostaParaAguardar</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:intermediateCatchEvent id="Event_AguardarRespostaAluno" name="Aguardar resposta do aluno">
+      <bpmn:incoming>Flow_PropostaParaAguardar</bpmn:incoming>
+      <bpmn:incoming>Flow_RespostaAlunoParaAguardar</bpmn:incoming>
+      <bpmn:outgoing>Flow_5</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MessageEventDef_1" />
+    </bpmn:intermediateCatchEvent>
+
+    <bpmn:exclusiveGateway id="Gateway_AlunoAceitou" name="Aceitou?">
+      <bpmn:incoming>Flow_5</bpmn:incoming>
+      <bpmn:outgoing>Flow_AlunoAceitouSim</bpmn:outgoing>
+      <bpmn:outgoing>Flow_AlunoAceitouNao</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:task id="Activity_AnalisarContestacao" name="Analisar contestação">
+      <bpmn:incoming>Flow_AlunoAceitouNao</bpmn:incoming>
+      <bpmn:outgoing>Flow_6</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:exclusiveGateway id="Gateway_ConcordaContestacao" name="Concorda com contraproposta?">
+      <bpmn:incoming>Flow_6</bpmn:incoming>
+      <bpmn:outgoing>Flow_ContestacaoConcorda</bpmn:outgoing>
+      <bpmn:outgoing>Flow_ContestacaoNaoConcorda</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:task id="Activity_FinalizarAcordoDebito" name="Finalizar Acordo e Lançar Débito">
+      <bpmn:incoming>Flow_ContestacaoConcorda</bpmn:incoming>
+      <bpmn:outgoing>Flow_AcordoToEncerra</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Activity_EncerrarOcorrencia" name="Encerra ocorrência">
+      <bpmn:incoming>Flow_AlunoAceitouSim</bpmn:incoming>
+      <bpmn:incoming>Flow_AcordoToEncerra</bpmn:incoming>
+      <bpmn:outgoing>Flow_End1</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:endEvent id="Event_EndOcorrencia" name="Ocorrência Resolvida">
+      <bpmn:incoming>Flow_End1</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <!-- NÓS DO ALUNO -->
+    <bpmn:intermediateThrowEvent id="Event_RecebeProposta" name="Recebe notificação de proposta">
+      <bpmn:incoming>Flow_PropostaParaAluno</bpmn:incoming>
+      <bpmn:outgoing>Flow_A1</bpmn:outgoing>
+    </bpmn:intermediateThrowEvent>
+
+    <bpmn:task id="Activity_ConsultarProposta" name="Consultar valor proposto">
+      <bpmn:incoming>Flow_A1</bpmn:incoming>
+      <bpmn:outgoing>Flow_A2</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:exclusiveGateway id="Gateway_AlunoConcorda" name="Concorda?">
+      <bpmn:incoming>Flow_A2</bpmn:incoming>
+      <bpmn:outgoing>Flow_AConcordaSim</bpmn:outgoing>
+      <bpmn:outgoing>Flow_AConcordaNao</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:task id="Activity_ConfirmarAceitacao" name="Confirmar aceitação">
+      <bpmn:incoming>Flow_AConcordaSim</bpmn:incoming>
+      <bpmn:outgoing>Flow_AMerge1</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Activity_SubmeterContestacao" name="Submeter contestação ou contraproposta">
+      <bpmn:incoming>Flow_AConcordaNao</bpmn:incoming>
+      <bpmn:outgoing>Flow_AMerge2</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:exclusiveGateway id="Gateway_MergeAluno">
+      <bpmn:incoming>Flow_AMerge1</bpmn:incoming>
+      <bpmn:incoming>Flow_AMerge2</bpmn:incoming>
+      <bpmn:outgoing>Flow_A3</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:intermediateThrowEvent id="Event_EnviaRespostaAluno" name="Envia resposta">
+      <bpmn:incoming>Flow_A3</bpmn:incoming>
+      <bpmn:outgoing>Flow_RespostaAlunoParaAguardar</bpmn:outgoing>
+      <bpmn:outgoing>Flow_AEnd</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MessageEventDef_2" />
+    </bpmn:intermediateThrowEvent>
+
+    <bpmn:endEvent id="Event_EndAluno">
+      <bpmn:incoming>Flow_AEnd</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <!-- LIGAÇÕES DE FLUXO GERAL -->
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Event_StartOcorrencia" targetRef="Activity_ConsultaOcorrencia" />
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Activity_ConsultaOcorrencia" targetRef="Gateway_ReparacaoExterna" />
+    <bpmn:sequenceFlow id="Flow_RepSim" name="Sim" sourceRef="Gateway_ReparacaoExterna" targetRef="Activity_SolicitarOrcamento" />
+    <bpmn:sequenceFlow id="Flow_RepNao" name="Não" sourceRef="Gateway_ReparacaoExterna" targetRef="Gateway_DanoImpede" />
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Activity_SolicitarOrcamento" targetRef="Activity_RegistarOrcamento" />
+    <bpmn:sequenceFlow id="Flow_ToMergeAcoes1" sourceRef="Activity_RegistarOrcamento" targetRef="Gateway_MergeAcoes" />
+    <bpmn:sequenceFlow id="Flow_ImpedeSim" name="Sim" sourceRef="Gateway_DanoImpede" targetRef="Activity_RegistarBaixa" />
+    <bpmn:sequenceFlow id="Flow_ImpedeNao" name="Não" sourceRef="Gateway_DanoImpede" targetRef="Activity_AtualizarEspecificacao" />
+    <bpmn:sequenceFlow id="Flow_ToMergeAcoes2" sourceRef="Activity_RegistarBaixa" targetRef="Gateway_MergeAcoes" />
+    <bpmn:sequenceFlow id="Flow_ToMergeAcoes3" sourceRef="Activity_AtualizarEspecificacao" targetRef="Gateway_MergeAcoes" />
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="Gateway_MergeAcoes" targetRef="Activity_EnviarProposta" />
+    <bpmn:sequenceFlow id="Flow_PropostaParaAluno" sourceRef="Activity_EnviarProposta" targetRef="Event_RecebeProposta" />
+    <bpmn:sequenceFlow id="Flow_PropostaParaAguardar" sourceRef="Activity_EnviarProposta" targetRef="Event_AguardarRespostaAluno" />
+    <bpmn:sequenceFlow id="Flow_A1" sourceRef="Event_RecebeProposta" targetRef="Activity_ConsultarProposta" />
+    <bpmn:sequenceFlow id="Flow_A2" sourceRef="Activity_ConsultarProposta" targetRef="Gateway_AlunoConcorda" />
+    <bpmn:sequenceFlow id="Flow_AConcordaSim" name="Sim" sourceRef="Gateway_AlunoConcorda" targetRef="Activity_ConfirmarAceitacao" />
+    <bpmn:sequenceFlow id="Flow_AConcordaNao" name="Não" sourceRef="Gateway_AlunoConcorda" targetRef="Activity_SubmeterContestacao" />
+    <bpmn:sequenceFlow id="Flow_AMerge1" sourceRef="Activity_ConfirmarAceitacao" targetRef="Gateway_MergeAluno" />
+    <bpmn:sequenceFlow id="Flow_AMerge2" sourceRef="Activity_SubmeterContestacao" targetRef="Gateway_MergeAluno" />
+    <bpmn:sequenceFlow id="Flow_A3" sourceRef="Gateway_MergeAluno" targetRef="Event_EnviaRespostaAluno" />
+    <bpmn:sequenceFlow id="Flow_RespostaAlunoParaAguardar" sourceRef="Event_EnviaRespostaAluno" targetRef="Event_AguardarRespostaAluno" />
+    <bpmn:sequenceFlow id="Flow_AEnd" sourceRef="Event_EnviaRespostaAluno" targetRef="Event_EndAluno" />
+    <bpmn:sequenceFlow id="Flow_5" sourceRef="Event_AguardarRespostaAluno" targetRef="Gateway_AlunoAceitou" />
+    <bpmn:sequenceFlow id="Flow_AlunoAceitouSim" name="Sim" sourceRef="Gateway_AlunoAceitou" targetRef="Activity_EncerrarOcorrencia" />
+    <bpmn:sequenceFlow id="Flow_AlunoAceitouNao" name="Não" sourceRef="Gateway_AlunoAceitou" targetRef="Activity_AnalisarContestacao" />
+    <bpmn:sequenceFlow id="Flow_6" sourceRef="Activity_AnalisarContestacao" targetRef="Gateway_ConcordaContestacao" />
+    <bpmn:sequenceFlow id="Flow_ContestacaoConcorda" name="Sim" sourceRef="Gateway_ConcordaContestacao" targetRef="Activity_FinalizarAcordoDebito" />
+    <bpmn:sequenceFlow id="Flow_AcordoToEncerra" sourceRef="Activity_FinalizarAcordoDebito" targetRef="Activity_EncerrarOcorrencia" />
+    <bpmn:sequenceFlow id="Flow_ContestacaoNaoConcorda" name="Não" sourceRef="Gateway_ConcordaContestacao" targetRef="Gateway_MergeAcoes" />
+    <bpmn:sequenceFlow id="Flow_End1" sourceRef="Activity_EncerrarOcorrencia" targetRef="Event_EndOcorrencia" />
+  </bpmn:process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_PN03_v2">
+    <bpmndi:BPMNPlane id="BPMNPlane_PN03_v2" bpmnElement="Collaboration_PN03">
+      <bpmndi:BPMNShape id="Participant_CoordenadorAluno_di" bpmnElement="Participant_CoordenadorAluno" isHorizontal="true">
+        <dc:Bounds x="150" y="80" width="2800" height="700" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Coordenador_di" bpmnElement="Lane_Coordenador" isHorizontal="true">
+        <dc:Bounds x="180" y="80" width="2770" height="350" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Aluno_di" bpmnElement="Lane_Aluno" isHorizontal="true">
+        <dc:Bounds x="180" y="430" width="2770" height="350" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Participant_EntidadeExterna_di" bpmnElement="Participant_EntidadeExterna" isHorizontal="true">
+        <dc:Bounds x="150" y="-50" width="2800" height="100" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_StartOcorrencia_di" bpmnElement="Event_StartOcorrencia">
+        <dc:Bounds x="250" y="162" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="223" y="205" width="90" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_ConsultaOcorrencia_di" bpmnElement="Activity_ConsultaOcorrencia">
+        <dc:Bounds x="350" y="140" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_ReparacaoExterna_di" bpmnElement="Gateway_ReparacaoExterna" isMarkerVisible="true">
+        <dc:Bounds x="515" y="155" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="495" y="212" width="90" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_SolicitarOrcamento_di" bpmnElement="Activity_SolicitarOrcamento">
+        <dc:Bounds x="630" y="240" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_RegistarOrcamento_di" bpmnElement="Activity_RegistarOrcamento">
+        <dc:Bounds x="790" y="240" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_DanoImpede_di" bpmnElement="Gateway_DanoImpede" isMarkerVisible="true">
+        <dc:Bounds x="700" y="155" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="680" y="212" width="90" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_RegistarBaixa_di" bpmnElement="Activity_RegistarBaixa">
+        <dc:Bounds x="860" y="80" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_AtualizarEspecificacao_di" bpmnElement="Activity_AtualizarEspecificacao">
+        <dc:Bounds x="860" y="180" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_MergeAcoes_di" bpmnElement="Gateway_MergeAcoes" isMarkerVisible="true">
+        <dc:Bounds x="1020" y="155" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_EnviarProposta_di" bpmnElement="Activity_EnviarProposta">
+        <dc:Bounds x="1130" y="140" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_AguardarRespostaAluno_di" bpmnElement="Event_AguardarRespostaAluno">
+        <dc:Bounds x="1292" y="162" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1271" y="205" width="78" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_AlunoAceitou_di" bpmnElement="Gateway_AlunoAceitou" isMarkerVisible="true">
+        <dc:Bounds x="1395" y="155" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1399" y="125" width="42" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_AnalisarContestacao_di" bpmnElement="Activity_AnalisarContestacao">
+        <dc:Bounds x="1510" y="240" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_ConcordaContestacao_di" bpmnElement="Gateway_ConcordaContestacao" isMarkerVisible="true">
+        <dc:Bounds x="1675" y="255" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1655" y="312" width="90" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_FinalizarAcordoDebito_di" bpmnElement="Activity_FinalizarAcordoDebito">
+        <dc:Bounds x="1790" y="240" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_EncerrarOcorrencia_di" bpmnElement="Activity_EncerrarOcorrencia">
+        <dc:Bounds x="1960" y="140" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_EndOcorrencia_di" bpmnElement="Event_EndOcorrencia">
+        <dc:Bounds x="2122" y="162" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2096" y="205" width="89" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_RecebeProposta_di" bpmnElement="Event_RecebeProposta">
+        <dc:Bounds x="1152" y="582" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1131" y="625" width="78" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_ConsultarProposta_di" bpmnElement="Activity_ConsultarProposta">
+        <dc:Bounds x="1250" y="560" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_AlunoConcorda_di" bpmnElement="Gateway_AlunoConcorda" isMarkerVisible="true">
+        <dc:Bounds x="1415" y="575" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1414" y="545" width="52" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_ConfirmarAceitacao_di" bpmnElement="Activity_ConfirmarAceitacao">
+        <dc:Bounds x="1530" y="500" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_SubmeterContestacao_di" bpmnElement="Activity_SubmeterContestacao">
+        <dc:Bounds x="1530" y="620" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_MergeAluno_di" bpmnElement="Gateway_MergeAluno" isMarkerVisible="true">
+        <dc:Bounds x="1695" y="575" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_EnviaRespostaAluno_di" bpmnElement="Event_EnviaRespostaAluno">
+        <dc:Bounds x="1802" y="572" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1782" y="615" width="76" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_EndAluno_di" bpmnElement="Event_EndAluno">
+        <dc:Bounds x="1902" y="572" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
+        <di:waypoint x="286" y="180" />
+        <di:waypoint x="350" y="180" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
+        <di:waypoint x="450" y="180" />
+        <di:waypoint x="515" y="180" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_RepSim_di" bpmnElement="Flow_RepSim">
+        <di:waypoint x="540" y="205" />
+        <di:waypoint x="540" y="280" />
+        <di:waypoint x="630" y="280" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="548" y="240" width="20" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_RepNao_di" bpmnElement="Flow_RepNao">
+        <di:waypoint x="565" y="180" />
+        <di:waypoint x="700" y="180" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="623" y="162" width="21" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3">
+        <di:waypoint x="730" y="280" />
+        <di:waypoint x="790" y="280" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ToMergeAcoes1_di" bpmnElement="Flow_ToMergeAcoes1">
+        <di:waypoint x="890" y="280" />
+        <di:waypoint x="1045" y="280" />
+        <di:waypoint x="1045" y="205" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ImpedeSim_di" bpmnElement="Flow_ImpedeSim">
+        <di:waypoint x="725" y="155" />
+        <di:waypoint x="725" y="120" />
+        <di:waypoint x="860" y="120" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="733" y="99" width="20" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ImpedeNao_di" bpmnElement="Flow_ImpedeNao">
+        <di:waypoint x="725" y="205" />
+        <di:waypoint x="725" y="220" />
+        <di:waypoint x="860" y="220" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="733" y="223" width="21" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ToMergeAcoes2_di" bpmnElement="Flow_ToMergeAcoes2">
+        <di:waypoint x="960" y="120" />
+        <di:waypoint x="1045" y="120" />
+        <di:waypoint x="1045" y="155" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ToMergeAcoes3_di" bpmnElement="Flow_ToMergeAcoes3">
+        <di:waypoint x="960" y="220" />
+        <di:waypoint x="1045" y="220" />
+        <di:waypoint x="1045" y="205" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_4_di" bpmnElement="Flow_4">
+        <di:waypoint x="1070" y="180" />
+        <di:waypoint x="1130" y="180" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_PropostaParaAluno_di" bpmnElement="Flow_PropostaParaAluno">
+        <di:waypoint x="1180" y="220" />
+        <di:waypoint x="1180" y="582" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_PropostaParaAguardar_di" bpmnElement="Flow_PropostaParaAguardar">
+        <di:waypoint x="1230" y="180" />
+        <di:waypoint x="1292" y="180" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_A1_di" bpmnElement="Flow_A1">
+        <di:waypoint x="1188" y="600" />
+        <di:waypoint x="1250" y="600" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_A2_di" bpmnElement="Flow_A2">
+        <di:waypoint x="1350" y="600" />
+        <di:waypoint x="1415" y="600" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_AConcordaSim_di" bpmnElement="Flow_AConcordaSim">
+        <di:waypoint x="1440" y="575" />
+        <di:waypoint x="1440" y="540" />
+        <di:waypoint x="1530" y="540" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1448" y="555" width="20" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_AConcordaNao_di" bpmnElement="Flow_AConcordaNao">
+        <di:waypoint x="1440" y="625" />
+        <di:waypoint x="1440" y="660" />
+        <di:waypoint x="1530" y="660" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1448" y="640" width="21" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_AMerge1_di" bpmnElement="Flow_AMerge1">
+        <di:waypoint x="1630" y="540" />
+        <di:waypoint x="1720" y="540" />
+        <di:waypoint x="1720" y="575" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_AMerge2_di" bpmnElement="Flow_AMerge2">
+        <di:waypoint x="1630" y="660" />
+        <di:waypoint x="1720" y="660" />
+        <di:waypoint x="1720" y="625" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_A3_di" bpmnElement="Flow_A3">
+        <di:waypoint x="1745" y="590" />
+        <di:waypoint x="1802" y="590" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_RespostaAlunoParaAguardar_di" bpmnElement="Flow_RespostaAlunoParaAguardar">
+        <di:waypoint x="1820" y="572" />
+        <di:waypoint x="1820" y="180" />
+        <di:waypoint x="1328" y="180" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_AEnd_di" bpmnElement="Flow_AEnd">
+        <di:waypoint x="1838" y="590" />
+        <di:waypoint x="1902" y="590" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_5_di" bpmnElement="Flow_5">
+        <di:waypoint x="1328" y="180" />
+        <di:waypoint x="1395" y="180" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_AlunoAceitouSim_di" bpmnElement="Flow_AlunoAceitouSim">
+        <di:waypoint x="1445" y="180" />
+        <di:waypoint x="1960" y="180" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1693" y="162" width="20" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_AlunoAceitouNao_di" bpmnElement="Flow_AlunoAceitouNao">
+        <di:waypoint x="1420" y="205" />
+        <di:waypoint x="1420" y="280" />
+        <di:waypoint x="1510" y="280" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1428" y="240" width="21" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_6_di" bpmnElement="Flow_6">
+        <di:waypoint x="1610" y="280" />
+        <di:waypoint x="1675" y="280" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ContestacaoConcorda_di" bpmnElement="Flow_ContestacaoConcorda">
+        <di:waypoint x="1725" y="280" />
+        <di:waypoint x="1790" y="280" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1748" y="262" width="20" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_AcordoToEncerra_di" bpmnElement="Flow_AcordoToEncerra">
+        <di:waypoint x="1890" y="280" />
+        <di:waypoint x="2010" y="280" />
+        <di:waypoint x="2010" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ContestacaoNaoConcorda_di" bpmnElement="Flow_ContestacaoNaoConcorda">
+        <di:waypoint x="1700" y="255" />
+        <di:waypoint x="1700" y="180" />
+        <di:waypoint x="1070" y="180" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1390" y="162" width="21" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_End1_di" bpmnElement="Flow_End1">
+        <di:waypoint x="2060" y="180" />
+        <di:waypoint x="2122" y="180" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_MsgOrcamento_di" bpmnElement="Flow_MsgOrcamento">
+        <di:waypoint x="680" y="240" />
+        <di:waypoint x="680" y="50" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_MsgRespostaOrcamento_di" bpmnElement="Flow_MsgRespostaOrcamento">
+        <di:waypoint x="840" y="50" />
+        <di:waypoint x="840" y="240" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

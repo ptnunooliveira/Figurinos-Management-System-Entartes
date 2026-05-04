@@ -1,0 +1,38 @@
+@startuml
+title Diagrama de Sequência - Registar Levantamento (Atualizado)
+
+autonumber
+
+actor Funcionario
+boundary "UI: Levantamento\n(levantamento.tsx)" as UI
+control "Service API\n(services.ts)" as APIService
+control "checklistController" as Controller
+control "checklistService" as Service
+database "Prisma ORM" as DB
+
+Funcionario -> UI : Preenche checklist e Clica "Confirmar Levantamento"
+activate UI
+
+UI -> APIService : criarChecklist(idReserva, dados (tipo=1))
+activate APIService
+
+APIService -> Controller : POST /reservas/{id}/checklists
+activate Controller
+
+Controller -> Service : criarChecklist(idFuncionario, dadosChecklist, idReserva)
+activate Service
+
+Service -> DB : checklist.create() & \nlinha_reserva.updateMany(3 - EM CURSO) & \nreserva.update(3 - EM CURSO)
+activate DB
+DB --> Service : novaChecklist
+deactivate DB
+
+Service --> Controller : novaChecklist
+deactivate Service
+Controller --> APIService : HTTP 201 Created (JSON)
+deactivate Controller
+APIService --> UI : Promise <novaChecklist>
+deactivate APIService
+UI --> Funcionario : toast.success("Levantamento registado com sucesso!")
+deactivate UI
+@enduml

@@ -1,0 +1,26 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0" version="29.6.1">
+  <diagram name="Ocorrencia" id="ocorrencia_v3">
+    <mxGraphModel dx="1000" dy="1000" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="start" style="ellipse;fillColor=strokeColor;html=1;" vertex="1" parent="1"><mxGeometry x="40" y="150" width="30" height="30" as="geometry"/></mxCell>
+        <mxCell id="n_aguardar" value="A aguardar" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;" vertex="1" parent="1"><mxGeometry x="120" y="145" width="120" height="40" as="geometry" /></mxCell>
+        <mxCell id="n_orcamento" value="A aguardar orçamento" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;" vertex="1" parent="1"><mxGeometry x="320" y="50" width="140" height="40" as="geometry" /></mxCell>
+        <mxCell id="n_aluno" value="A aguardar resposta do aluno" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;" vertex="1" parent="1"><mxGeometry x="320" y="145" width="140" height="40" as="geometry" /></mxCell>
+        <mxCell id="n_contestada" value="Contestada pelo aluno" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;" vertex="1" parent="1"><mxGeometry x="520" y="240" width="140" height="40" as="geometry" /></mxCell>
+        <mxCell id="n_resolvida" value="Resolvida" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;" vertex="1" parent="1"><mxGeometry x="720" y="145" width="120" height="40" as="geometry" /></mxCell>
+        <mxCell id="end" style="ellipse;html=1;shape=endState;fillColor=strokeColor;" vertex="1" parent="1"><mxGeometry x="900" y="150" width="30" height="30" as="geometry"/></mxCell>
+        <mxCell id="e1" edge="1" parent="1" source="start" target="n_aguardar"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e2" value="Pede orçamento" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="n_aguardar" target="n_orcamento"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e3" value="Regista e envia proposta" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="n_orcamento" target="n_aluno"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e4" value="Envia proposta direta" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="n_aguardar" target="n_aluno"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e5" value="Aluno aceita" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="n_aluno" target="n_resolvida"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e6" value="Aluno contesta" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="n_aluno" target="n_contestada"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e7" value="Func. aceita" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;entryX=0.5;entryY=1;" edge="1" parent="1" source="n_contestada" target="n_resolvida"><mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="780" y="260" /></Array></mxGeometry></mxCell>
+        <mxCell id="e8" value="Nova proposta" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;entryX=0.5;entryY=1;" edge="1" parent="1" source="n_contestada" target="n_aluno"><mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="390" y="260" /></Array></mxGeometry></mxCell>
+        <mxCell id="e9" edge="1" parent="1" source="n_resolvida" target="end"><mxGeometry relative="1" as="geometry" /></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

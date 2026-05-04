@@ -1,0 +1,40 @@
+@startuml
+title Diagrama de Sequência - Efetuar Reserva (Atualizado)
+
+autonumber
+
+actor Aluno
+boundary "UI: Carrinho\n(CartContext.tsx / reservas.tsx)" as UI
+control "Service API\n(services.ts)" as APIService
+control "reservaController" as Controller
+control "reservaService" as Service
+database "Prisma ORM" as DB
+
+Aluno -> UI : Confirmar pedido no carrinho
+activate UI
+
+UI -> APIService : criarReserva(linhas)
+activate APIService
+
+APIService -> Controller : POST /reservas
+activate Controller
+
+Controller -> Service : criarReserva(idUtilizador, idFuncionario, dadosBody)
+activate Service
+
+Service -> DB : $transaction() (Validação e Criação Atómica)
+activate DB
+DB -> Service : Verificar conflitos e stock (obterStockFigurinoPorAnuncio)
+Service -> DB : reserva.create() (estado: 1 - PENDENTE)
+DB --> Service : novaReserva
+deactivate DB
+
+Service --> Controller : novaReserva
+deactivate Service
+Controller --> APIService : HTTP 200 OK (JSON)
+deactivate Controller
+APIService --> UI : Promise<Reserva>
+deactivate APIService
+UI --> Aluno : toast.success("Reserva criada com sucesso!")
+deactivate UI
+@enduml

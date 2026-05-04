@@ -1,0 +1,60 @@
+@startuml
+title Diagrama de Sequência - Efetuar Reserva (Detalhado ao Código)
+
+autonumber
+
+actor "Utilizador\n(Aluno / Funcionário)" as User
+boundary "UI: Carrinho\n(Carrinho.tsx)" as UI
+control "Service API\n(services.ts)" as APIService
+control "reservaController" as Controller
+control "reservaService" as Service
+database "Prisma ORM" as DB
+
+User -> UI : Clicar em "Finalizar Reserva"
+activate UI
+
+UI -> APIService : criarReserva(linhasParaReserva, idAlunoSelecionado?)
+activate APIService
+
+APIService -> Controller : POST /reservas
+activate Controller
+
+Controller -> Controller : Determinar idUtilizador (Dono da reserva)\ne idFuncionario (se aplicável)
+
+Controller -> Service : criarReserva(idUtilizador, idFuncionario, dadosBody)
+activate Service
+
+Service -> DB : utilizador.findUnique(idUtilizador)
+activate DB
+DB --> Service : dadosAluno
+deactivate DB
+
+Service -> Service : Validar se o perfil é ALUNO e está ativo
+Service -> Service : Validar conflitos de datas internos no próprio carrinho
+
+Service -> DB : Iniciar $transaction()
+activate DB
+
+loop Para cada linha no carrinho
+    Service -> DB : anuncio_escola.findUnique()
+    DB --> Service : anuncio (para congelar o valor_diario atual)
+    Service -> DB : obterStockFigurinoPorAnuncio()
+    DB --> Service : quantidadeStock
+    Service -> DB : verificarDisponibilidade()
+    DB --> Service : ocupado (boolean)
+end
+
+Service -> DB : reserva.create(incluindo as linhas_reserva com preço)\n(Estado: 1 - PENDENTE)
+DB --> Service : novaReserva
+deactivate DB
+
+Service --> Controller : novaReserva
+deactivate Service
+Controller --> APIService : HTTP 200 OK (JSON)
+deactivate Controller
+APIService --> UI : Promise<Reserva>
+deactivate APIService
+UI -> UI : limparCarrinho()
+UI --> User : toast.success("Reserva criada com sucesso!")
+deactivate UI
+@enduml

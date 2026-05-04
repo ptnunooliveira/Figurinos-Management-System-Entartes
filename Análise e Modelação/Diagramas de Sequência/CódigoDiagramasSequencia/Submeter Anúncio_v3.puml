@@ -1,0 +1,44 @@
+@startuml
+title Diagrama de Sequência - Submeter Anúncio (Detalhado ao Código)
+
+autonumber
+
+actor Aluno
+boundary "UI: Marketplace\n(marketplace.tsx)" as UI
+control "Service API\n(services.ts)" as APIService
+control "marketplaceController" as Controller
+control "marketplaceService" as Service
+database "Prisma ORM" as DB
+
+Aluno -> UI : Clica "Submeter Anúncio para Aprovação"
+activate UI
+
+UI -> APIService : criarAnuncioMarketplace(FormData)
+activate APIService
+
+APIService -> Controller : POST /marketplace\n(Multer Middleware trata imagens)
+activate Controller
+
+Controller -> Service : criarAnuncioMarketplace(dados, imagens)
+activate Service
+
+Service -> DB : obterEstadoAnuncioPorNome("Submetido")
+Service -> DB : anuncio_marketplace.aggregate(_max)
+Service -> DB : anuncio_marketplace.create(idNovo, estado = Submetido)
+activate DB
+DB --> Service : criado
+deactivate DB
+
+Service -> Service : uploadImagensAnuncio(criado.id, imagens)
+Service -> DB : obterAnuncioMarketplacePorId(criado.id)
+DB --> Service : anuncioCompleto (incluindo relacionamentos)
+
+Service --> Controller : anuncioCompleto
+deactivate Service
+Controller --> APIService : HTTP 201 Created (JSON)
+deactivate Controller
+APIService --> UI : Promise <anuncio>
+deactivate APIService
+UI --> Aluno : toast.success("Anúncio submetido para aprovação!")
+deactivate UI
+@enduml

@@ -1,0 +1,118 @@
+@startuml
+title Diagrama de Sequência - Validar / Publicar Anúncio (Detalhado ao Código)
+
+autonumber
+
+actor Funcionario
+boundary "UI: Marketplace\n(marketplace.tsx)" as UI
+control "Service API\n(services.ts)" as APIService
+control "apiFetch\n(api.ts)" as ApiFetch
+control "marketplaceRoutes\n(marketplaceRoutes.js)" as Routes
+control "authMiddleware" as Auth
+control "perfilMiddleware\n(FUNCIONARIO, ADMIN)" as Perfil
+control "marketplaceController\nupdateMarketplaceStatus" as Controller
+control "marketplaceService" as Service
+control "marketplaceStorage" as Storage
+database "Prisma ORM" as DB
+
+Funcionario -> UI : Abre detalhes de anúncio pendente
+activate UI
+
+alt Aprovar anúncio
+    Funcionario -> UI : Clica "Aprovar"
+    UI -> UI : aprovarAnuncioPendente(id)
+    UI -> APIService : aprovarAnuncioMarketplace(id, true)
+else Rejeitar anúncio
+    Funcionario -> UI : Clica "Rejeitar"
+    UI -> UI : abrirModalRejeicao(anuncio)
+    Funcionario -> UI : Indica motivo e confirma
+    UI -> UI : confirmarRejeicao()
+    UI -> APIService : aprovarAnuncioMarketplace(id, false, motivo)
+end
+
+activate APIService
+APIService -> ApiFetch : apiFetch(`/marketplace/${id}/aprovar`, PATCH, body)
+activate ApiFetch
+
+ApiFetch -> Routes : PATCH /marketplace/:id/aprovar
+activate Routes
+
+Routes -> Auth : authMiddleware
+activate Auth
+Auth --> Routes : req.user validado
+deactivate Auth
+
+Routes -> Perfil : perfilMiddleware(["FUNCIONARIO", "ADMIN"])
+activate Perfil
+Perfil --> Routes : perfil autorizado
+deactivate Perfil
+
+Routes -> Controller : updateMarketplaceStatus(req, res)
+activate Controller
+
+Controller -> Controller : parseId(req.params.id)
+Controller -> Controller : validar aprovado booleano
+Controller -> Controller : validar motivorejeicao se aprovado == false
+
+Controller -> Service : atualizarEstadoAnuncioMarketplace(id, aprovado, motivorejeicao)
+activate Service
+
+Service -> DB : anuncio_marketplace.findUnique({ where: { id } })
+DB --> Service : anuncio
+
+Service -> Service : obterEstadoAnuncioPorNome("Submetido")
+Service -> DB : estado_anuncio.findFirst({ nome equals "Submetido" })
+DB --> Service : estadoSubmetido
+
+Service -> Service : validar anuncio.id_estado == estadoSubmetido.id
+
+alt aprovado == true
+    Service -> Service : obterEstadoAnuncioPorNome("Publicado")
+    Service -> DB : estado_anuncio.findFirst({ nome equals "Publicado" })
+    DB --> Service : estadoPublicado
+
+    Service -> DB : anuncio_marketplace.update({ id_estado, dataaprovacao, motivorejeicao: null })
+    DB --> Service : update concluído
+else aprovado == false
+    Service -> Service : obterEstadoAnuncioPorNome("Rejeitado")
+    Service -> DB : estado_anuncio.findFirst({ nome equals "Rejeitado" })
+    DB --> Service : estadoRejeitado
+
+    Service -> DB : anuncio_marketplace.update({ id_estado, dataaprovacao, motivorejeicao })
+    DB --> Service : update concluído
+end
+
+Service -> Service : obterAnuncioMarketplacePorId(id)
+Service -> DB : anuncio_marketplace.findUnique({ where: { id }, select: ... })
+DB --> Service : anuncio
+
+Service -> Storage : listarImagensAnuncio(anuncio.id)
+Storage --> Service : imagens
+
+Service -> Service : mapearAnuncioMarketplace(anuncio)
+Service --> Controller : anuncioCompleto
+deactivate Service
+
+Controller --> Routes : res.status(200).json(atualizado)
+deactivate Controller
+
+Routes --> ApiFetch : HTTP 200 OK
+deactivate Routes
+
+ApiFetch --> APIService : Response JSON
+deactivate ApiFetch
+
+APIService --> UI : Promise<anuncio>
+deactivate APIService
+
+alt Aprovar anúncio
+    UI -> UI : toast.success("Anúncio aprovado com sucesso!")
+else Rejeitar anúncio
+    UI -> UI : toast.success("Anúncio rejeitado")
+end
+
+UI -> UI : fecharDetalhes()
+UI -> UI : invalidateQueries(["marketplaceGestao"])
+
+deactivate UI
+@enduml

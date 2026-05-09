@@ -244,7 +244,7 @@ function Dashboard() {
       {
     /* Secção de Boas-Vindas */
   }
-      <div className="bg-gradient-to-br from-fig-purple to-fig-magenta rounded-2xl p-8 text-white relative overflow-hidden">
+      <div className="bg-gradient-to-br from-fig-purple to-fig-magenta rounded-2xl p-8 text-white relative overflow-visible">
         <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: "radial-gradient(circle at 80% 20%, white 0%, transparent 60%)" }} />
         <div className="flex items-start justify-between gap-4 relative">
           <div>
@@ -269,7 +269,7 @@ function Dashboard() {
                   </span>}
               </button>
 
-              {mostrarNotificacoes && <div className="absolute right-0 mt-2 w-96 max-w-[90vw] bg-white text-gray-900 rounded-xl shadow-xl border z-20">
+              {mostrarNotificacoes && <div className="absolute right-0 mt-2 w-96 max-w-[90vw] bg-white text-gray-900 rounded-xl shadow-xl border z-50">
                   <div className="p-4 border-b">
                     <p className="font-semibold">Notificações</p>
                   </div>

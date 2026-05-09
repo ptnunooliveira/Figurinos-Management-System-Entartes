@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { PlusCircle, Search, Filter, Shirt, Euro, Edit, Trash2, Calendar, X } from "lucide-react";
+import { PlusCircle, Search, Filter, Shirt, Euro, Edit, Trash2, Calendar, X, Eye } from "lucide-react";
 import { useNavigate } from "react-router";
 import { getUtilizadorAtual } from "../lib/auth";
 import { getAnunciosEscola, getFigurinosRaw, criarAnuncioEscola, atualizarAnuncioEscola, eliminarAnuncioEscola, getCategorias, getTiposFigurino, getSexos, type AnuncioEscolaAPI, type FigurinoAPI, type AuxiliarItem } from "../lib/services";
@@ -36,6 +36,7 @@ export function AnunciosEscola() {
   const [valorDiarioEditar, setValorDiarioEditar] = useState("");
   const [mostrarModalReserva, setMostrarModalReserva] = useState(false);
   const [anuncioReserva, setAnuncioReserva] = useState<AnuncioEscolaAPI | null>(null);
+  const [anuncioDetalhes, setAnuncioDetalhes] = useState<AnuncioEscolaAPI | null>(null);
   const [dataInicioReserva, setDataInicioReserva] = useState("");
   const [dataFimReserva, setDataFimReserva] = useState("");
   const { adicionarAoCarrinho } = useCart();
@@ -348,33 +349,43 @@ export function AnunciosEscola() {
                 {isStaff ? (
                   <>
                     <button
-                      className="flex items-center gap-1 px-2.5 py-1 text-xs border border-yellow-200 bg-yellow-50 text-yellow-700 hover:bg-yellow-100 rounded-lg transition-colors whitespace-nowrap"
+                      className="flex items-center gap-1.5 text-yellow-600 hover:text-yellow-700 transition-colors"
                       onClick={() => { setEditarAnuncio(anuncio); setValorDiarioEditar(String(anuncio.valordiarioaluguer ?? '')); }}
                     >
-                      <Edit className="w-3 h-3" />
+                      <Edit className="w-4 h-4" />
                       Editar
                     </button>
                     <button
-                      className="flex items-center gap-1 px-2.5 py-1 text-xs border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg transition-colors whitespace-nowrap"
+                      className="flex items-center gap-1.5 text-red-600 hover:text-red-700 transition-colors"
                       onClick={() => handleRemoverAnuncio(anuncio.id, anuncio.figurino?.titulo ?? anuncio.figurino?.descricao ?? '')}
                     >
-                      <Trash2 className="w-3 h-3" />
+                      <Trash2 className="w-4 h-4" />
                       Remover
                     </button>
                     <button
                       onClick={() => handleAbrirReserva(anuncio)}
-                      className="flex items-center gap-1 px-2.5 py-1 text-xs bg-gradient-to-r from-fig-purple to-fig-magenta text-white rounded-lg hover:shadow-md transition-all whitespace-nowrap"
+                      className="flex items-center gap-1.5 text-fig-purple hover:text-fig-magenta transition-colors"
                     >
+                      <Calendar className="w-4 h-4" />
                       Reservar
                     </button>
                   </>
                 ) : (
-                  <button
-                    onClick={() => handleAbrirReserva(anuncio)}
-                    className="flex items-center gap-1 px-3 py-1.5 text-xs bg-gradient-to-r from-fig-purple to-fig-magenta text-white rounded-lg hover:shadow-md transition-all whitespace-nowrap"
-                  >
-                    Reservar
-                  </button>
+                  <>
+                    <button
+                      onClick={() => setAnuncioDetalhes(anuncio)}
+                      className="flex items-center gap-1 px-3 py-1.5 text-xs border border-fig-purple text-fig-purple rounded-lg hover:bg-fig-purple/5 transition-colors whitespace-nowrap"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      Ver detalhes
+                    </button>
+                    <button
+                      onClick={() => handleAbrirReserva(anuncio)}
+                      className="flex items-center gap-1 px-3 py-1.5 text-xs bg-gradient-to-r from-fig-purple to-fig-magenta text-white rounded-lg hover:shadow-md transition-all whitespace-nowrap"
+                    >
+                      Reservar
+                    </button>
+                  </>
                 )}
               </div>
             </div>
@@ -517,6 +528,109 @@ export function AnunciosEscola() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Ver Detalhes (aluno) */}
+      {anuncioDetalhes && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b flex items-start justify-between">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">
+                  {anuncioDetalhes.figurino?.titulo ?? anuncioDetalhes.figurino?.descricao ?? `Anúncio #${anuncioDetalhes.id}`}
+                </h2>
+                <p className="text-sm text-gray-500 mt-0.5 flex items-center gap-1">
+                  <Calendar className="w-3.5 h-3.5" />
+                  Publicado em {anuncioDetalhes.dataanuncio ? new Date(anuncioDetalhes.dataanuncio).toLocaleDateString('pt-PT') : '—'}
+                </p>
+              </div>
+              <button onClick={() => setAnuncioDetalhes(null)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-5">
+              {/* Ícone e preço */}
+              <div className="flex items-center gap-4 p-4 bg-gradient-to-br from-fig-purple/5 to-fig-magenta/5 rounded-xl">
+                <div className="w-16 h-16 bg-gradient-to-br from-fig-purple/10 via-fig-magenta/10 to-fig-green/10 flex items-center justify-center rounded-lg flex-shrink-0">
+                  <Shirt className="w-8 h-8 text-fig-purple/40" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-fig-purple">€{(anuncioDetalhes.valordiarioaluguer ?? 0).toFixed(2)}</p>
+                  <p className="text-sm text-gray-500">por dia de aluguer</p>
+                </div>
+              </div>
+
+              {/* Tags de categorização */}
+              <div className="flex flex-wrap gap-2">
+                {anuncioDetalhes.figurino?.categoria && (
+                  <span className="px-2.5 py-1 bg-fig-purple/10 text-fig-purple text-xs rounded-full font-medium">
+                    {anuncioDetalhes.figurino.categoria.nomecategoria}
+                  </span>
+                )}
+                {anuncioDetalhes.figurino?.tipo_figurino && (
+                  <span className="px-2.5 py-1 bg-fig-green/10 text-fig-green text-xs rounded-full font-medium">
+                    {anuncioDetalhes.figurino.tipo_figurino.nome}
+                  </span>
+                )}
+                {anuncioDetalhes.figurino?.tamanho && (
+                  <span className="px-2.5 py-1 bg-gray-100 text-gray-600 text-xs rounded-full font-medium">
+                    Tamanho: {anuncioDetalhes.figurino.tamanho}
+                  </span>
+                )}
+                {anuncioDetalhes.figurino?.sexo && (
+                  <span className="px-2.5 py-1 bg-fig-purple/10 text-fig-purple text-xs rounded-full font-medium">
+                    {anuncioDetalhes.figurino.sexo.nome}
+                  </span>
+                )}
+              </div>
+
+              {/* Descrição */}
+              {anuncioDetalhes.figurino?.descricao && (
+                <div>
+                  <p className="text-sm font-medium text-gray-700 mb-1">Descrição</p>
+                  <p className="text-sm text-gray-600 bg-gray-50 rounded-lg p-3 whitespace-pre-wrap">
+                    {anuncioDetalhes.figurino.descricao}
+                  </p>
+                </div>
+              )}
+
+              {/* Acessórios */}
+              {anuncioDetalhes.figurino?.figurino_acessorio && anuncioDetalhes.figurino.figurino_acessorio.length > 0 && (
+                <div>
+                  <p className="text-sm font-medium text-gray-700 mb-2">
+                    Acessórios incluídos ({anuncioDetalhes.figurino.figurino_acessorio.length})
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {anuncioDetalhes.figurino.figurino_acessorio.map((fa) => (
+                      <span key={fa.id_acessorio} className="px-3 py-1 bg-blue-50 text-blue-600 text-xs rounded-full font-medium">
+                        {fa.acessorio.nome}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Botões */}
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setAnuncioDetalhes(null)}
+                  className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Fechar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setAnuncioDetalhes(null); handleAbrirReserva(anuncioDetalhes); }}
+                  className="flex-1 px-6 py-3 bg-gradient-to-r from-fig-purple to-fig-magenta text-white rounded-lg hover:shadow-lg transition-all"
+                >
+                  Reservar
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

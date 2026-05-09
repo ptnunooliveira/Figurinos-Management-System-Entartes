@@ -12,7 +12,6 @@ export interface FigurinoAPI {
   id: number;
   titulo?: string | null;
   descricao: string | null;
-  quantidade_stock?: number | null;
   tamanho: string | null;
   localizacao: string | null;
   ativo?: boolean | null;
@@ -49,7 +48,6 @@ export function mapFigurino(f: FigurinoAPI): Figurino {
     imagens: [],
     acessorios: f.figurino_acessorio.map((fa) => fa.acessorio),
     valor_diario: 0,
-    quantidade_stock: f.quantidade_stock ?? 1,
   };
 }
 
@@ -104,7 +102,6 @@ export async function atualizarFigurino(
     id_tipo?: number | null;
     id_sexo?: number | null;
     id_estado_figurino?: number | null;
-    quantidade_stock?: number | null;
     id_acessorios?: number[];
     substituir_acessorios?: boolean;
   },
@@ -136,14 +133,12 @@ export interface DisponibilidadeAnuncio {
   id_anuncio: number;
   id_figurino: number | null;
   figurino_nome: string;
-  quantidade_stock: number;
   data_inicio: string;
   data_fim: string;
   datas_indisponiveis: string[];
   datas: Array<{
     data: string;
     ocupadas: number;
-    stock: number;
     disponivel: boolean;
   }>;
 }
@@ -220,6 +215,31 @@ export async function criarAcessorio(nome: string): Promise<AuxiliarItem> {
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.erro ?? err.error ?? 'Erro ao criar acessório');
+  }
+  return res.json();
+}
+
+export async function criarCategoria(nome: string): Promise<AuxiliarItem> {
+  const res = await apiFetch('/pesquisa/categorias', {
+    method: 'POST',
+    body: JSON.stringify({ nomecategoria: nome }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error ?? err.erro ?? 'Erro ao criar categoria');
+  }
+  const data = await res.json();
+  return { id: data.id, nome: data.nomecategoria };
+}
+
+export async function criarTipoFigurino(nome: string): Promise<AuxiliarItem> {
+  const res = await apiFetch('/pesquisa/tipos-figurino', {
+    method: 'POST',
+    body: JSON.stringify({ nome }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error ?? err.erro ?? 'Erro ao criar tipo de figurino');
   }
   return res.json();
 }

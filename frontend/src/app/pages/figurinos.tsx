@@ -41,7 +41,6 @@ export function Figurinos() {
     tipo: "",
     sexo: "",
     estado: "",
-    quantidade_stock: "1",
   });
   const [acessoriosEditacao, setAcessoriosEditacao] = useState<number[]>([]);
   const { adicionarAoCarrinho } = useCart();
@@ -98,7 +97,6 @@ export function Figurinos() {
       tipo: figurino.tipo_figurino?.id ? String(figurino.tipo_figurino.id) : "",
       sexo: figurino.sexo?.id ? String(figurino.sexo.id) : "",
       estado: figurino.estado_condicao?.id ? String(figurino.estado_condicao.id) : "",
-      quantidade_stock: String(figurino.quantidade_stock ?? 1),
     });
     setAcessoriosEditacao((figurino.figurino_acessorio ?? []).map((fa) => fa.id_acessorio));
     setMostrarModalEditar(true);
@@ -107,7 +105,7 @@ export function Figurinos() {
   const handleFecharEditar = () => {
     setMostrarModalEditar(false);
     setFigurinoEditando(null);
-    setFormEditacao({ titulo: "", descricao: "", tamanho: "", localizacao: "", categoria: "", tipo: "", sexo: "", estado: "", quantidade_stock: "1" });
+    setFormEditacao({ titulo: "", descricao: "", tamanho: "", localizacao: "", categoria: "", tipo: "", sexo: "", estado: "" });
     setAcessoriosEditacao([]);
   };
 
@@ -135,7 +133,6 @@ export function Figurinos() {
         id_tipo: formEditacao.tipo ? parseInt(formEditacao.tipo) : null,
         id_sexo: formEditacao.sexo ? parseInt(formEditacao.sexo) : null,
         id_estado_figurino: formEditacao.estado ? parseInt(formEditacao.estado) : null,
-        quantidade_stock: Math.max(0, parseInt(formEditacao.quantidade_stock) || 0),
         id_acessorios: acessoriosEditacao,
         substituir_acessorios: true,
       });
@@ -144,19 +141,6 @@ export function Figurinos() {
       handleFecharEditar();
     } catch (err: any) {
       toast.error(err.message || "Erro ao atualizar figurino");
-    }
-  };
-
-  const handleAtualizarStock = async (figurino: FigurinoAPI, valor: number) => {
-    const quantidade = Math.max(0, Math.floor(valor));
-    if ((figurino.quantidade_stock ?? 1) === quantidade) return;
-
-    try {
-      await atualizarFigurino(figurino.id, { quantidade_stock: quantidade });
-      toast.success("Stock atualizado com sucesso!");
-      queryClient.invalidateQueries({ queryKey: ["figurinos"] });
-    } catch (err: any) {
-      toast.error(err.message || "Erro ao atualizar stock");
     }
   };
 
@@ -249,34 +233,34 @@ export function Figurinos() {
     );
   });
 
-  const categoriasUnicas = [...new Set(figurinos.map((f) => f.categoria?.nomecategoria ?? '').filter(Boolean))].sort();
-  const tiposUnicos = [...new Set(figurinos.map((f) => f.tipo_figurino?.nome ?? '').filter(Boolean))].sort();
-  const tamanhosUnicos = ["XS", "S", "M", "L", "XL", "XXL"];
-  const generosUnicos = [...new Set(figurinos.map((f) => f.sexo?.nome ?? '').filter(Boolean))].sort();
-  const estadosUnicos = [...new Set(figurinos.map((f) => f.estado_condicao?.nome ?? '').filter(Boolean))].sort();
+  const categoriasUnicas = categorias.map((c) => c.nome).sort();
+  const tiposUnicos = tipos.map((t) => t.nome).sort();
+  const tamanhosUnicos = [...new Set(figurinos.map((f) => f.tamanho ?? '').filter(Boolean))].sort();
+  const generosUnicos = sexos.map((s) => s.nome).sort();
+  const estadosUnicos = estadosCondicao.map((e) => e.nome).sort();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       {/* Cabeçalho */}
-      <div className="flex items-start justify-between flex-wrap gap-4">
+      <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Catálogo de Figurinos</h1>
-          <p className="text-gray-600">Explore a nossa coleção completa de figurinos disponíveis</p>
+          <h1 className="text-2xl font-bold text-gray-900">Catálogo de Figurinos</h1>
+          <p className="text-gray-600 text-sm mt-0.5">Explore a nossa coleção completa de figurinos disponíveis</p>
         </div>
         {isStaff && (
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <button
               onClick={() => setMostrarModalAcessorio(true)}
-              className="flex items-center gap-2 border border-purple-600 text-purple-600 hover:bg-purple-50 px-6 py-3 rounded-lg transition-colors"
+              className="flex items-center gap-1.5 border border-purple-600 text-purple-600 hover:bg-purple-50 px-4 py-2 text-sm rounded-lg transition-colors whitespace-nowrap"
             >
-              <Plus className="w-5 h-5" />
+              <Plus className="w-4 h-4" />
               Criar Acessório
             </button>
             <Link
               to="/figurinos/criar"
-              className="flex items-center gap-2 bg-gradient-to-r from-fig-purple to-fig-magenta text-white px-6 py-3 rounded-lg hover:shadow-lg transition-all"
+              className="flex items-center gap-1.5 bg-gradient-to-r from-fig-purple to-fig-magenta text-white px-4 py-2 text-sm rounded-lg hover:shadow-lg transition-all whitespace-nowrap"
             >
-              <Plus className="w-5 h-5" />
+              <Plus className="w-4 h-4" />
               Criar Figurino
             </Link>
           </div>
@@ -284,236 +268,177 @@ export function Figurinos() {
       </div>
 
       {/* Pesquisa e Filtros */}
-      <div className="bg-white rounded-xl shadow-sm p-6 space-y-4">
+      <div className="bg-white rounded-xl shadow-sm px-4 py-3 space-y-2">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
             type="text"
             placeholder="Pesquisar figurinos..."
             value={termoPesquisa}
             onChange={(e) => setTermoPesquisa(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            className="w-full pl-9 pr-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
           />
         </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              <Filter className="w-4 h-4 inline mr-1" />
-              Categoria
-            </label>
-            <select
-              value={categoriaSelecionada}
-              onChange={(e) => setCategoriaSelecionada(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-            >
-              <option value="todas">Todas as categorias</option>
-              {categoriasUnicas.map((cat) => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Tipo</label>
-            <select
-              value={tipoSelecionado}
-              onChange={(e) => setTipoSelecionado(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-            >
-              <option value="todos">Todos os tipos</option>
-              {tiposUnicos.map((tipo) => (
-                <option key={tipo} value={tipo}>{tipo}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Tamanho</label>
-            <select
-              value={tamanhoSelecionado}
-              onChange={(e) => setTamanhoSelecionado(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-            >
-              <option value="todos">Todos os tamanhos</option>
-              {tamanhosUnicos.map((tamanho) => (
-                <option key={tamanho} value={tamanho}>{tamanho}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Género</label>
-            <select
-              value={generoSelecionado}
-              onChange={(e) => setGeneroSelecionado(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-            >
-              <option value="todos">Todos</option>
-              {generosUnicos.map((genero) => (
-                <option key={genero} value={genero}>{genero}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Estado</label>
-            <select
-              value={estadoSelecionado}
-              onChange={(e) => setEstadoSelecionado(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-            >
-              <option value="todos">Todos os estados</option>
-              {estadosUnicos.map((estado) => (
-                <option key={estado} value={estado}>{estado}</option>
-              ))}
-            </select>
-          </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Filter className="w-4 h-4 text-gray-400 flex-shrink-0" />
+          <select
+            value={categoriaSelecionada}
+            onChange={(e) => setCategoriaSelecionada(e.target.value)}
+            className="px-2 py-1.5 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+          >
+            <option value="todas">Todas as categorias</option>
+            {categoriasUnicas.map((cat) => (
+              <option key={cat} value={cat}>{cat}</option>
+            ))}
+          </select>
+          <select
+            value={tipoSelecionado}
+            onChange={(e) => setTipoSelecionado(e.target.value)}
+            className="px-2 py-1.5 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+          >
+            <option value="todos">Todos os tipos</option>
+            {tiposUnicos.map((tipo) => (
+              <option key={tipo} value={tipo}>{tipo}</option>
+            ))}
+          </select>
+          <select
+            value={tamanhoSelecionado}
+            onChange={(e) => setTamanhoSelecionado(e.target.value)}
+            className="px-2 py-1.5 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+          >
+            <option value="todos">Todos os tamanhos</option>
+            {tamanhosUnicos.map((tamanho) => (
+              <option key={tamanho} value={tamanho}>{tamanho}</option>
+            ))}
+          </select>
+          <select
+            value={generoSelecionado}
+            onChange={(e) => setGeneroSelecionado(e.target.value)}
+            className="px-2 py-1.5 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+          >
+            <option value="todos">Todos os géneros</option>
+            {generosUnicos.map((genero) => (
+              <option key={genero} value={genero}>{genero}</option>
+            ))}
+          </select>
+          <select
+            value={estadoSelecionado}
+            onChange={(e) => setEstadoSelecionado(e.target.value)}
+            className="px-2 py-1.5 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+          >
+            <option value="todos">Todos os estados</option>
+            {estadosUnicos.map((estado) => (
+              <option key={estado} value={estado}>{estado}</option>
+            ))}
+          </select>
         </div>
-      </div>
-
-      {/* Contagem */}
-      <div className="flex items-center justify-between">
-        <p className="text-gray-600">
-          {figurinosFiltrados.length} figurino{figurinosFiltrados.length !== 1 ? 's' : ''} encontrado{figurinosFiltrados.length !== 1 ? 's' : ''}
-        </p>
       </div>
 
       {/* Lista */}
-      <div className="space-y-4">
+      <div className="space-y-2">
         {figurinosFiltrados.map((figurino) => (
-          <div key={figurino.id} className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow overflow-hidden">
-            <div className="flex flex-col sm:flex-row gap-0 sm:gap-6">
-              <div className="w-full sm:w-32 h-32 bg-gradient-to-br from-fig-purple/10 via-fig-magenta/10 to-fig-green/10 flex items-center justify-center flex-shrink-0">
-                <Shirt className="w-16 h-16 text-fig-purple/30" />
+          <div key={figurino.id} className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow overflow-hidden flex">
+            {/* Ícone */}
+            <div className="w-30 bg-gradient-to-br from-fig-purple/10 via-fig-magenta/10 to-fig-green/10 flex items-center justify-center flex-shrink-0">
+              <Shirt className="w-8 h-8 text-fig-purple/30" />
+            </div>
+
+            {/* Conteúdo */}
+            <div className="flex-1 min-w-0 px-4 py-9 flex items-center gap-4">
+              {/* Info principal */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <p className="font-semibold text-gray-900 text-sm truncate">
+                    {figurino.titulo ?? figurino.descricao ?? '—'}
+                  </p>
+                  {figurino.localizacao && (
+                    <span className="text-xs text-gray-400 truncate flex-shrink-0">{figurino.localizacao}</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {figurino.categoria && (
+                    <span className="px-2 py-0.5 bg-fig-purple/10 text-fig-purple text-xs rounded-full font-medium">
+                      {figurino.categoria.nomecategoria}
+                    </span>
+                  )}
+                  {figurino.tipo_figurino && (
+                    <span className="px-2 py-0.5 bg-fig-green/10 text-fig-green text-xs rounded-full font-medium">
+                      {figurino.tipo_figurino.nome}
+                    </span>
+                  )}
+                  {figurino.tamanho && (
+                    <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full font-medium">
+                      {figurino.tamanho}
+                    </span>
+                  )}
+                  {figurino.sexo && (
+                    <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full font-medium">
+                      {figurino.sexo.nome}
+                    </span>
+                  )}
+                  {figurino.estado_condicao && (
+                    <span className="px-2 py-0.5 bg-fig-green/10 text-fig-green text-xs rounded-full font-medium">
+                      {figurino.estado_condicao.nome}
+                    </span>
+                  )}
+                  {(figurino.figurino_acessorio ?? []).slice(0, 3).map((fa) => (
+                    <span key={fa.id_acessorio} className="px-2 py-0.5 bg-blue-50 text-blue-600 text-xs rounded-full font-medium">
+                      {fa.acessorio.nome}
+                    </span>
+                  ))}
+                  {(figurino.figurino_acessorio ?? []).length > 3 && (
+                    <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full">
+                      +{(figurino.figurino_acessorio ?? []).length - 3}
+                    </span>
+                  )}
+                </div>
               </div>
 
-              <div className="flex-1 p-5 sm:py-5 sm:pr-5 sm:pl-0">
-                <div className="flex flex-col h-full">
-                  <div className="mb-3">
-                    <h3 className="font-semibold text-gray-900 text-lg mb-1">{figurino.titulo ?? figurino.descricao ?? '—'}</h3>
-                    <p className="text-sm text-gray-500">{figurino.localizacao ?? ''}</p>
+              {/* Preço (apenas para alunos) */}
+              {!isStaff && (() => {
+                const anuncio = anunciosEscola.find(a => a.id_figurino === figurino.id);
+                return (
+                  <div className="flex items-baseline gap-0.5 flex-shrink-0">
+                    <span className="font-bold text-fig-purple">€{(anuncio?.valordiarioaluguer ?? 0).toFixed(2)}</span>
+                    <span className="text-xs text-gray-400">/dia</span>
                   </div>
+                );
+              })()}
 
-                  <div className="flex items-center gap-2 flex-wrap mb-3">
-                    {figurino.categoria && (
-                      <span className="inline-flex items-center gap-1 px-3 py-1 bg-fig-purple/10 text-fig-purple text-xs rounded-full font-medium">
-                        {figurino.categoria.nomecategoria}
-                      </span>
-                    )}
-                    {figurino.tamanho && (
-                      <span className="inline-flex items-center px-3 py-1 bg-gray-100 text-gray-700 text-xs rounded-full font-medium">
-                        {figurino.tamanho}
-                      </span>
-                    )}
-                    {figurino.sexo && (
-                      <span className="inline-flex items-center px-3 py-1 bg-gray-100 text-gray-700 text-xs rounded-full font-medium">
-                        {figurino.sexo.nome}
-                      </span>
-                    )}
-                    {figurino.estado_condicao && (
-                      <span className="inline-flex items-center px-3 py-1 bg-fig-green/10 text-fig-green text-xs rounded-full font-medium">
-                        {figurino.estado_condicao.nome}
-                      </span>
-                    )}
-                  </div>
-
-                  {(figurino.figurino_acessorio ?? []).length > 0 && (
-                    <div className="mb-3">
-                      <p className="text-xs text-gray-500 mb-1">Acessórios incluídos:</p>
-                      <div className="flex flex-wrap gap-1">
-                        {(figurino.figurino_acessorio ?? []).slice(0, 3).map((fa) => (
-                          <span key={fa.id_acessorio} className="text-xs px-2 py-0.5 bg-fig-green/10 text-fig-green rounded">
-                            {fa.acessorio.nome}
-                          </span>
-                        ))}
-                        {(figurino.figurino_acessorio ?? []).length > 3 && (
-                          <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded">
-                            +{(figurino.figurino_acessorio ?? []).length - 3}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="mt-auto pt-3 border-t">
-                    {isStaff ? (
-                      <div className="flex items-center justify-between gap-4 text-sm flex-wrap">
-                        <div className="flex items-center gap-2">
-                          <span className="text-gray-600 font-medium">Stock</span>
-                          <button
-                            onClick={() => handleAtualizarStock(figurino, (figurino.quantidade_stock ?? 1) - 1)}
-                            className="w-8 h-8 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-40"
-                            disabled={(figurino.quantidade_stock ?? 1) <= 0}
-                            title="Diminuir stock"
-                          >
-                            -
-                          </button>
-                          <input
-                            type="number"
-                            min="0"
-                            defaultValue={figurino.quantidade_stock ?? 1}
-                            onBlur={(e) => handleAtualizarStock(figurino, parseInt(e.target.value) || 0)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                e.currentTarget.blur();
-                              }
-                            }}
-                            className="w-20 px-2 py-1.5 border border-gray-300 rounded-lg text-center"
-                            title="Quantidade em stock"
-                          />
-                          <button
-                            onClick={() => handleAtualizarStock(figurino, (figurino.quantidade_stock ?? 1) + 1)}
-                            className="w-8 h-8 border border-gray-300 rounded-lg hover:bg-gray-50"
-                            title="Aumentar stock"
-                          >
-                            +
-                          </button>
-                        </div>
-                        <div className="flex items-center justify-end gap-4">
-                        <button
-                          onClick={() => handleAbrirVer(figurino)}
-                          className="flex items-center gap-1.5 text-gray-600 hover:text-gray-900 transition-colors"
-                        >
-                          <Eye className="w-4 h-4" />
-                          Ver
-                        </button>
-                        <button
-                          onClick={() => handleAbrirEditar(figurino)}
-                          className="flex items-center gap-1.5 text-yellow-600 hover:text-yellow-700 transition-colors"
-                        >
-                          <Edit className="w-4 h-4" />
-                          Editar
-                        </button>
-                        <button
-                          onClick={() => handleRemoverFigurino(figurino.id, figurino.titulo ?? figurino.descricao ?? '')}
-                          className="flex items-center gap-1.5 text-red-600 hover:text-red-700 transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                          Remover
-                        </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-between flex-wrap gap-4">
-                        {(() => {
-                          const anuncio = anunciosEscola.find(a => a.id_figurino === figurino.id);
-                          return (
-                            <div className="text-right">
-                              <p className="text-sm text-gray-600">€ {(anuncio?.valordiarioaluguer ?? 0).toFixed(2)} /dia</p>
-                            </div>
-                          );
-                        })()}
-                        <button
-                          onClick={() => handleAbrirModalReserva(figurino)}
-                          className="bg-gradient-to-r from-fig-purple to-fig-magenta hover:shadow-lg text-white py-2 px-6 rounded-lg transition-all"
-                        >
-                          Reservar
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
+              {/* Ações */}
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {isStaff ? (
+                  <>
+                    <button
+                      onClick={() => handleAbrirVer(figurino)}
+                      className="flex items-center gap-1.5 text-gray-600 hover:text-gray-900 transition-colors text-sm"
+                    >
+                      <Eye className="w-4 h-4" />
+                      Ver
+                    </button>
+                    <button
+                      onClick={() => handleAbrirEditar(figurino)}
+                      className="flex items-center gap-1.5 text-yellow-600 hover:text-yellow-700 transition-colors text-sm"
+                    >
+                      <Edit className="w-4 h-4" />
+                      Editar
+                    </button>
+                    <button
+                      onClick={() => handleRemoverFigurino(figurino.id, figurino.titulo ?? figurino.descricao ?? '')}
+                      className="flex items-center gap-1.5 text-red-600 hover:text-red-700 transition-colors text-sm"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      Remover
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => handleAbrirModalReserva(figurino)}
+                    className="flex items-center gap-1 px-3 py-1.5 text-xs bg-gradient-to-r from-fig-purple to-fig-magenta text-white rounded-lg hover:shadow-md transition-all whitespace-nowrap"
+                  >
+                    Reservar
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -521,10 +446,9 @@ export function Figurinos() {
       </div>
 
       {figurinosFiltrados.length === 0 && (
-        <div className="text-center py-12">
-          <Shirt className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum figurino encontrado</h3>
-          <p className="text-gray-600">Tente ajustar os filtros ou pesquisar por outros termos</p>
+        <div className="text-center py-10 bg-white rounded-xl">
+          <Shirt className="w-12 h-12 mx-auto text-gray-300 mb-3" />
+          <p className="text-gray-500 text-sm">Nenhum figurino encontrado</p>
         </div>
       )}
 
@@ -658,12 +582,6 @@ export function Figurinos() {
                   <p className="mt-1 text-gray-900">{figurinoSelecionado.estado_condicao?.nome ?? '—'}</p>
                 </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Stock total</label>
-                  <p className="mt-1 text-gray-900">{figurinoSelecionado.quantidade_stock ?? 1}</p>
-                </div>
-              </div>
               <div>
                 <label className="text-sm font-medium text-gray-700">Acessórios incluídos</label>
                 {(figurinoSelecionado.figurino_acessorio ?? []).length > 0 ? (
@@ -738,19 +656,6 @@ export function Figurinos() {
                     type="text"
                     value={formEditacao.localizacao}
                     onChange={(e) => setFormEditacao({...formEditacao, localizacao: e.target.value})}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Stock</label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="1"
-                    value={formEditacao.quantidade_stock}
-                    onChange={(e) => setFormEditacao({...formEditacao, quantidade_stock: e.target.value})}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   />
                 </div>

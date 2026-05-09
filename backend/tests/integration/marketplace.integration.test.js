@@ -38,6 +38,16 @@ describe("Marketplace BPMN integration", () => {
   let staff;
   let alunoToken;
   let staffToken;
+  const anunciosCriados = [];
+
+  afterAll(async () => {
+    if (anunciosCriados.length > 0) {
+      await prisma.anuncio_marketplace.deleteMany({
+        where: { id: { in: anunciosCriados } },
+      });
+    }
+    await prisma.$disconnect();
+  });
 
   beforeAll(async () => {
     aluno = await prisma.utilizador.findFirst({
@@ -76,6 +86,7 @@ describe("Marketplace BPMN integration", () => {
     expect(criarRes.body?.id).toBeDefined();
 
     const anuncioId = criarRes.body.id;
+    anunciosCriados.push(anuncioId);
 
     const aprovarRes = await request(app)
       .patch(`/marketplace/${anuncioId}/aprovar`)
@@ -110,6 +121,7 @@ describe("Marketplace BPMN integration", () => {
 
     expect(criarRes.status).toBe(201);
     const anuncioId = criarRes.body.id;
+    anunciosCriados.push(anuncioId);
 
     const rejeitarRes = await request(app)
       .patch(`/marketplace/${anuncioId}/aprovar`)
@@ -144,6 +156,7 @@ describe("Marketplace BPMN integration", () => {
 
     expect(criarRes.status).toBe(201);
     const anuncioId = criarRes.body.id;
+    anunciosCriados.push(anuncioId);
 
     const rejeitarRes = await request(app)
       .patch(`/marketplace/${anuncioId}/aprovar`)

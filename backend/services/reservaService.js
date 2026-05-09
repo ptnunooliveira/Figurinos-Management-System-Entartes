@@ -162,7 +162,7 @@ const obterDetalhesReserva = async (idReserva) => {
 
 
 // Foi adicionado o parâmetro "tx" (transaction) com valor por defeito "prisma" para manter compatibilidade
-const verificarDisponibilidade = async (idFigurino, dataInicioPedida, dataFimPedida, quantidadeStock = 1, tx = prisma) => {
+const verificarDisponibilidade = async (idFigurino, dataInicioPedida, dataFimPedida, tx = prisma) => {
 
     const inicio = new Date(dataInicioPedida);
     const fim = new Date(dataFimPedida);
@@ -181,7 +181,7 @@ const verificarDisponibilidade = async (idFigurino, dataInicioPedida, dataFimPed
         }
     });
 
-    return reservasSobrepostas >= Math.max(0, quantidadeStock || 0);
+    return reservasSobrepostas >= 1;
 }
 
 const obterNomeFigurinoPorAnuncio = async (idAnuncio, tx = prisma) => {
@@ -196,18 +196,6 @@ const obterNomeFigurinoPorAnuncio = async (idAnuncio, tx = prisma) => {
     });
 
     return anuncio?.figurino?.titulo || anuncio?.figurino?.descricao || `anÃºncio ${idAnuncio}`;
-};
-
-const obterStockFigurinoPorAnuncio = async (idAnuncio, tx = prisma) => {
-    const rows = await tx.$queryRawUnsafe(
-        `SELECT COALESCE(f.quantidade_stock, 1) AS quantidade_stock
-         FROM anuncio_escola ae
-         LEFT JOIN figurino f ON f.id = ae.id_figurino
-         WHERE ae.id = ${Number(idAnuncio)}
-         LIMIT 1`
-    );
-
-    return Number(rows?.[0]?.quantidade_stock ?? 1);
 };
 
 
@@ -296,8 +284,7 @@ const criarReserva = async (idUtilizador, idFuncionario, dadosBody) => {
                 throw erro;
             }
 
-            const quantidadeStock = await obterStockFigurinoPorAnuncio(linha.id_anuncio, tx);
-            const ocupado = await verificarDisponibilidade(anuncio.id_figurino, linha.datainicio, linha.datafim, quantidadeStock, tx);
+            const ocupado = await verificarDisponibilidade(anuncio.id_figurino, linha.datainicio, linha.datafim, tx);
 
             if(ocupado){
                 const nomeFigurino = anuncio.figurino?.titulo || anuncio.figurino?.descricao || `anúncio ${linha.id_anuncio}`;

@@ -348,23 +348,24 @@ export function AnunciosEscola() {
                 {isStaff ? (
                   <>
                     <button
-                      className="flex items-center gap-1 px-2.5 py-1 text-xs border border-yellow-200 bg-yellow-50 text-yellow-700 hover:bg-yellow-100 rounded-lg transition-colors whitespace-nowrap"
+                      className="flex items-center gap-1.5 text-yellow-600 hover:text-yellow-700 transition-colors"
                       onClick={() => { setEditarAnuncio(anuncio); setValorDiarioEditar(String(anuncio.valordiarioaluguer ?? '')); }}
                     >
-                      <Edit className="w-3 h-3" />
+                      <Edit className="w-4 h-4" />
                       Editar
                     </button>
                     <button
-                      className="flex items-center gap-1 px-2.5 py-1 text-xs border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg transition-colors whitespace-nowrap"
+                      className="flex items-center gap-1.5 text-red-600 hover:text-red-700 transition-colors"
                       onClick={() => handleRemoverAnuncio(anuncio.id, anuncio.figurino?.titulo ?? anuncio.figurino?.descricao ?? '')}
                     >
-                      <Trash2 className="w-3 h-3" />
+                      <Trash2 className="w-4 h-4" />
                       Remover
                     </button>
                     <button
                       onClick={() => handleAbrirReserva(anuncio)}
-                      className="flex items-center gap-1 px-2.5 py-1 text-xs bg-gradient-to-r from-fig-purple to-fig-magenta text-white rounded-lg hover:shadow-md transition-all whitespace-nowrap"
+                      className="flex items-center gap-1.5 text-fig-purple hover:text-fig-magenta transition-colors"
                     >
+                      <Calendar className="w-4 h-4" />
                       Reservar
                     </button>
                   </>

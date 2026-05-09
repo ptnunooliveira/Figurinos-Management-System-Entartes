@@ -131,7 +131,7 @@ export function Reservas() {
           onClick={() => setAbaAtiva("ativas")}
           className={`px-5 py-1.5 rounded-lg text-sm transition-colors ${
             abaAtiva === "ativas"
-              ? "bg-purple-600 text-white"
+              ? "bg-gradient-to-r from-fig-purple to-fig-magenta text-white"
               : "text-gray-600 hover:bg-gray-100"
           }`}
         >
@@ -141,7 +141,7 @@ export function Reservas() {
           onClick={() => setAbaAtiva("historico")}
           className={`px-5 py-1.5 rounded-lg text-sm transition-colors ${
             abaAtiva === "historico"
-              ? "bg-purple-600 text-white"
+              ? "bg-gradient-to-r from-fig-purple to-fig-magenta text-white"
               : "text-gray-600 hover:bg-gray-100"
           }`}
         >
@@ -158,7 +158,7 @@ export function Reservas() {
             type="text"
             value={termoPesquisa}
             onChange={(e) => setTermoPesquisa(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            className="w-full pl-9 pr-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-fig-purple focus:border-transparent"
             placeholder="Pesquisar por ID, aluno ou figurino..."
           />
         </div>
@@ -170,7 +170,7 @@ export function Reservas() {
             <select
               value={estadoSelecionado}
               onChange={(e) => setEstadoSelecionado(e.target.value)}
-              className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-fig-purple focus:border-transparent"
             >
               <option value="todos">Todos os Estados</option>
               <option value="CONFIRMADA">Confirmada</option>
@@ -200,9 +200,9 @@ export function Reservas() {
             return (
               <div key={reserva.id} className="bg-white rounded-xl shadow-sm overflow-hidden flex">
                 {/* Coluna esquerda — info da reserva */}
-                <div className="w-36 flex-shrink-0 border-r bg-gradient-to-b from-purple-50 to-pink-50 p-3 flex flex-col gap-1">
+                <div className="w-36 flex-shrink-0 border-r bg-gradient-to-b from-fig-purple/10 via-fig-magenta/10 to-fig-green/10 p-3 flex flex-col gap-1">
                   <div className="flex items-center gap-1">
-                    <Calendar className="w-3.5 h-3.5 text-purple-600 flex-shrink-0" />
+                    <Calendar className="w-3.5 h-3.5 text-fig-purple flex-shrink-0" />
                     <span className="font-semibold text-gray-900 text-sm">#{reserva.id}</span>
                   </div>
                   <p className="text-xs text-gray-500">
@@ -228,8 +228,8 @@ export function Reservas() {
                     return (
                       <div key={linha.id} className="flex items-center gap-3 px-3 py-2">
                         {/* Imagem */}
-                        <div className="w-11 h-11 bg-gradient-to-br from-purple-100 to-pink-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                          <Shirt className="w-6 h-6 text-purple-400" />
+                        <div className="w-11 h-11 bg-gradient-to-br from-fig-purple/10 via-fig-magenta/10 to-fig-green/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <Shirt className="w-6 h-6 text-fig-purple/40" />
                         </div>
 
                         {/* Info figurino */}
@@ -255,7 +255,7 @@ export function Reservas() {
                           <p className="text-xs text-gray-500 mt-0.5">
                             {formatarMoeda(linha.valor_diario ?? 0)}/dia × {dias} dias
                             {' · '}
-                            <span className="font-semibold text-purple-600">Total: {formatarMoeda(valorTotal)}</span>
+                            <span className="font-semibold text-fig-purple">Total: {formatarMoeda(valorTotal)}</span>
                           </p>
                         </div>
 
@@ -330,7 +330,7 @@ export function Reservas() {
             {abaAtiva === "ativas" && !isStaff && (
               <Link
                 to="/figurinos"
-                className="bg-purple-600 hover:bg-purple-700 text-white px-5 py-2 rounded-lg text-sm transition-colors inline-block"
+                className="bg-gradient-to-r from-fig-purple to-fig-magenta hover:shadow-md text-white px-5 py-2 rounded-lg text-sm transition-all inline-block"
               >
                 Explorar Figurinos
               </Link>

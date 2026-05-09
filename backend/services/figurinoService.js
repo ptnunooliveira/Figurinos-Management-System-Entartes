@@ -150,29 +150,12 @@ const obterTitulosFigurinos = async (client, ids) => {
     return new Map(titulos.map((item) => [Number(item.id), item.titulo]));
 };
 
-const obterStocksFigurinos = async (client, ids) => {
-    const idsUnicos = [...new Set(ids.filter(validarId))];
-
-    if (idsUnicos.length === 0) {
-        return new Map();
-    }
-
-    const placeholders = idsUnicos.map((id) => Number(id)).join(',');
-    const stocks = await client.$queryRawUnsafe(
-        `SELECT id, COALESCE(quantidade_stock, 1) AS quantidade_stock FROM figurino WHERE id IN (${placeholders})`
-    );
-
-    return new Map(stocks.map((item) => [Number(item.id), Number(item.quantidade_stock)]));
-};
-
 const anexarTitulosFigurinos = async (figurinos, client = prisma) => {
     const lista = Array.isArray(figurinos) ? figurinos : [figurinos];
     const titulos = await obterTitulosFigurinos(client, lista.map((figurino) => figurino?.id));
-    const stocks = await obterStocksFigurinos(client, lista.map((figurino) => figurino?.id));
     const comTitulos = lista.map((figurino) => ({
         ...figurino,
         titulo: titulos.get(figurino.id) ?? figurino.titulo ?? null,
-        quantidade_stock: stocks.get(figurino.id) ?? figurino.quantidade_stock ?? 1
     }));
 
     return Array.isArray(figurinos) ? comTitulos : comTitulos[0];
@@ -189,13 +172,6 @@ const escaparLiteralSql = (valor) => {
 const atualizarTituloFigurino = async (client, idFigurino, titulo) => {
     await client.$executeRawUnsafe(
         `UPDATE figurino SET titulo = ${escaparLiteralSql(titulo)} WHERE id = ${Number(idFigurino)}`
-    );
-};
-
-const atualizarStockFigurino = async (client, idFigurino, quantidadeStock) => {
-    const stock = Math.max(0, Number(quantidadeStock) || 0);
-    await client.$executeRawUnsafe(
-        `UPDATE figurino SET quantidade_stock = ${stock} WHERE id = ${Number(idFigurino)}`
     );
 };
 
@@ -318,8 +294,6 @@ const obterFigurino = async (idFigurino) => {
         return null;
     }
 
-    const figurinoComStock = await anexarTitulosFigurinos(figurino);
-
     return anexarTitulosFigurinos(figurino);
 };
 
@@ -328,7 +302,7 @@ const obterFigurino = async (idFigurino) => {
 // Criar um novo figurino
 // ------------------------------------------------------------
 const criarFigurino = async (dadosFigurino) => {
-    const { id_acessorios = [], titulo, quantidade_stock, ...dadosBaseFigurino } = dadosFigurino;
+    const { id_acessorios = [], titulo, ...dadosBaseFigurino } = dadosFigurino;
     const novoId = await obterProximoIdFigurino();
 
     const novoFigurino = await prisma.$transaction(async (tx) => {
@@ -359,10 +333,6 @@ const criarFigurino = async (dadosFigurino) => {
             await atualizarTituloFigurino(tx, figurinoCriado.id, titulo);
         }
 
-        if (quantidade_stock !== undefined) {
-            await atualizarStockFigurino(tx, figurinoCriado.id, quantidade_stock);
-        }
-
         if (id_acessorios.length > 0) {
             await tx.figurino_acessorio.createMany({
                 data: id_acessorios.map((idAcessorio) => ({
@@ -391,7 +361,6 @@ const criarFigurino = async (dadosFigurino) => {
         return {
             ...figurinoCompleto,
             titulo: titulo ?? null,
-            quantidade_stock: quantidade_stock ?? 1
         };
     });
 
@@ -403,7 +372,7 @@ const criarFigurino = async (dadosFigurino) => {
 // Atualizar um figurino existente
 // ------------------------------------------------------------
 const atualizarFigurino = async (idFigurino, dadosFigurino) => {
-    const { titulo, quantidade_stock, id_acessorios, substituir_acessorios, ...dadosBaseFigurino } = dadosFigurino;
+    const { titulo, id_acessorios, substituir_acessorios, ...dadosBaseFigurino } = dadosFigurino;
     const deveSubstituirAcessorios = substituir_acessorios === true || id_acessorios !== undefined;
 
     const figurinoAtualizado = await prisma.$transaction(async (tx) => {
@@ -434,10 +403,6 @@ const atualizarFigurino = async (idFigurino, dadosFigurino) => {
 
         if (titulo !== undefined) {
             await atualizarTituloFigurino(tx, idFigurino, titulo);
-        }
-
-        if (quantidade_stock !== undefined) {
-            await atualizarStockFigurino(tx, idFigurino, quantidade_stock);
         }
 
         if (deveSubstituirAcessorios) {
@@ -561,7 +526,6 @@ const obterHistoricoFigurino = async (idFigurino) => {
             id_tipo: figurino.id_tipo,
             id_sexo: figurino.id_sexo,
             id_estado_figurino: figurino.id_estado_figurino,
-            quantidade_stock: figurinoComTitulo.quantidade_stock ?? 1,
             categoria: figurino.categoria,
             tipo_figurino: figurino.tipo_figurino,
             sexo: figurino.sexo,
@@ -645,8 +609,7 @@ const obterDisponibilidadeFigurino = async (idFigurino, dataInicio, dataFim) => 
         data_inicio_pedida: dataInicio,
         data_fim_pedida: dataFim,
         estado_figurino: figurino.estado_condicao ?? null,
-        quantidade_stock: figurino.quantidade_stock ?? 1,
-        disponivel: linhasConflito.length < (figurino.quantidade_stock ?? 1),
+        disponivel: linhasConflito.length === 0,
         total_anuncios_escola: figurino.anuncio_escola.length,
         total_linhas_reserva_associadas: todasLinhasReserva.length,
         total_conflitos_no_periodo: linhasConflito.length,

@@ -48,9 +48,9 @@ const obterTodosAnunciosEscola = async (filtros) => {
         }
     };
 
-    if(categoria || tamanho || sexo){
+    prismaOptions.where = { figurino: { ativo: { not: false } } };
 
-        prismaOptions.where = { figurino: {} };
+    if(categoria || tamanho || sexo){
 
         if(categoria){
 
@@ -64,7 +64,7 @@ const obterTodosAnunciosEscola = async (filtros) => {
 
         if(sexo){
 
-            prismaOptions.where.figurino.id_sexo = parseInt(sexo); 
+            prismaOptions.where.figurino.id_sexo = parseInt(sexo);
         }
 
     }
@@ -120,15 +120,6 @@ const obterDisponibilidadeAnuncio = async (id, dataInicio, dataFim) => {
         throw erro;
     }
 
-    const stockRows = await prisma.$queryRawUnsafe(
-        `SELECT COALESCE(f.quantidade_stock, 1) AS quantidade_stock
-         FROM anuncio_escola ae
-         LEFT JOIN figurino f ON f.id = ae.id_figurino
-         WHERE ae.id = ${Number(id)}
-         LIMIT 1`
-    );
-    const quantidadeStock = Math.max(0, Number(stockRows?.[0]?.quantidade_stock ?? 1));
-
     const linhasReserva = await prisma.linha_reserva.findMany({
         where: {
             anuncio_escola: {
@@ -160,13 +151,12 @@ const obterDisponibilidadeAnuncio = async (id, dataInicio, dataFim) => {
             return linhaInicio <= cursor && linhaFim >= cursor;
         }).length;
 
-        const disponivel = ocupadas < quantidadeStock;
+        const disponivel = ocupadas === 0;
         const data = formatarData(cursor);
 
         datas.push({
             data,
             ocupadas,
-            stock: quantidadeStock,
             disponivel
         });
 
@@ -179,7 +169,6 @@ const obterDisponibilidadeAnuncio = async (id, dataInicio, dataFim) => {
         id_anuncio: id,
         id_figurino: anuncio.id_figurino,
         figurino_nome: anuncio.figurino?.titulo || anuncio.figurino?.descricao || '',
-        quantidade_stock: quantidadeStock,
         data_inicio: dataInicio,
         data_fim: dataFim,
         datas_indisponiveis: datasIndisponiveis,

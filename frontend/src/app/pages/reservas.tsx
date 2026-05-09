@@ -122,7 +122,9 @@ export function Reservas() {
         <h1 className="text-2xl font-bold text-gray-900 mb-0.5">
           {isStaff ? 'Gestão de Reservas' : 'Minhas Reservas'}
         </h1>
-        <p className="text-gray-600 text-sm">Gerencie as reservas de figurinos</p>
+        <p className="text-gray-600 text-sm">
+          {isStaff ? 'Gerencie as reservas de figurinos' : 'Consulte e gerencie as suas reservas de figurinos'}
+        </p>
       </div>
 
       {/* Abas */}
@@ -159,7 +161,7 @@ export function Reservas() {
             value={termoPesquisa}
             onChange={(e) => setTermoPesquisa(e.target.value)}
             className="w-full pl-9 pr-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-fig-purple focus:border-transparent"
-            placeholder="Pesquisar por ID, aluno ou figurino..."
+            placeholder={isStaff ? "Pesquisar por ID, aluno ou figurino..." : "Pesquisar por ID ou figurino..."}
           />
         </div>
 
@@ -324,15 +326,15 @@ export function Reservas() {
               {abaAtiva === "ativas"
                 ? isStaff
                   ? "Não há reservas ativas no momento."
-                  : "Ainda não tem reservas ativas. Explore o catálogo!"
+                  : "Ainda não tem reservas ativas. Explore os anúncios da escola!"
                 : "Ainda não há histórico de reservas."}
             </p>
             {abaAtiva === "ativas" && !isStaff && (
               <Link
-                to="/figurinos"
+                to="/anuncios-escola"
                 className="bg-gradient-to-r from-fig-purple to-fig-magenta hover:shadow-md text-white px-5 py-2 rounded-lg text-sm transition-all inline-block"
               >
-                Explorar Figurinos
+                Explorar Anúncios
               </Link>
             )}
           </div>

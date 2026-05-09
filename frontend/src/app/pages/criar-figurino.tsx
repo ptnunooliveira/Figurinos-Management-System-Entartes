@@ -41,7 +41,6 @@ export function CriarFigurino() {
     tipo: "",
     sexo: "",
     estado: "",
-    quantidade_stock: "1",
   });
 
   const handleImagemUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -127,7 +126,6 @@ export function CriarFigurino() {
           id_tipo: formulario.tipo ? parseInt(formulario.tipo) : null,
           id_sexo: formulario.sexo ? parseInt(formulario.sexo) : null,
           id_estado_figurino: formulario.estado ? parseInt(formulario.estado) : null,
-          quantidade_stock: Math.max(0, parseInt(formulario.quantidade_stock) || 0),
           id_acessorios: acessoriosSelecionados,
         }),
       });
@@ -271,20 +269,14 @@ export function CriarFigurino() {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Tamanho *
               </label>
-              <select
+              <input
+                type="text"
                 value={formulario.tamanho}
                 onChange={(e) => setFormulario({...formulario, tamanho: e.target.value})}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                placeholder="Ex: M, 42, 38/40..."
                 required
-              >
-                <option value="">Selecione...</option>
-                <option value="XS">XS</option>
-                <option value="S">S</option>
-                <option value="M">M</option>
-                <option value="L">L</option>
-                <option value="XL">XL</option>
-                <option value="XXL">XXL</option>
-              </select>
+              />
             </div>
 
             <div>
@@ -331,21 +323,6 @@ export function CriarFigurino() {
                 onChange={(e) => setFormulario({...formulario, localizacao: e.target.value})}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 placeholder="Ex: Armazém A - Prateleira 12"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Stock *
-              </label>
-              <input
-                type="number"
-                min="0"
-                step="1"
-                value={formulario.quantidade_stock}
-                onChange={(e) => setFormulario({...formulario, quantidade_stock: e.target.value})}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 required
               />
             </div>

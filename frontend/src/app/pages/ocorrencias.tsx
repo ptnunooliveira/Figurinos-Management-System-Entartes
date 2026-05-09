@@ -67,6 +67,7 @@ export function Ocorrencias() {
     queryFn: isFuncionario ? getOcorrencias : getMinhasOcorrencias,
   });
   const [selecionada, setSelecionada] = useState<OcorrenciaDetalhada | null>(null);
+  const [abaAtiva, setAbaAtiva] = useState<"em_curso" | "resolvidas">("em_curso");
 
   // Filtros
   const [filtroTexto, setFiltroTexto] = useState("");
@@ -349,10 +350,26 @@ export function Ocorrencias() {
     }
   };
 
-  // === Filtros ===
+  // === Separadores e filtros ===
+
+  const ocorrenciasEmCurso = useMemo(() =>
+    [...ocorrencias]
+      .filter(o => (o.estado || "").toLowerCase() !== "resolvida")
+      .sort((a, b) => b.id - a.id),
+    [ocorrencias]
+  );
+
+  const ocorrenciasResolvidas = useMemo(() =>
+    [...ocorrencias]
+      .filter(o => (o.estado || "").toLowerCase() === "resolvida")
+      .sort((a, b) => b.id - a.id),
+    [ocorrencias]
+  );
+
+  const ocorrenciasDaAba = abaAtiva === "em_curso" ? ocorrenciasEmCurso : ocorrenciasResolvidas;
 
   const ocorrenciasFiltradas = useMemo(() => {
-    return ocorrencias.filter((o) => {
+    return ocorrenciasDaAba.filter((o) => {
       if (filtroTexto) {
         const termo = filtroTexto.toLowerCase();
         const corresponde =
@@ -380,12 +397,12 @@ export function Ocorrencias() {
       }
       return true;
     });
-  }, [ocorrencias, filtroTexto, filtroAluno, filtroEstado, filtroDataInicio, filtroDataFim, isFuncionario]);
+  }, [ocorrenciasDaAba, filtroTexto, filtroAluno, filtroEstado, filtroDataInicio, filtroDataFim, isFuncionario]);
 
   const estadosUnicos = useMemo(() => {
-    const set = new Set(ocorrencias.map((o) => o.estado).filter(Boolean));
+    const set = new Set(ocorrenciasDaAba.map((o) => o.estado).filter(Boolean));
     return Array.from(set).sort();
-  }, [ocorrencias]);
+  }, [ocorrenciasDaAba]);
 
   const temFiltroAtivo = filtroTexto || filtroAluno || filtroEstado || filtroDataInicio || filtroDataFim;
 
@@ -461,6 +478,30 @@ export function Ocorrencias() {
       <div>
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Ocorrências</h1>
         <p className="text-gray-600">Lista de ocorrências geradas no processo de devolução</p>
+      </div>
+
+      {/* Separadores */}
+      <div className="bg-white rounded-xl shadow-sm p-1 inline-flex gap-1">
+        <button
+          onClick={() => setAbaAtiva("em_curso")}
+          className={`px-5 py-1.5 rounded-lg text-sm transition-colors ${
+            abaAtiva === "em_curso"
+              ? "bg-gradient-to-r from-fig-purple to-fig-magenta text-white"
+              : "text-gray-600 hover:bg-gray-100"
+          }`}
+        >
+          Em curso ({ocorrenciasEmCurso.length})
+        </button>
+        <button
+          onClick={() => setAbaAtiva("resolvidas")}
+          className={`px-5 py-1.5 rounded-lg text-sm transition-colors ${
+            abaAtiva === "resolvidas"
+              ? "bg-gradient-to-r from-fig-purple to-fig-magenta text-white"
+              : "text-gray-600 hover:bg-gray-100"
+          }`}
+        >
+          Resolvidas ({ocorrenciasResolvidas.length})
+        </button>
       </div>
 
       {/* Painel de filtros */}
@@ -540,6 +581,13 @@ export function Ocorrencias() {
           <div className="text-center py-12">
             <CheckCircle className="w-16 h-16 mx-auto text-green-300 mb-4" />
             <p className="text-gray-600">Nenhuma ocorrência registada</p>
+          </div>
+        ) : ocorrenciasDaAba.length === 0 ? (
+          <div className="text-center py-12">
+            <CheckCircle className="w-16 h-16 mx-auto text-green-300 mb-4" />
+            <p className="text-gray-600">
+              {abaAtiva === "em_curso" ? "Sem ocorrências em curso" : "Sem ocorrências resolvidas"}
+            </p>
           </div>
         ) : ocorrenciasFiltradas.length === 0 ? (
           <div className="text-center py-12">

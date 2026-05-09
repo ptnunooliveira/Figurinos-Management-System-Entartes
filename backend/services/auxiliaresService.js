@@ -522,6 +522,12 @@ const obterTipoMovimentoContaCorrentePorNome = async (nome) => obterAuxiliarPorN
 const criarTipoMovimentoContaCorrente = async (nome) => criarAuxiliarPorModelo("tipo_movimento_contacorrente", nome);
 const atualizarTipoMovimentoContaCorrente = async (id, nome) => atualizarAuxiliarPorModelo("tipo_movimento_contacorrente", id, nome);
 
+// Funcoes para tamanho.
+const obterTamanhos = async () => obterAuxiliarPorModelo("tamanho");
+const obterTamanhoPorNome = async (nome) => obterAuxiliarPorNome("tamanho", nome);
+const criarTamanho = async (nome) => criarAuxiliarPorModelo("tamanho", nome);
+const atualizarTamanho = async (id, nome) => atualizarAuxiliarPorModelo("tamanho", id, nome);
+
 //#endregion
 
 // EXPORTAR FUNCOES

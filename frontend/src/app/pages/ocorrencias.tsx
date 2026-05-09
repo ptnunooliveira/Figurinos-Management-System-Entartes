@@ -808,6 +808,9 @@ function DetalheOcorrencia(props: DetalheProps) {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Campo label="Descrição" valor={o.descricao} />
+          {o.observacoes_devolucao && (
+            <Campo label="Observações da devolução" valor={o.observacoes_devolucao} />
+          )}
           <Campo
             label="Data de criação"
             valor={

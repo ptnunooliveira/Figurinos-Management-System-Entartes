@@ -185,9 +185,54 @@ export function Dashboard() {
       .filter((n): n is NotificacaoDashboard => n !== null)
       .filter((n) => !removidas.includes(n.chave));
 
+    const notificacoesReservas = minhasReservas
+      .flatMap((reserva) =>
+        (reserva.linhas ?? []).map((linha) => {
+          const estado = (linha.estado || "").toUpperCase();
+          if (estado !== "CONFIRMADA" && estado !== "EM CURSO") return null;
+
+          const figurino = linha.anuncio?.figurino?.nome || "figurino";
+          const dataInicio = linha.data_inicio ? new Date(linha.data_inicio).toLocaleDateString("pt-PT") : "";
+          const chave = `reserva:${reserva.id}:linha:${linha.id}:${estado}`;
+          const mensagem = estado === "CONFIRMADA"
+            ? `A entrega do figurino "${figurino}" foi aprovada${dataInicio ? ` para ${dataInicio}` : ""}.`
+            : `A reserva do figurino "${figurino}" está em curso.`;
+
+          return { chave, mensagem, lida: vistas.includes(chave) };
+        })
+      )
+      .filter((n): n is NotificacaoDashboard => n !== null)
+      .filter((n) => !removidas.includes(n.chave));
+
+    const notificacoesOcorrencias = minhasOcorrencias
+      .map((ocorrencia) => {
+        const estado = (ocorrencia.estado || "").toLowerCase();
+        const propostaPendente = ocorrencia.propostas?.some((p) => {
+          const estadoProposta = (p.estado || "").toLowerCase();
+          return estadoProposta !== "aceite" && estadoProposta !== "rejeitada" && estadoProposta !== "finalizada";
+        });
+
+        if (
+          estado === "resolvida" ||
+          (!propostaPendente && estado !== "a aguardar" && estado !== "a aguardar resposta do aluno")
+        ) {
+          return null;
+        }
+
+        const figurino = ocorrencia.figurino_nome || "figurino";
+        const chave = `ocorrencia:${ocorrencia.id}:${ocorrencia.estado}:${propostaPendente ? "proposta" : "estado"}`;
+        const mensagem = propostaPendente
+          ? `Tem uma proposta de cobrança para responder na ocorrência do figurino "${figurino}".`
+          : `A ocorrência do figurino "${figurino}" precisa da sua atenção.`;
+
+        return { chave, mensagem, lida: vistas.includes(chave) };
+      })
+      .filter((n): n is NotificacaoDashboard => n !== null)
+      .filter((n) => !removidas.includes(n.chave));
+
     setNotificacoesInteresse(interesse);
-    setNotificacoesExtra(geradas);
-  }, [isFuncionario, meusAnunciosDashboard, utilizadorAtual?.id]);
+    setNotificacoesExtra([...geradas, ...notificacoesReservas, ...notificacoesOcorrencias]);
+  }, [isFuncionario, meusAnunciosDashboard, minhasOcorrencias, minhasReservas, utilizadorAtual?.id]);
 
   // --- Derived counts ---
 

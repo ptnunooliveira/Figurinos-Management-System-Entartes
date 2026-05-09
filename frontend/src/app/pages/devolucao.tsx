@@ -3,11 +3,30 @@ import { useParams, useNavigate, Link } from "react-router";
 import { ArrowLeft, CheckCircle, AlertTriangle } from "lucide-react";
 import SignatureCanvas from "react-signature-canvas";
 import { getUtilizadorAtual } from "../lib/auth";
-import { getReservaDetalhes, getEstadosCondicao, criarChecklist, getChecklistsReserva, criarOcorrencia } from "../lib/services";
+import { getReservaDetalhes, getEstadosCondicao, criarChecklist, getChecklistsReserva } from "../lib/services";
 import type { AuxiliarItem, ChecklistAPI } from "../lib/services";
 import type { Reserva } from "../lib/dados-mock";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
+
+const obterDadosObservacoesChecklist = (observacoes?: string | null): {
+  observacoesGerais: string;
+  acessoriosVerificados: Array<{ id: number; nome: string }>;
+} | null => {
+  if (!observacoes) return null;
+  try {
+    const parsed = JSON.parse(observacoes);
+    const lista = Array.isArray(parsed?.acessoriosVerificados) ? parsed.acessoriosVerificados : [];
+    return {
+      observacoesGerais: typeof parsed?.observacoesGerais === "string" ? parsed.observacoesGerais : "",
+      acessoriosVerificados: lista
+      .map((item: any) => ({ id: Number(item?.id), nome: String(item?.nome ?? "") }))
+        .filter((item: { id: number; nome: string }) => Number.isInteger(item.id) && item.id > 0 && item.nome),
+    };
+  } catch {
+    return { observacoesGerais: observacoes, acessoriosVerificados: [] };
+  }
+};
 
 export function Devolucao() {
   const { id, linhaId } = useParams();
@@ -31,11 +50,11 @@ export function Devolucao() {
     id: number;
     nome: string;
     verificado: boolean;
-    temProblema: boolean;
   }>>([]);
   const [idEstadoFigurinoSel, setIdEstadoFigurinoSel] = useState<number | null>(null);
   const [idEstadoLevantamento, setIdEstadoLevantamento] = useState<number | null>(null);
   const [observacoesGerais, setObservacoesGerais] = useState("");
+  const [observacoesLevantamento, setObservacoesLevantamento] = useState("");
   const [ocorrenciaAlerta, setOcorrenciaAlerta] = useState<{ id: number } | null>(null);
 
   const linhaSelecionadaId = linhaId ? Number(linhaId) : null;
@@ -46,22 +65,25 @@ export function Devolucao() {
     const linha = reserva.linhas.find(l => l.id === linhaSelecionadaId);
     if (!linha) return;
 
-    const acessorios = linha.anuncio?.figurino?.acessorios ?? [];
-    setChecklist(acessorios.map((acc, idx) => ({
-      id: idx + 1,
-      nome: acc.nome,
-      verificado: false,
-      temProblema: false,
-    })));
-
     const idFigurino = linha.anuncio?.figurino?.id;
     const checklistLevantamento = checklistsData.find(c => c.id_tipo_checklist === 1);
     const itemLevantamento = checklistLevantamento?.checklist_item.find(it => it.idfigurino === idFigurino);
     const idLev = itemLevantamento?.id_estado ?? null;
+    const dadosLevantamento = obterDadosObservacoesChecklist(itemLevantamento?.observacoes);
+    const acessoriosLevantamento = dadosLevantamento?.acessoriosVerificados ?? null;
+    const acessoriosFallback = linha.anuncio?.figurino?.acessorios ?? [];
+    const acessoriosEsperados = acessoriosLevantamento ?? acessoriosFallback;
+
+    setChecklist(acessoriosEsperados.map((acc) => ({
+      id: acc.id,
+      nome: acc.nome,
+      verificado: false,
+    })));
 
     setIdEstadoLevantamento(idLev);
     setIdEstadoFigurinoSel(idLev ?? estadosCondicao[0]?.id ?? null);
     setObservacoesGerais("");
+    setObservacoesLevantamento(dadosLevantamento?.observacoesGerais ?? "");
     setOcorrenciaAlerta(null);
   }, [linhaSelecionadaId, reserva, checklistsData, estadosCondicao]);
 
@@ -75,14 +97,6 @@ export function Devolucao() {
     setChecklist(prev =>
       prev.map(item =>
         item.id === idItem ? { ...item, verificado: !item.verificado } : item
-      )
-    );
-  };
-
-  const toggleProblema = (idItem: number) => {
-    setChecklist(prev =>
-      prev.map(item =>
-        item.id === idItem ? { ...item, temProblema: !item.temProblema } : item
       )
     );
   };
@@ -108,10 +122,29 @@ export function Devolucao() {
       return;
     }
 
+    const acessoriosEmFalta = checklist.filter(item => !item.verificado);
+    if (acessoriosEmFalta.length > 0) {
+      const continuar = window.confirm(
+        `Existem acessórios esperados que não foram selecionados na devolução: ${acessoriosEmFalta.map(item => item.nome).join(", ")}.\n\n` +
+        "Se continuar, será gerada uma ocorrência por acessórios em falta. Pretende continuar?"
+      );
+      if (!continuar) return;
+    }
+
     const assinaturaFuncionario = assinaturaFuncionarioRef.current?.toDataURL() ?? "";
     const assinaturaCliente = assinaturaClienteRef.current?.toDataURL() ?? "";
 
     try {
+      const observacoesChecklist = JSON.stringify({
+        observacoesGerais: observacoesGerais || "",
+        acessoriosVerificados: checklist
+          .filter(item => item.verificado)
+          .map(item => ({
+            id: item.id,
+            nome: item.nome,
+          })),
+      });
+
       const result = await criarChecklist(Number(id), {
         id_tipo_checklist: 2,
         assinaturaFuncionario,
@@ -120,21 +153,11 @@ export function Devolucao() {
           id_linha_reserva: linhaReserva!.id,
           idfigurino: linhaReserva!.anuncio.figurino.id,
           id_estado: estadoId,
-          observacoes: observacoesGerais || undefined,
+          observacoes: observacoesChecklist,
         }],
       });
 
-      let ocorrenciaGerada = Array.isArray(result?.ocorrencias) ? result.ocorrencias[0] : null;
-
-      // Verifica se existem acessórios assinalados com problema
-      const problemasAcessorios = checklist.filter(i => i.temProblema);
-      if (!ocorrenciaGerada && problemasAcessorios.length > 0) {
-        const desc = "Problema com acessórios: " + problemasAcessorios.map(p => p.nome).join(", ");
-        ocorrenciaGerada = await criarOcorrencia({
-          id_linha_reserva: linhaReserva!.id,
-          descricao: desc
-        });
-      }
+      const ocorrenciaGerada = Array.isArray(result?.ocorrencias) ? result.ocorrencias[0] : null;
 
       if (ocorrenciaGerada) {
         setOcorrenciaAlerta({ id: ocorrenciaGerada.id });
@@ -184,7 +207,7 @@ export function Devolucao() {
             <AlertTriangle className="w-5 h-5 text-orange-600 mt-0.5 flex-shrink-0" />
             <div>
               <p className="font-semibold text-orange-900">
-                Estado do figurino inferior ao estado inicial
+                Devolução registada com ocorrência
               </p>
               <p className="text-sm text-orange-800 mt-1">
                 Ocorrencia <strong>#{ocorrenciaAlerta.id}</strong> gerada automaticamente.
@@ -258,9 +281,16 @@ export function Devolucao() {
                     </p>
                   </div>
                 </div>
-              )}
+            )}
 
             <div className="mt-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Observações do Levantamento
+              </label>
+              <div className="mb-4 min-h-11 rounded-lg border border-gray-200 bg-gray-50 px-4 py-2 text-sm text-gray-800 whitespace-pre-wrap">
+                {observacoesLevantamento || "Sem observações registadas no levantamento."}
+              </div>
+
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Observacoes
               </label>
@@ -278,14 +308,15 @@ export function Devolucao() {
             <h2 className="text-lg font-semibold text-gray-900 mb-4">
               Checklist de Acessorios ({checklist.filter(i => i.verificado).length}/{checklist.length})
             </h2>
+            <p className="text-sm text-gray-600 mb-4">
+              Apenas aparecem os acessórios registados como entregues no levantamento.
+            </p>
 
             <div className="space-y-4">
               {checklist.map(item => (
                 <div
                   key={item.id}
-                  className={`border rounded-lg p-4 ${
-                    item.temProblema ? "border-orange-300 bg-orange-50" : ""
-                  }`}
+                  className="border rounded-lg p-4"
                 >
                   <div className="flex items-start gap-4">
                     <label className="flex items-center gap-3 flex-1 cursor-pointer">
@@ -300,15 +331,6 @@ export function Devolucao() {
                       </div>
                     </label>
 
-                    <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={item.temProblema}
-                        onChange={() => toggleProblema(item.id)}
-                        className="w-4 h-4 text-orange-600 rounded focus:ring-orange-500"
-                      />
-                      Marcar como problema
-                    </label>
                   </div>
                 </div>
               ))}
@@ -378,3 +400,4 @@ export function Devolucao() {
     </div>
   );
 }
+

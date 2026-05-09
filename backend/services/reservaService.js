@@ -15,6 +15,7 @@
 
 
 const prisma = require('../prisma/client');
+const DIAS_BLOQUEIO_APOS_DEVOLUCAO = 3;
 
 /////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////// TRANSIÇÕES DE ESTADO ////////////////////////////
@@ -166,6 +167,8 @@ const verificarDisponibilidade = async (idFigurino, dataInicioPedida, dataFimPed
 
     const inicio = new Date(dataInicioPedida);
     const fim = new Date(dataFimPedida);
+    const inicioComMargem = new Date(inicio);
+    inicioComMargem.setDate(inicioComMargem.getDate() - DIAS_BLOQUEIO_APOS_DEVOLUCAO);
 
     const reservasSobrepostas = await tx.linha_reserva.count({
         where: {
@@ -173,7 +176,7 @@ const verificarDisponibilidade = async (idFigurino, dataInicioPedida, dataFimPed
                 id_figurino: idFigurino
             },
             datainicio: { lte: fim },
-            datafim: { gte: inicio },
+            datafim: { gte: inicioComMargem },
             OR: [
                 { id_estado_linha_reserva: null },
                 { id_estado_linha_reserva: { notIn: [4, 5] } }
@@ -196,6 +199,21 @@ const obterNomeFigurinoPorAnuncio = async (idAnuncio, tx = prisma) => {
     });
 
     return anuncio?.figurino?.titulo || anuncio?.figurino?.descricao || `anÃºncio ${idAnuncio}`;
+};
+
+const adicionarDias = (data, dias) => {
+    const novaData = new Date(data);
+    novaData.setDate(novaData.getDate() + dias);
+    return novaData;
+};
+
+const intervalosReservaSobrepoemComMargem = (linhaA, linhaB) => {
+    const inicioA = new Date(linhaA.datainicio);
+    const fimA = adicionarDias(new Date(linhaA.datafim), DIAS_BLOQUEIO_APOS_DEVOLUCAO);
+    const inicioB = new Date(linhaB.datainicio);
+    const fimB = adicionarDias(new Date(linhaB.datafim), DIAS_BLOQUEIO_APOS_DEVOLUCAO);
+
+    return inicioA <= fimB && inicioB <= fimA;
 };
 
 
@@ -247,11 +265,8 @@ const criarReserva = async (idUtilizador, idFuncionario, dadosBody) => {
         for (let j = i + 1; j < linhasArray.length; j++) {
             const outraLinha = linhasArray[j];
             if (linhaAtual.id_anuncio === outraLinha.id_anuncio) {
-                const inicioOutra = new Date(outraLinha.datainicio);
-                const fimOutra = new Date(outraLinha.datafim);
-
                 // Se o mesmo anúncio estiver em conflito de datas no próprio pedido do carrinho
-                if (inicioAtual <= fimOutra && fimAtual >= inicioOutra) {
+                if (intervalosReservaSobrepoemComMargem(linhaAtual, outraLinha)) {
                     const nomeFigurino = await obterNomeFigurinoPorAnuncio(linhaAtual.id_anuncio);
                     const erro = new Error(`Conflito no carrinho: o figurino "${nomeFigurino}" tem datas sobrepostas no mesmo pedido.`);
                     erro.status = 409;

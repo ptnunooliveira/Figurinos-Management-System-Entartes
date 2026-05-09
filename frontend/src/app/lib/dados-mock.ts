@@ -29,6 +29,7 @@ export interface Figurino {
   tipo: string;
   sexo: string;
   estado: string;
+  estado_id?: number | null;
   imagens: string[];
   acessorios: Acessorio[];
   valor_diario: number;

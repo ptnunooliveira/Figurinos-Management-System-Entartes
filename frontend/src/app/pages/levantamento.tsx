@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router";
-import { ArrowLeft, CheckCircle, Save } from "lucide-react";
+import { ArrowLeft, CheckCircle } from "lucide-react";
 import SignatureCanvas from "react-signature-canvas";
 import { getUtilizadorAtual } from "../lib/auth";
 import { getReservaDetalhes, getEstadosCondicao, criarChecklist } from "../lib/services";
@@ -29,6 +29,18 @@ export function Levantamento() {
   const [observacoesGerais, setObservacoesGerais] = useState("");
   const [linhaSelecionadaId, setLinhaSelecionadaId] = useState<number | null>(null);
 
+  const obterEstadoInicialFigurino = (estadoNome?: string, estadoId?: number | null) => {
+    if (estadoId && estadosCondicao.some((estado) => estado.id === estadoId)) {
+      return estadoId;
+    }
+
+    const estadoPorNome = estadosCondicao.find(
+      (estado) => estado.nome.trim().toLowerCase() === (estadoNome ?? "").trim().toLowerCase()
+    );
+
+    return estadoPorNome?.id ?? estadosCondicao[0]?.id ?? null;
+  };
+
   useEffect(() => {
     if (reserva && reserva.linhas.length > 0 && !linhaSelecionadaId) {
       const primeiraLinhaValida = reserva.linhas.find(l => l.estado?.toUpperCase() !== 'CANCELADA');
@@ -44,16 +56,16 @@ export function Levantamento() {
     if (!linha) return;
 
     const acessorios = linha.anuncio?.figurino?.acessorios ?? [];
-    setChecklist(acessorios.map((acc, idx) => ({
-      id: idx + 1,
+    setChecklist(acessorios.map((acc) => ({
+      id: acc.id,
       nome: acc.nome,
       observacoes: "",
       verificado: false,
     })));
 
-    if (estadosCondicao.length > 0) {
-      setIdEstadoFigurinoSel(estadosCondicao[0].id);
-    }
+    setIdEstadoFigurinoSel(
+      obterEstadoInicialFigurino(linha.anuncio?.figurino?.estado, linha.anuncio?.figurino?.estado_id)
+    );
     setObservacoesGerais("");
   }, [linhaSelecionadaId, reserva, estadosCondicao]);
 
@@ -87,10 +99,13 @@ export function Levantamento() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const todosVerificados = checklist.every(item => item.verificado);
-    if (!todosVerificados && checklist.length > 0) {
-      toast.error("Por favor, verifique todos os itens da checklist");
-      return;
+    const acessoriosNaoSelecionados = checklist.filter(item => !item.verificado);
+    if (acessoriosNaoSelecionados.length > 0) {
+      const continuar = window.confirm(
+        `Existem acessórios não selecionados: ${acessoriosNaoSelecionados.map(item => item.nome).join(", ")}.\n\n` +
+        "Se continuar, estes acessórios ficam registados como não entregues no levantamento e não serão esperados na devolução. Pretende continuar?"
+      );
+      if (!continuar) return;
     }
 
     if (assinaturaFuncionarioRef.current?.isEmpty() || assinaturaClienteRef.current?.isEmpty()) {
@@ -109,6 +124,17 @@ export function Levantamento() {
     }
 
     try {
+      const observacoesChecklist = JSON.stringify({
+        observacoesGerais: observacoesGerais || "",
+        acessoriosVerificados: checklist
+          .filter(item => item.verificado)
+          .map(item => ({
+            id: item.id,
+            nome: item.nome,
+            observacoes: item.observacoes || "",
+          })),
+      });
+
       await criarChecklist(Number(id), {
         id_tipo_checklist: 1,
         assinaturaFuncionario,
@@ -117,7 +143,7 @@ export function Levantamento() {
           id_linha_reserva: linhaReserva!.id,
           idfigurino: linhaReserva!.anuncio.figurino.id,
           id_estado: estadoId,
-          observacoes: observacoesGerais || undefined,
+          observacoes: observacoesChecklist,
         }],
       });
       toast.success("Levantamento registado com sucesso!");
@@ -223,6 +249,9 @@ export function Levantamento() {
                 onChange={(e) => setIdEstadoFigurinoSel(Number(e.target.value))}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               >
+                {estadosCondicao.length === 0 && (
+                  <option value="">Sem estados disponíveis</option>
+                )}
                 {estadosCondicao.map(estado => (
                   <option key={estado.id} value={estado.id}>{estado.nome}</option>
                 ))}

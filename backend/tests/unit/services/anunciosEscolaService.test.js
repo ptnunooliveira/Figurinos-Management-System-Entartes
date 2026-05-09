@@ -145,14 +145,20 @@ describe("anunciosEscolaService", () => {
   // ----------------------------------------------------------------------
   // obterTodosAnunciosEscola - filtros
   // ----------------------------------------------------------------------
-  test("obterTodosAnunciosEscola retorna todos os anuncios sem filtros", async () => {
+  test("obterTodosAnunciosEscola retorna anuncios e exclui figurinos desativados por defeito", async () => {
     mockPrisma.anuncio_escola.findMany.mockResolvedValue([{ id: 1 }, { id: 2 }]);
 
     const result = await service.obterTodosAnunciosEscola({});
 
     expect(result).toHaveLength(2);
+    // Mesmo sem filtros do utilizador, o servico aplica sempre uma
+    // clausula where que exclui figurinos com ativo=false. Esta
+    // confirmacao protege contra regressoes em que o filtro fosse
+    // removido por engano e voltassem a aparecer figurinos suspensos.
     expect(mockPrisma.anuncio_escola.findMany).toHaveBeenCalledWith(
-      expect.not.objectContaining({ where: expect.anything() })
+      expect.objectContaining({
+        where: { figurino: { ativo: { not: false } } },
+      })
     );
   });
 

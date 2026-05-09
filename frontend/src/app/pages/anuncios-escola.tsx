@@ -2,7 +2,7 @@ import { useState } from "react";
 import { PlusCircle, Search, Filter, Shirt, Euro, Edit, Trash2, Calendar, X, Eye } from "lucide-react";
 import { useNavigate } from "react-router";
 import { getUtilizadorAtual } from "../lib/auth";
-import { getAnunciosEscola, getFigurinosRaw, criarAnuncioEscola, atualizarAnuncioEscola, eliminarAnuncioEscola, getCategorias, getTiposFigurino, getSexos, type AnuncioEscolaAPI, type FigurinoAPI, type AuxiliarItem } from "../lib/services";
+import { getAnunciosEscola, getFigurinosRaw, criarAnuncioEscola, atualizarAnuncioEscola, eliminarAnuncioEscola, getCategorias, getTiposFigurino, getSexos, getDisponibilidadeAnuncio, type AnuncioEscolaAPI, type FigurinoAPI, type AuxiliarItem } from "../lib/services";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCart } from "./CartContext";
 import { toast } from "sonner";
@@ -39,7 +39,44 @@ export function AnunciosEscola() {
   const [anuncioDetalhes, setAnuncioDetalhes] = useState<AnuncioEscolaAPI | null>(null);
   const [dataInicioReserva, setDataInicioReserva] = useState("");
   const [dataFimReserva, setDataFimReserva] = useState("");
+  const [filtroDispInicio, setFiltroDispInicio] = useState("");
+  const [filtroDispFim, setFiltroDispFim] = useState("");
+  const [anunciosDisponiveisIds, setAnunciosDisponiveisIds] = useState<Set<number> | null>(null);
+  const [verificandoDisp, setVerificandoDisp] = useState(false);
   const { adicionarAoCarrinho } = useCart();
+
+  const fmtData = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+  const handleVerificarDisponibilidade = async () => {
+    if (!filtroDispInicio || !filtroDispFim) return;
+    setVerificandoDisp(true);
+    try {
+      const resultados = await Promise.all(
+        anunciosEscola.map(async (anuncio) => {
+          const dados = await getDisponibilidadeAnuncio(anuncio.id, filtroDispInicio, filtroDispFim);
+          const indisponiveis = new Set(dados?.datas_indisponiveis ?? []);
+          const d1 = new Date(`${filtroDispInicio}T00:00:00`);
+          const d2 = new Date(`${filtroDispFim}T00:00:00`);
+          for (let d = new Date(d1); d <= d2; d.setDate(d.getDate() + 1)) {
+            if (indisponiveis.has(fmtData(d))) return null;
+          }
+          return anuncio.id;
+        })
+      );
+      setAnunciosDisponiveisIds(new Set(resultados.filter((id): id is number => id !== null)));
+    } catch {
+      toast.error("Erro ao verificar disponibilidade");
+    } finally {
+      setVerificandoDisp(false);
+    }
+  };
+
+  const handleLimparFiltroDisp = () => {
+    setFiltroDispInicio("");
+    setFiltroDispFim("");
+    setAnunciosDisponiveisIds(null);
+  };
 
 
 
@@ -68,9 +105,12 @@ export function AnunciosEscola() {
       (!dataInicio || (dataAnuncio && dataAnuncio >= dataInicio)) &&
       (!dataFim || (dataAnuncio && dataAnuncio <= dataFim));
 
+      const disponivelNoFiltro = anunciosDisponiveisIds === null || anunciosDisponiveisIds.has(anuncio.id);
+
       return (
       correspondePesquisa &&
       dentroIntervalo &&
+      disponivelNoFiltro &&
       (!categoriaSelecionada || fig?.categoria?.id?.toString() === categoriaSelecionada) &&
       (!tipoSelecionado || fig?.tipo_figurino?.id?.toString() === tipoSelecionado) &&
       (!tamanhoSelecionado || tamanho === tamanhoSelecionado) &&
@@ -275,6 +315,44 @@ export function AnunciosEscola() {
               </button>
             )}
           </div>
+        </div>
+
+        {/* Filtro de disponibilidade */}
+        <div className="flex items-center gap-2 flex-wrap border-t border-gray-100 pt-2">
+          <Calendar className="w-4 h-4 text-fig-purple flex-shrink-0" />
+          <span className="text-xs font-medium text-gray-600 whitespace-nowrap">Disponível de</span>
+          <input
+            type="date"
+            value={filtroDispInicio}
+            min={new Date().toISOString().slice(0, 10)}
+            onChange={(e) => { setFiltroDispInicio(e.target.value); setAnunciosDisponiveisIds(null); }}
+            className="px-2 py-1.5 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+          />
+          <span className="text-xs text-gray-500">até</span>
+          <input
+            type="date"
+            value={filtroDispFim}
+            min={filtroDispInicio || new Date().toISOString().slice(0, 10)}
+            onChange={(e) => { setFiltroDispFim(e.target.value); setAnunciosDisponiveisIds(null); }}
+            className="px-2 py-1.5 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+          />
+          <button
+            onClick={handleVerificarDisponibilidade}
+            disabled={!filtroDispInicio || !filtroDispFim || verificandoDisp}
+            className="px-3 py-1.5 text-xs bg-fig-purple text-white rounded-lg hover:bg-fig-purple/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+          >
+            {verificandoDisp ? "A verificar..." : "Verificar disponibilidade"}
+          </button>
+          {anunciosDisponiveisIds !== null && (
+            <>
+              <span className="text-xs font-medium text-fig-purple">
+                {anunciosDisponiveisIds.size} {anunciosDisponiveisIds.size === 1 ? "disponível" : "disponíveis"}
+              </span>
+              <button onClick={handleLimparFiltroDisp} className="text-gray-400 hover:text-gray-600" title="Limpar filtro">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -639,29 +717,29 @@ export function AnunciosEscola() {
       {mostrarModalReserva && anuncioReserva && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b sticky top-0 bg-white">
+            <div className="p-4 border-b sticky top-0 bg-white">
               <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-bold text-gray-900">Reservar Figurino</h2>
+                <h2 className="text-xl font-bold text-gray-900">Reservar Figurino</h2>
                 <button onClick={handleFecharReserva} className="text-gray-500 hover:text-gray-700">
-                  <X className="w-6 h-6" />
+                  <X className="w-5 h-5" />
                 </button>
               </div>
             </div>
 
-            <div className="p-6 space-y-6">
-              <div className="flex items-start gap-4 p-4 bg-gradient-to-br from-fig-purple/5 to-fig-magenta/5 rounded-lg">
-                <div className="w-20 h-20 bg-gradient-to-br from-fig-purple/10 via-fig-magenta/10 to-fig-green/10 flex items-center justify-center rounded-lg flex-shrink-0">
-                  <Shirt className="w-10 h-10 text-fig-purple/40" />
+            <div className="p-4 space-y-4">
+              <div className="flex items-center gap-3 p-3 bg-gradient-to-br from-fig-purple/5 to-fig-magenta/5 rounded-lg">
+                <div className="w-12 h-12 bg-gradient-to-br from-fig-purple/10 via-fig-magenta/10 to-fig-green/10 flex items-center justify-center rounded-lg flex-shrink-0">
+                  <Shirt className="w-6 h-6 text-fig-purple/40" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-semibold text-gray-900 text-lg mb-1">{anuncioReserva.figurino?.titulo ?? anuncioReserva.figurino?.descricao ?? '—'}</h3>
-                  <p className="text-sm text-gray-600">€ {(anuncioReserva.valordiarioaluguer ?? 0).toFixed(2)} /dia</p>
+                  <h3 className="font-semibold text-gray-900 text-base leading-tight">{anuncioReserva.figurino?.titulo ?? anuncioReserva.figurino?.descricao ?? '—'}</h3>
+                  <p className="text-sm text-gray-500">{(anuncioReserva.valordiarioaluguer ?? 0).toFixed(2).replace('.', ',')}€ / dia</p>
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <h4 className="font-semibold text-gray-900 flex items-center gap-2">
-                  <Calendar className="w-5 h-5 text-fig-purple" />
+              <div className="space-y-2">
+                <h4 className="font-semibold text-gray-900 flex items-center gap-2 text-sm">
+                  <Calendar className="w-4 h-4 text-fig-purple" />
                   Período da Reserva
                 </h4>
                 <CalendarioReserva
@@ -672,26 +750,47 @@ export function AnunciosEscola() {
                   onDataFimChange={setDataFimReserva}
                 />
               </div>
+
+              {dataInicioReserva && dataFimReserva && (() => {
+                const d1 = new Date(`${dataInicioReserva}T00:00:00`);
+                const d2 = new Date(`${dataFimReserva}T00:00:00`);
+                const dias = Math.round((d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+                const precoDia = anuncioReserva.valordiarioaluguer ?? 0;
+                const total = precoDia * dias;
+                const fmt = (v: number) => v.toLocaleString("pt-PT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                return (
+                  <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 space-y-1 text-sm">
+                    <div className="flex justify-between text-gray-700">
+                      <span>{fmt(precoDia)}€ × {dias} {dias === 1 ? "dia" : "dias"}</span>
+                      <span>{fmt(precoDia * dias)}€</span>
+                    </div>
+                    <div className="flex justify-between font-semibold text-gray-900 border-t border-gray-200 pt-1">
+                      <span>Total desta reserva:</span>
+                      <span>{fmt(total)}€</span>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
 
-            <div className="p-6 border-t bg-gray-50 flex justify-end gap-3">
+            <div className="p-4 border-t bg-gray-50 flex justify-end gap-3">
               <button
                 onClick={handleFecharReserva}
-                className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors font-medium"
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors font-medium text-sm"
               >
                 Cancelar
               </button>
               <button
                 onClick={() => handleConfirmarReserva()}
                 disabled={!dataInicioReserva || !dataFimReserva}
-                className="px-6 py-3 border border-fig-purple text-fig-purple bg-white hover:bg-fig-purple/5 rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 border border-fig-purple text-fig-purple bg-white hover:bg-fig-purple/5 rounded-lg transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Adicionar ao Carrinho
               </button>
               <button
                 onClick={() => handleConfirmarReserva(true)}
                 disabled={!dataInicioReserva || !dataFimReserva}
-                className="px-6 py-3 bg-gradient-to-r from-fig-purple to-fig-magenta hover:shadow-lg text-white rounded-lg transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 bg-gradient-to-r from-fig-purple to-fig-magenta hover:shadow-lg text-white rounded-lg transition-all font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Finalizar reserva
               </button>

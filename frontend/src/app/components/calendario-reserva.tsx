@@ -129,7 +129,7 @@ export function CalendarioReserva({
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-1.5">
       <DayPicker
         mode="range"
         selected={rangeSelecionado}
@@ -185,33 +185,33 @@ export function CalendarioReserva({
           months: { justifyContent: "center" },
           month: { width: "100%" },
           table: { width: "100%" },
-          head_cell: { fontSize: "0.75rem", color: "#6b7280", fontWeight: 600 },
-          cell: { padding: "2px" },
-          day: { width: "2.25rem", height: "2.25rem", borderRadius: "0.5rem", margin: "0 auto" },
-          caption: { paddingBottom: "0.5rem" },
+          head_cell: { fontSize: "0.65rem", color: "#6b7280", fontWeight: 600, padding: "0" },
+          cell: { padding: "1px" },
+          day: { width: "1.75rem", height: "1.75rem", borderRadius: "0.25rem", margin: "0 auto", fontSize: "0.75rem" },
+          caption: { paddingBottom: "0.15rem", fontSize: "0.8rem" },
+          nav_button: { width: "1.5rem", height: "1.5rem" },
         }}
-        className="max-w-sm rounded-lg border border-gray-200 p-3"
+        className="max-w-sm rounded-lg border border-gray-200 p-2"
       />
-      <div className="rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-700">
-        {dataInicio ? (
-          <span>
-            Selecionado: {new Date(`${dataInicio}T00:00:00`).toLocaleDateString("pt-PT")}
-            {dataFim ? ` até ${new Date(`${dataFim}T00:00:00`).toLocaleDateString("pt-PT")}` : " - escolha a data de fim"}
+      <div className="flex items-center justify-between gap-2 text-xs text-gray-500">
+        <div className="flex items-center gap-2">
+          <span className="inline-flex items-center gap-1">
+            <span className="w-2.5 h-2.5 rounded-sm bg-blue-100 border border-blue-200" />
+            Disponível
           </span>
-        ) : (
-          <span>Escolha a data de início e depois a data de fim.</span>
-        )}
-      </div>
-      <div className="flex items-center gap-4 text-xs text-gray-600 flex-wrap">
-        <span className="inline-flex items-center gap-1">
-          <span className="w-3 h-3 rounded-sm bg-blue-100 border border-blue-200" />
-          Disponível
+          <span className="inline-flex items-center gap-1">
+            <span className="w-2.5 h-2.5 rounded-sm bg-gray-100 border border-gray-200" />
+            Indisponível
+          </span>
+        </div>
+        <span className="italic truncate">
+          {dataInicio
+            ? dataFim
+              ? `${new Date(`${dataInicio}T00:00:00`).toLocaleDateString("pt-PT")} → ${new Date(`${dataFim}T00:00:00`).toLocaleDateString("pt-PT")}`
+              : `${new Date(`${dataInicio}T00:00:00`).toLocaleDateString("pt-PT")} — escolha fim`
+            : "Escolha o período"}
         </span>
-        <span className="inline-flex items-center gap-1">
-          <span className="w-3 h-3 rounded-sm bg-gray-100 border border-gray-200" />
-          Indisponível
-        </span>
-        {aCarregar && <span>A verificar disponibilidade...</span>}
+        {aCarregar && <span className="text-gray-400 shrink-0">A verificar...</span>}
       </div>
     </div>
   );

@@ -117,7 +117,7 @@ describe("anunciosEscolaService", () => {
     expect(result.datas_indisponiveis).toHaveLength(0);
   });
 
-  test("obterDisponibilidadeAnuncio marca dias como indisponiveis quando stock esta esgotado", async () => {
+  test("obterDisponibilidadeAnuncio marca reserva e 3 dias apos devolucao como indisponiveis", async () => {
     const hoje = "2026-06-01";
     const amanha = "2026-06-02";
 
@@ -136,23 +136,28 @@ describe("anunciosEscolaService", () => {
       },
     ]);
 
-    const result = await service.obterDisponibilidadeAnuncio(1, hoje, amanha);
+    const result = await service.obterDisponibilidadeAnuncio(1, hoje, "2026-06-05");
 
     expect(result.datas_indisponiveis).toContain(hoje);
     expect(result.datas_indisponiveis).toContain(amanha);
+    expect(result.datas_indisponiveis).toContain("2026-06-03");
+    expect(result.datas_indisponiveis).toContain("2026-06-04");
+    expect(result.datas_indisponiveis).toContain("2026-06-05");
   });
 
   // ----------------------------------------------------------------------
   // obterTodosAnunciosEscola - filtros
   // ----------------------------------------------------------------------
-  test("obterTodosAnunciosEscola retorna todos os anuncios sem filtros", async () => {
+  test("obterTodosAnunciosEscola retorna anuncios ativos sem filtros adicionais", async () => {
     mockPrisma.anuncio_escola.findMany.mockResolvedValue([{ id: 1 }, { id: 2 }]);
 
     const result = await service.obterTodosAnunciosEscola({});
 
     expect(result).toHaveLength(2);
     expect(mockPrisma.anuncio_escola.findMany).toHaveBeenCalledWith(
-      expect.not.objectContaining({ where: expect.anything() })
+      expect.objectContaining({
+        where: { figurino: { ativo: { not: false } } },
+      })
     );
   });
 

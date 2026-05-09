@@ -180,4 +180,31 @@ describe("reservaService", () => {
       service.criarReserva(999, null, { linhas: [{ id_anuncio: 1, datainicio: "2026-06-01", datafim: "2026-06-05" }] })
     ).rejects.toMatchObject({ status: 400 });
   });
+
+  test("criarReserva valida disponibilidade com 3 dias de margem apos devolucao", async () => {
+    mockPrisma.utilizador.findUnique.mockResolvedValue({ id: 1, perfil: "ALUNO", ativo: true });
+    mockTx.anuncio_escola.findUnique.mockResolvedValue({
+      id: 1,
+      id_figurino: 10,
+      valordiarioaluguer: 5,
+      figurino: { id: 10, titulo: "Fato", descricao: "Descricao do fato" },
+    });
+    mockTx.linha_reserva.count.mockResolvedValue(1);
+
+    await expect(
+      service.criarReserva(1, null, { linhas: [{ id_anuncio: 1, datainicio: "2026-06-05", datafim: "2026-06-07" }] })
+    ).rejects.toMatchObject({ status: 409 });
+
+    expect(mockTx.linha_reserva.count).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          datafim: {
+            gte: expect.any(Date),
+          },
+        }),
+      })
+    );
+    const chamada = mockTx.linha_reserva.count.mock.calls[0][0];
+    expect(chamada.where.datafim.gte.toISOString().slice(0, 10)).toBe("2026-06-02");
+  });
 });

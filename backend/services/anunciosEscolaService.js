@@ -88,6 +88,7 @@ const criarDataUTC = (valor) => {
 };
 
 const formatarData = (data) => data.toISOString().slice(0, 10);
+const DIAS_BLOQUEIO_APOS_DEVOLUCAO = 3;
 
 const adicionarDias = (data, dias) => {
     const novaData = new Date(data);
@@ -120,13 +121,15 @@ const obterDisponibilidadeAnuncio = async (id, dataInicio, dataFim) => {
         throw erro;
     }
 
+    const inicioComMargem = adicionarDias(inicio, -DIAS_BLOQUEIO_APOS_DEVOLUCAO);
+
     const linhasReserva = await prisma.linha_reserva.findMany({
         where: {
             anuncio_escola: {
                 id_figurino: anuncio.id_figurino
             },
             datainicio: { lte: fim },
-            datafim: { gte: inicio },
+            datafim: { gte: inicioComMargem },
             OR: [
                 { id_estado_linha_reserva: null },
                 { id_estado_linha_reserva: { notIn: [4, 5] } }
@@ -147,7 +150,7 @@ const obterDisponibilidadeAnuncio = async (id, dataInicio, dataFim) => {
         const ocupadas = linhasReserva.filter((linha) => {
             if (!linha.datainicio || !linha.datafim) return false;
             const linhaInicio = new Date(linha.datainicio);
-            const linhaFim = new Date(linha.datafim);
+            const linhaFim = adicionarDias(new Date(linha.datafim), DIAS_BLOQUEIO_APOS_DEVOLUCAO);
             return linhaInicio <= cursor && linhaFim >= cursor;
         }).length;
 

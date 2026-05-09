@@ -10,6 +10,7 @@ function mapFigurino(f) {
     tipo: f.tipo_figurino?.nome ?? "",
     sexo: f.sexo?.nome ?? "",
     estado: f.estado_condicao?.nome ?? "",
+    estado_id: f.estado_condicao?.id ?? null,
     imagens: [],
     acessorios: f.figurino_acessorio.map((fa) => fa.acessorio),
     valor_diario: 0
@@ -177,7 +178,7 @@ function mapLinhaReserva(lr) {
       id: lr.anuncio_escola?.id ?? 0,
       figurino: fig ? {
         id: fig.id,
-        nome: fig.descricao ?? "",
+        nome: fig.titulo ?? fig.descricao ?? "",
         descricao: fig.descricao ?? "",
         tamanho: fig.tamanho ?? "",
         localizacao: fig.localizacao ?? "",
@@ -185,10 +186,11 @@ function mapLinhaReserva(lr) {
         tipo: "",
         sexo: "",
         estado: fig.estado_condicao?.nome ?? "",
+        estado_id: fig.estado_condicao?.id ?? null,
         imagens: [],
         acessorios: (fig.figurino_acessorio ?? []).map((fa) => fa.acessorio),
         valor_diario: lr.anuncio_escola?.valordiarioaluguer ?? 0
-      } : { id: 0, nome: "", descricao: "", tamanho: "", localizacao: "", categoria: "", tipo: "", sexo: "", estado: "", imagens: [], acessorios: [], valor_diario: 0 },
+      } : { id: 0, nome: "", descricao: "", tamanho: "", localizacao: "", categoria: "", tipo: "", sexo: "", estado: "", estado_id: null, imagens: [], acessorios: [], valor_diario: 0 },
       valor_diario_aluguer: lr.anuncio_escola?.valordiarioaluguer ?? 0,
       estado: lr.anuncio_escola?.estado_anuncio?.nome ?? ""
     },
@@ -442,9 +444,24 @@ async function continuarAnuncioMarketplace(id) {
   }
   return res.json();
 }
+function extrairObservacoesChecklist(observacoes) {
+  if (!observacoes) return "";
+  try {
+    const parsed = JSON.parse(observacoes);
+    if (typeof parsed?.observacoesGerais === "string") {
+      return parsed.observacoesGerais;
+    }
+  } catch {
+    return observacoes;
+  }
+  return "";
+}
 function mapOcorrencia(o) {
   const fig = o.linha_reserva?.anuncio_escola?.figurino;
   const cliente = o.linha_reserva?.reserva?.utilizador;
+  const idFigurino = fig?.id;
+  const checklistDevolucao = (o.linha_reserva?.devolucao ?? []).find((d) => d?.checklist?.id_tipo_checklist === 2)?.checklist;
+  const itemDevolucao = checklistDevolucao?.checklist_item?.find((item) => item.idfigurino === idFigurino);
   return {
     id: o.id,
     descricao: o.descricao ?? "",
@@ -454,8 +471,9 @@ function mapOcorrencia(o) {
     tipo: "",
     valor_proposto: o.valor ?? void 0,
     figurino_id: fig?.id,
-    figurino_nome: fig?.descricao ?? "",
+    figurino_nome: fig?.titulo ?? fig?.descricao ?? "",
     figurino_descricao: fig?.descricao ?? "",
+    observacoes_devolucao: extrairObservacoesChecklist(itemDevolucao?.observacoes),
     figurino_tamanho: fig?.tamanho ?? "",
     figurino_localizacao: fig?.localizacao ?? "",
     figurino_estado_id: fig?.id_estado_figurino ?? null,

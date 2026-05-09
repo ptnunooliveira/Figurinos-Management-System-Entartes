@@ -14,6 +14,22 @@
 const { ID_ESTADO_OCORRENCIA } = require("../utils/estadosOcorrencia");
 const prisma = require("../prisma/client");
 
+const obterAcessoriosVerificados = (observacoes) => {
+  if (!observacoes) return [];
+  try {
+    const parsed = JSON.parse(observacoes);
+    if (!Array.isArray(parsed?.acessoriosVerificados)) return [];
+    return parsed.acessoriosVerificados
+      .map((item) => ({
+        id: Number(item?.id),
+        nome: String(item?.nome ?? "").trim(),
+      }))
+      .filter((item) => Number.isInteger(item.id) && item.id > 0);
+  } catch {
+    return [];
+  }
+};
+
 //#region devolucoes
 
 // Listar todas as devoluções
@@ -75,6 +91,32 @@ const figurinoTemDanoPorComparacao = async (id_linha_reserva, id_checklist_devol
   }
 
   return (itemDevolucao.id_estado ?? 0) > (itemLevantamento.id_estado ?? 0);
+};
+
+const obterAcessoriosEmFaltaNaDevolucao = async (id_linha_reserva, id_checklist_devolucao) => {
+  const linhaReserva = await prisma.linha_reserva.findUnique({
+    where: { id: id_linha_reserva },
+    include: { anuncio_escola: true },
+  });
+  if (!linhaReserva) return [];
+
+  const idfigurino = linhaReserva.anuncio_escola?.id_figurino;
+  if (!idfigurino) return [];
+
+  const checklistLevantamento = await prisma.checklist.findFirst({
+    where: { id_reserva: linhaReserva.id_reserva, id_tipo_checklist: 1 },
+    include: { checklist_item: { where: { idfigurino } } },
+  });
+
+  const itemDevolucao = await prisma.checklist_item.findFirst({
+    where: { id_checklist: id_checklist_devolucao, idfigurino },
+  });
+
+  const acessoriosLevantamento = obterAcessoriosVerificados(checklistLevantamento?.checklist_item[0]?.observacoes);
+  const acessoriosDevolucao = obterAcessoriosVerificados(itemDevolucao?.observacoes);
+  const idsDevolvidos = new Set(acessoriosDevolucao.map((item) => item.id));
+
+  return acessoriosLevantamento.filter((item) => !idsDevolvidos.has(item.id));
 };
 
 // Criar nova devolução
@@ -167,13 +209,22 @@ const criarDevolucao = async ({ id_linha_reserva, id_checklist, datadevolucao })
     }
   }
 
-  // Comparar estado do figurino: se piorou face ao levantamento, cria ocorrência automaticamente
+  // Comparar estado do figurino e acessorios: se algo piorou/faltou, cria ocorrencia automaticamente.
   let ocorrencia = null;
   const temDano = await figurinoTemDanoPorComparacao(id_linha_reserva, id_checklist);
-  if (temDano) {
+  const acessoriosEmFalta = await obterAcessoriosEmFaltaNaDevolucao(id_linha_reserva, id_checklist);
+  if (temDano || acessoriosEmFalta.length > 0) {
+    const descricoes = [];
+    if (temDano) {
+      descricoes.push("Figurino devolvido com estado de condicao inferior ao registado no levantamento.");
+    }
+    if (acessoriosEmFalta.length > 0) {
+      descricoes.push(`Acessorios em falta na devolucao: ${acessoriosEmFalta.map((item) => item.nome || `#${item.id}`).join(", ")}.`);
+    }
+
     ocorrencia = await prisma.ocorrencia.create({
       data: {
-        descricao: "Figurino devolvido com estado de condicao inferior ao registado no levantamento.",
+        descricao: descricoes.join(" "),
         valor: null,
         dataregisto: new Date(),
         id_estado: ID_ESTADO_OCORRENCIA.AGUARDAR,
@@ -206,6 +257,15 @@ const OCORRENCIA_INCLUDE_COMPLETO = {
       reserva: {
         include: {
           utilizador: { select: { id: true, nome: true, email: true } },
+        },
+      },
+      devolucao: {
+        include: {
+          checklist: {
+            include: {
+              checklist_item: true,
+            },
+          },
         },
       },
     },

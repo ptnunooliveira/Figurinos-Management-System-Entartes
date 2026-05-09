@@ -92,6 +92,55 @@ describe("devolucaoService", () => {
     expect(result).toMatchObject({ id: 1 });
   });
 
+  test("criarDevolucao cria ocorrencia quando falta acessorio entregue no levantamento", async () => {
+    mockPrisma.linha_reserva.findUnique
+      .mockResolvedValueOnce({
+        id: 1,
+        id_reserva: 10,
+        anuncio_escola: { id_figurino: 5 },
+        reserva: null,
+        valordiario: null,
+        datainicio: null,
+        datafim: null,
+      })
+      .mockResolvedValueOnce({ id: 1, id_reserva: 10, anuncio_escola: { id_figurino: 5 } })
+      .mockResolvedValueOnce({ id: 1, id_reserva: 10, anuncio_escola: { id_figurino: 5 } });
+    mockPrisma.checklist.findUnique.mockResolvedValue({ id: 2, id_reserva: 10, id_tipo_checklist: 2 });
+    mockPrisma.devolucao.findFirst.mockResolvedValue(null);
+    mockPrisma.devolucao.create.mockResolvedValue({ id: 1, id_linha_reserva: 1, id_checklist: 2 });
+    mockPrisma.checklist.findFirst
+      .mockResolvedValueOnce({ checklist_item: [{ id_estado: 1, observacoes: null }] })
+      .mockResolvedValueOnce({
+        checklist_item: [{
+          observacoes: JSON.stringify({
+            acessoriosVerificados: [
+              { id: 1, nome: "Chapeu" },
+              { id: 2, nome: "Luvas" },
+            ],
+          }),
+        }],
+      });
+    mockPrisma.checklist_item.findFirst
+      .mockResolvedValueOnce({ id_estado: 1 })
+      .mockResolvedValueOnce({
+        observacoes: JSON.stringify({
+          acessoriosVerificados: [{ id: 1, nome: "Chapeu" }],
+        }),
+      });
+    mockPrisma.ocorrencia.create.mockResolvedValue({ id: 99, descricao: "Acessorios em falta" });
+
+    const result = await service.criarDevolucao({ id_linha_reserva: 1, id_checklist: 2 });
+
+    expect(mockPrisma.ocorrencia.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          descricao: expect.stringContaining("Luvas"),
+        }),
+      })
+    );
+    expect(result.ocorrencia).toMatchObject({ id: 99 });
+  });
+
   // criarOcorrencia - validacoes
   test("criarOcorrencia lanca NOT_FOUND quando linha_reserva nao existe", async () => {
     mockPrisma.linha_reserva.findUnique.mockResolvedValue(null);

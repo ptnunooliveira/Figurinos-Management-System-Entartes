@@ -160,7 +160,6 @@ model estadopropostacobranca {
 
 model figurino {
   id                 Int                  @id @default(autoincrement())
-  titulo             String?              @db.VarChar(255)
   descricao          String?
   tamanho            String?              @db.VarChar(50)
   localizacao        String?              @db.VarChar(255)
@@ -169,6 +168,7 @@ model figurino {
   id_sexo            Int?
   id_estado_figurino Int?
   ativo              Boolean?             @default(true)
+  titulo             String?              @db.VarChar(255)
   anuncio_escola     anuncio_escola[]
   checklist_item     checklist_item[]
   categoria          categoria?           @relation(fields: [id_categoria], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_figurino_categoria")

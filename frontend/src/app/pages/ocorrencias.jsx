@@ -643,6 +643,7 @@ function DetalheOcorrencia(props) {
           {isFuncionario && <Campo label="Email do cliente" valor={o.cliente_email || "\u2014"} />}
           <Campo label="Figurino" valor={o.figurino_nome || "\u2014"} />
           <Campo label="Categoria" valor={o.figurino_categoria || "\u2014"} />
+          {o.observacoes_devolucao && <Campo label="Observacoes da devolucao" valor={o.observacoes_devolucao} />}
           {isFuncionario && <Campo
     label="Figurino ativo?"
     valor={o.figurino_ativo === false ? "N\xE3o" : "Sim"}

@@ -25,23 +25,27 @@ router.post('/', authMiddleware, verificarPerfil(['FUNCIONARIO', 'ADMIN']), anun
 /**
  * @route   GET /anuncios-escola
  * @desc    Listar todos os anúncios da escola
- * @access  Público
+ * @access  Privado (qualquer utilizador autenticado e ativo)
+ *
+ * O authMiddleware revalida o flag "ativo" na BD a cada pedido,
+ * pelo que utilizadores suspensos sao bloqueados com 403 mesmo
+ * que ainda tenham um JWT valido em cache.
  */
-router.get('/', anunciosEscolaController.listarAnunciosEscola);
+router.get('/', authMiddleware, anunciosEscolaController.listarAnunciosEscola);
 
 /**
  * @route   GET /anuncios-escola/:id/disponibilidade
  * @desc    Obter disponibilidade diária do anúncio
- * @access  Público
+ * @access  Privado (qualquer utilizador autenticado e ativo)
  */
-router.get('/:id/disponibilidade', anunciosEscolaController.obterDisponibilidadeAnuncio);
+router.get('/:id/disponibilidade', authMiddleware, anunciosEscolaController.obterDisponibilidadeAnuncio);
 
 /**
  * @route   GET /anuncios-escola/:id
  * @desc    Obter anúncio da escola por ID
- * @access  Público
+ * @access  Privado (qualquer utilizador autenticado e ativo)
  */
-router.get('/:id', anunciosEscolaController.obterAnuncioEscolaPorId);
+router.get('/:id', authMiddleware, anunciosEscolaController.obterAnuncioEscolaPorId);
 
 /**
  * @route   PUT /anuncios-escola/:id

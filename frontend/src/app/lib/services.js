@@ -757,6 +757,37 @@ async function updateUser(id, dados) {
   }
   return res.json();
 }
+// Lista completa de utilizadores para o painel de administracao.
+// Inclui qualquer perfil e tambem suspensos. Endpoint restrito a ADMIN.
+async function getUtilizadoresAdmin() {
+  try {
+    const res = await apiFetch("/users/admin/todos");
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data) ? data : [];
+  } catch {
+    return [];
+  }
+}
+// Suspende um utilizador (ativo = false). Combinado com o
+// authMiddleware do backend, o efeito e imediato.
+async function desativarUtilizador(id) {
+  const res = await apiFetch(`/users/${id}/desativar`, { method: "PATCH" });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message ?? err.erro ?? "Erro ao desativar utilizador");
+  }
+  return res.json();
+}
+// Reativa um utilizador (ativo = true).
+async function ativarUtilizador(id) {
+  const res = await apiFetch(`/users/${id}/ativar`, { method: "PATCH" });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message ?? err.erro ?? "Erro ao reativar utilizador");
+  }
+  return res.json();
+}
 export {
   aceitarProposta,
   aprovarAnuncioMarketplace,
@@ -811,6 +842,9 @@ export {
   getSexos,
   getTiposFigurino,
   getUtilizadores,
+  getUtilizadoresAdmin,
+  desativarUtilizador,
+  ativarUtilizador,
   mapFigurino,
   mapReserva,
   marcarMovimentoExportado,

@@ -5,6 +5,7 @@ import { getUtilizadorAtual } from "../lib/auth";
 import { useQuery } from "@tanstack/react-query";
 import { getReservas, getMinhasReservas, getOcorrencias, getMarketplace, getMarketplaceGestao, getMarketplaceDoUtilizador, getPropostasCobranca, getMinhasOcorrencias, getFigurinosRaw } from "../lib/services";
 const EMPTY_ANUNCIOS = [];
+const EMPTY_ARRAY = [];
 const DASHBOARD_NOTIF_KEY = "fighappens_notificacoes_vistas";
 const MARKETPLACE_INTERESSE_NOTIF_KEY = "fighappens_marketplace_interesses";
 const DASHBOARD_NOTIF_REMOVIDAS_KEY = "fighappens_notificacoes_removidas";
@@ -64,41 +65,41 @@ function Dashboard() {
     } catch {
     }
   };
-  const { data: figurinos = [] } = useQuery({
+  const { data: figurinos = EMPTY_ARRAY } = useQuery({
     queryKey: ["figurinos"],
     queryFn: getFigurinosRaw
   });
-  const { data: reservasFuncionario = [] } = useQuery({
+  const { data: reservasFuncionario = EMPTY_ARRAY } = useQuery({
     queryKey: ["reservas"],
     queryFn: getReservas,
     enabled: isFuncionario
   });
-  const { data: minhasReservas = [] } = useQuery({
+  const { data: minhasReservas = EMPTY_ARRAY } = useQuery({
     queryKey: ["minhasReservas"],
     queryFn: getMinhasReservas,
     enabled: !isFuncionario
   });
-  const { data: ocorrencias = [] } = useQuery({
+  const { data: ocorrencias = EMPTY_ARRAY } = useQuery({
     queryKey: ["ocorrencias"],
     queryFn: getOcorrencias,
     enabled: isFuncionario
   });
-  const { data: minhasOcorrencias = [] } = useQuery({
+  const { data: minhasOcorrencias = EMPTY_ARRAY } = useQuery({
     queryKey: ["minhasOcorrencias"],
     queryFn: getMinhasOcorrencias,
     enabled: !isFuncionario
   });
-  const { data: marketplaceGestao = [] } = useQuery({
+  const { data: marketplaceGestao = EMPTY_ARRAY } = useQuery({
     queryKey: ["marketplaceGestao"],
     queryFn: () => getMarketplaceGestao(),
     enabled: isFuncionario
   });
-  const { data: propostas = [] } = useQuery({
+  const { data: propostas = EMPTY_ARRAY } = useQuery({
     queryKey: ["propostasCobranca"],
     queryFn: getPropostasCobranca,
     enabled: isFuncionario
   });
-  const { data: marketplace = [] } = useQuery({
+  const { data: marketplace = EMPTY_ARRAY } = useQuery({
     queryKey: ["marketplace"],
     queryFn: getMarketplace,
     enabled: !isFuncionario

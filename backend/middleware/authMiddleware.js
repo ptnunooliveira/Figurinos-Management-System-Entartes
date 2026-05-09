@@ -55,22 +55,44 @@ const authMiddleware = async (req, res, next) => {
 
         const token = parts[1];
 
-        // 2) Validar a assinatura/expiracao do token e extrair o payload
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        // 2) Validar a assinatura/expiracao do token e extrair o payload.
+        //    Erros aqui (token invalido/expirado) devem devolver 401
+        //    para que o frontend force novo login.
+        let decoded;
+        try {
+            decoded = jwt.verify(token, process.env.JWT_SECRET);
+        } catch (err) {
+            return res.status(401).json({
+                message: "Token invalido ou expirado."
+            });
+        }
 
         // 3) Confirmar na base de dados o estado actual do utilizador.
         //    Mesmo que o JWT esteja valido, o utilizador pode ter sido
         //    suspenso pelo administrador (ativo = false) ou eliminado.
         //    O select e propositadamente reduzido aos campos minimos
         //    necessarios para nao pesar em cada pedido autenticado.
-        const utilizadorAtual = await prisma.utilizador.findUnique({
-            where: { id: decoded.id },
-            select: {
-                id: true,
-                perfil: true,
-                ativo: true
-            }
-        });
+        //
+        //    Erros desta query (BD indisponivel, pool esgotado, etc.)
+        //    NAO devem devolver 401 -- isso faria o frontend acreditar
+        //    que o token e' invalido e expulsaria o utilizador. Sao
+        //    tratados como 503 (servico temporariamente indisponivel).
+        let utilizadorAtual;
+        try {
+            utilizadorAtual = await prisma.utilizador.findUnique({
+                where: { id: decoded.id },
+                select: {
+                    id: true,
+                    perfil: true,
+                    ativo: true
+                }
+            });
+        } catch (err) {
+            console.error("authMiddleware: erro a validar utilizador na BD:", err);
+            return res.status(503).json({
+                message: "Servico temporariamente indisponivel. Tente novamente."
+            });
+        }
 
         if (!utilizadorAtual) {
             // O utilizador desapareceu da BD apos a emissao do token
@@ -100,8 +122,11 @@ const authMiddleware = async (req, res, next) => {
         next();
 
     } catch (error) {
-        return res.status(401).json({
-            message: "Token invalido ou expirado."
+        // Salvaguarda final para qualquer erro inesperado fora dos
+        // blocos try/catch internos (ex.: erro a ler headers).
+        console.error("authMiddleware: erro inesperado:", error);
+        return res.status(500).json({
+            message: "Erro inesperado no middleware de autenticacao."
         });
     }
 };

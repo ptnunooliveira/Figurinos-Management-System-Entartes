@@ -132,7 +132,7 @@ function Dashboard() {
         return [];
       }
     })();
-    const geradas = meusAnunciosDashboard.map((a) => {
+    const notificacoesAnuncios = meusAnunciosDashboard.map((a) => {
       const estado = (a.estado || "").toLowerCase();
       const dataRef = a.data_aprovacao || a.data_anuncio || "";
       const chave = `${a.id}:${estado}:${dataRef}`;
@@ -144,9 +144,51 @@ function Dashboard() {
       }
       return null;
     }).filter((n) => n !== null).filter((n) => !removidas.includes(n.chave));
+    const notificacoesReservas = minhasReservas.flatMap((reserva) => {
+      return (reserva.linhas ?? []).map((linha) => {
+        const estado = (linha.estado || reserva.estado || "").trim().toUpperCase();
+        const nomeFigurino = linha.anuncio?.figurino?.nome || "figurino";
+        const chave = `reserva:${reserva.id}:${linha.id}:${estado}`;
+        if (estado === "CONFIRMADA") {
+          return {
+            chave,
+            mensagem: `A sua reserva do figurino "${nomeFigurino}" foi aprovada.`,
+            lida: vistas.includes(chave)
+          };
+        }
+        if (estado === "EM CURSO") {
+          return {
+            chave,
+            mensagem: `O levantamento do figurino "${nomeFigurino}" foi registado. Deve devolver o figurino na data indicada.`,
+            lida: vistas.includes(chave)
+          };
+        }
+        return null;
+      });
+    }).filter((n) => n !== null).filter((n) => !removidas.includes(n.chave));
+    const notificacoesOcorrencias = minhasOcorrencias.map((ocorrencia) => {
+      const estado = (ocorrencia.estado || "").toLowerCase();
+      const chave = `ocorrencia:${ocorrencia.id}:${estado}`;
+      if (estado === "a aguardar resposta do aluno" || estado === "a aguardar" || estado === "contestada pelo aluno") {
+        return {
+          chave,
+          mensagem: `A ocorrencia #${ocorrencia.id} do figurino "${ocorrencia.figurino_nome || "figurino"}" precisa da sua atencao.`,
+          lida: vistas.includes(chave)
+        };
+      }
+      if ((ocorrencia.propostas ?? []).some((p) => (p.estado || "").toLowerCase() !== "aceite" && (p.estado || "").toLowerCase() !== "rejeitada" && (p.estado || "").toLowerCase() !== "finalizada")) {
+        return {
+          chave: `${chave}:proposta`,
+          mensagem: `Tem uma proposta de cobranca para responder na ocorrencia #${ocorrencia.id}.`,
+          lida: vistas.includes(`${chave}:proposta`)
+        };
+      }
+      return null;
+    }).filter((n) => n !== null).filter((n) => !removidas.includes(n.chave));
+    const geradas = [...notificacoesAnuncios, ...notificacoesReservas, ...notificacoesOcorrencias];
     setNotificacoesInteresse(interesse);
     setNotificacoesExtra(geradas);
-  }, [isFuncionario, meusAnunciosDashboard, utilizadorAtual?.id]);
+  }, [isFuncionario, meusAnunciosDashboard, minhasOcorrencias, minhasReservas, utilizadorAtual?.id]);
   const figurinosDisponiveis = figurinos.length;
   const reservasAtivas = isFuncionario ? reservasFuncionario.filter((r) => {
     const e = r.estado?.toUpperCase();

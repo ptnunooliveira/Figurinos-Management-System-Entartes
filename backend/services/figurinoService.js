@@ -14,6 +14,7 @@
  */
 
 const prisma = require('../prisma/client');
+const DIAS_BLOQUEIO_APOS_DEVOLUCAO = 3;
 
 
 // ------------------------------------------------------------
@@ -73,6 +74,12 @@ const datasSobrepoem = (inicioA, fimA, inicioB, fimB) => {
     const bFim = new Date(fimB);
 
     return aInicio <= bFim && bInicio <= aFim;
+};
+
+const adicionarDias = (data, dias) => {
+    const novaData = new Date(data);
+    novaData.setDate(novaData.getDate() + dias);
+    return novaData;
 };
 
 
@@ -598,7 +605,7 @@ const obterDisponibilidadeFigurino = async (idFigurino, dataInicio, dataFim) => 
 
         return datasSobrepoem(
             linha.datainicio,
-            linha.datafim,
+            adicionarDias(linha.datafim, DIAS_BLOQUEIO_APOS_DEVOLUCAO),
             dataInicio,
             dataFim
         );

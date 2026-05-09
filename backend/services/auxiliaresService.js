@@ -51,8 +51,11 @@ const criarCategoria = async (nomecategoria) => {
     throw err;
   }
 
+  const novoId = await obterProximoIdAuxiliar("categoria");
+
   return prisma.categoria.create({
     data: {
+      id: novoId,
       nomecategoria,
     },
   });

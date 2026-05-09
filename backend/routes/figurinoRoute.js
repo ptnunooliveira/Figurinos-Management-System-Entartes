@@ -29,7 +29,7 @@ router.get('/', authMiddleware, figurinoController.obterTodosFigurinos);
 router.get('/:id', authMiddleware, figurinoController.obterFigurino);
 
 // GET /api/figurinos/:id/historico
-router.get('/:id/historico', authMiddleware, perfilMiddleware('FUNCIONARIO'), figurinoController.obterHistoricoFigurino);
+router.get('/:id/historico', authMiddleware, perfilMiddleware(['FUNCIONARIO', 'ADMIN']), figurinoController.obterHistoricoFigurino);
 
 // GET /api/figurinos/:id/disponibilidade?dataInicio=YYYY-MM-DD&dataFim=YYYY-MM-DD
 router.get('/:id/disponibilidade', authMiddleware, figurinoController.obterDisponibilidadeFigurino);

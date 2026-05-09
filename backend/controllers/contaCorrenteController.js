@@ -20,10 +20,6 @@ const obterTodosMovimentosContaCorrente = async (req, res) => {
     try {
         const movimentos = await contaCorrenteService.obterTodosMovimentosContaCorrente();
 
-        if (movimentos.length === 0) {
-            return res.status(200).json({ mensagem: 'Sem movimentos de conta corrente.' });
-        }
-
         return res.status(200).json(movimentos);
 
     } catch (erro) {
@@ -64,7 +60,7 @@ const obterMinhaContaCorrente = async (req, res) => {
 
         const contaCorrente = await contaCorrenteService.obterContaCorrentePorUtilizador(idUtilizador);
 
-        return res.status(200).json(contaCorrente);
+        return res.status(200).json(contaCorrente.movimentos);
 
     } catch (erro) {
         console.error('Erro ao obter a minha conta corrente:', erro);
@@ -84,7 +80,7 @@ const obterContaCorrentePorUtilizador = async (req, res) => {
 
         const contaCorrente = await contaCorrenteService.obterContaCorrentePorUtilizador(idUtilizador);
 
-        return res.status(200).json(contaCorrente);
+        return res.status(200).json(contaCorrente.movimentos);
 
     } catch (erro) {
         console.error('Erro ao obter conta corrente por utilizador:', erro);

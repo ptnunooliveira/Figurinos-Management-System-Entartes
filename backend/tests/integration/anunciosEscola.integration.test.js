@@ -62,32 +62,60 @@ describe("AnunciosEscola BPMN integration", () => {
   });
 
   // ----------------------------------------------------------------------
-  // Testes de acesso publico
+  // Testes de acesso (rotas privadas - exigem autenticacao)
+  // Nota: anteriormente estes GET eram publicos. Foram tornados privados
+  // para que utilizadores suspensos (ativo=false) deixem de conseguir
+  // listar/ver anuncios via o authMiddleware.
   // ----------------------------------------------------------------------
-  test("GET /anuncios-escola sem token devolve 200 (rota publica)", async () => {
+  test("GET /anuncios-escola sem token devolve 401", async () => {
     const res = await request(app).get("/anuncios-escola");
+
+    expect(res.status).toBe(401);
+  });
+
+  test("GET /anuncios-escola com token valido devolve 200", async () => {
+    const res = await request(app)
+      .get("/anuncios-escola")
+      .set("Authorization", `Bearer ${alunoToken}`);
 
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body)).toBe(true);
   });
 
-  test("GET /anuncios-escola com filtros devolve 200", async () => {
+  test("GET /anuncios-escola com filtros e token valido devolve 200", async () => {
     const res = await request(app)
       .get("/anuncios-escola")
+      .set("Authorization", `Bearer ${alunoToken}`)
       .query({ tamanho: "M" });
 
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body)).toBe(true);
   });
 
-  test("GET /anuncios-escola/:id com ID invalido devolve lista ou 404", async () => {
+  test("GET /anuncios-escola/:id sem token devolve 401", async () => {
     const res = await request(app).get("/anuncios-escola/999999");
+
+    expect(res.status).toBe(401);
+  });
+
+  test("GET /anuncios-escola/:id com token valido e ID invalido devolve 404", async () => {
+    const res = await request(app)
+      .get("/anuncios-escola/999999")
+      .set("Authorization", `Bearer ${alunoToken}`);
 
     expect([200, 404]).toContain(res.status);
   });
 
-  test("GET /anuncios-escola/:id/disponibilidade sem params devolve 400", async () => {
+  test("GET /anuncios-escola/:id/disponibilidade sem token devolve 401", async () => {
     const res = await request(app).get("/anuncios-escola/1/disponibilidade");
+
+    expect(res.status).toBe(401);
+  });
+
+  test("GET /anuncios-escola/:id/disponibilidade com token mas sem params devolve 400", async () => {
+    const res = await request(app)
+      .get("/anuncios-escola/1/disponibilidade")
+      .set("Authorization", `Bearer ${alunoToken}`);
 
     expect(res.status).toBe(400);
   });
@@ -149,7 +177,9 @@ describe("AnunciosEscola BPMN integration", () => {
   test("GET /anuncios-escola/:id devolve o anuncio criado", async () => {
     if (!anuncioCriadoId) return;
 
-    const res = await request(app).get(`/anuncios-escola/${anuncioCriadoId}`);
+    const res = await request(app)
+      .get(`/anuncios-escola/${anuncioCriadoId}`)
+      .set("Authorization", `Bearer ${alunoToken}`);
 
     expect(res.status).toBe(200);
     expect(res.body.id).toBe(anuncioCriadoId);
@@ -160,6 +190,7 @@ describe("AnunciosEscola BPMN integration", () => {
 
     const res = await request(app)
       .get(`/anuncios-escola/${anuncioCriadoId}/disponibilidade`)
+      .set("Authorization", `Bearer ${alunoToken}`)
       .query({ dataInicio: "2026-09-01", dataFim: "2026-09-30" });
 
     expect([200, 400, 404]).toContain(res.status);

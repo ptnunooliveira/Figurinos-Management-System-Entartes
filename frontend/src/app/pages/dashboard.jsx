@@ -5,6 +5,7 @@ import { getUtilizadorAtual } from "../lib/auth";
 import { useQuery } from "@tanstack/react-query";
 import { getReservas, getMinhasReservas, getOcorrencias, getMarketplace, getMarketplaceGestao, getMarketplaceDoUtilizador, getPropostasCobranca, getMinhasOcorrencias, getFigurinosRaw } from "../lib/services";
 const EMPTY_ANUNCIOS = [];
+const EMPTY_ARRAY = [];
 const DASHBOARD_NOTIF_KEY = "fighappens_notificacoes_vistas";
 const MARKETPLACE_INTERESSE_NOTIF_KEY = "fighappens_marketplace_interesses";
 const DASHBOARD_NOTIF_REMOVIDAS_KEY = "fighappens_notificacoes_removidas";
@@ -64,41 +65,41 @@ function Dashboard() {
     } catch {
     }
   };
-  const { data: figurinos = [] } = useQuery({
+  const { data: figurinos = EMPTY_ARRAY } = useQuery({
     queryKey: ["figurinos"],
     queryFn: getFigurinosRaw
   });
-  const { data: reservasFuncionario = [] } = useQuery({
+  const { data: reservasFuncionario = EMPTY_ARRAY } = useQuery({
     queryKey: ["reservas"],
     queryFn: getReservas,
     enabled: isFuncionario
   });
-  const { data: minhasReservas = [] } = useQuery({
+  const { data: minhasReservas = EMPTY_ARRAY } = useQuery({
     queryKey: ["minhasReservas"],
     queryFn: getMinhasReservas,
     enabled: !isFuncionario
   });
-  const { data: ocorrencias = [] } = useQuery({
+  const { data: ocorrencias = EMPTY_ARRAY } = useQuery({
     queryKey: ["ocorrencias"],
     queryFn: getOcorrencias,
     enabled: isFuncionario
   });
-  const { data: minhasOcorrencias = [] } = useQuery({
+  const { data: minhasOcorrencias = EMPTY_ARRAY } = useQuery({
     queryKey: ["minhasOcorrencias"],
     queryFn: getMinhasOcorrencias,
     enabled: !isFuncionario
   });
-  const { data: marketplaceGestao = [] } = useQuery({
+  const { data: marketplaceGestao = EMPTY_ARRAY } = useQuery({
     queryKey: ["marketplaceGestao"],
     queryFn: () => getMarketplaceGestao(),
     enabled: isFuncionario
   });
-  const { data: propostas = [] } = useQuery({
+  const { data: propostas = EMPTY_ARRAY } = useQuery({
     queryKey: ["propostasCobranca"],
     queryFn: getPropostasCobranca,
     enabled: isFuncionario
   });
-  const { data: marketplace = [] } = useQuery({
+  const { data: marketplace = EMPTY_ARRAY } = useQuery({
     queryKey: ["marketplace"],
     queryFn: getMarketplace,
     enabled: !isFuncionario
@@ -243,7 +244,7 @@ function Dashboard() {
       {
     /* Secção de Boas-Vindas */
   }
-      <div className="bg-gradient-to-br from-fig-purple to-fig-magenta rounded-2xl p-8 text-white relative overflow-hidden">
+      <div className="bg-gradient-to-br from-fig-purple to-fig-magenta rounded-2xl p-8 text-white relative overflow-visible">
         <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: "radial-gradient(circle at 80% 20%, white 0%, transparent 60%)" }} />
         <div className="flex items-start justify-between gap-4 relative">
           <div>
@@ -268,7 +269,7 @@ function Dashboard() {
                   </span>}
               </button>
 
-              {mostrarNotificacoes && <div className="absolute right-0 mt-2 w-96 max-w-[90vw] bg-white text-gray-900 rounded-xl shadow-xl border z-20">
+              {mostrarNotificacoes && <div className="absolute right-0 mt-2 w-96 max-w-[90vw] bg-white text-gray-900 rounded-xl shadow-xl border z-50">
                   <div className="p-4 border-b">
                     <p className="font-semibold">Notificações</p>
                   </div>

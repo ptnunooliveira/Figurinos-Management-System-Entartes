@@ -30,8 +30,8 @@ function Layout() {
   };
   const navegacaoFuncionario = [
     { nome: "Painel", href: "/", icon: Home },
-    { nome: "Figurinos", href: "/figurinos", icon: Shirt },
-    { nome: "An\xFAncios Escola", href: "/anuncios-escola", icon: Megaphone },
+    { nome: "Invent\xE1rio", href: "/figurinos", icon: Shirt },
+    { nome: "Figurinos", href: "/anuncios-escola", icon: Megaphone },
     { nome: "Reservas", href: "/reservas", icon: Calendar },
     { nome: "Ocorr\xEAncias", href: "/ocorrencias", icon: AlertTriangle },
     { nome: "Marketplace", href: "/marketplace", icon: ShoppingBag },
@@ -42,7 +42,7 @@ function Layout() {
   ];
   const navegacaoAluno = [
     { nome: "Painel", href: "/", icon: Home },
-    { nome: "An\xFAncios Escola", href: "/anuncios-escola", icon: Megaphone },
+    { nome: "Figurinos", href: "/anuncios-escola", icon: Megaphone },
     { nome: "Reservas", href: "/reservas", icon: Calendar },
     { nome: "Ocorr\xEAncias", href: "/ocorrencias", icon: AlertTriangle },
     { nome: "Marketplace", href: "/marketplace", icon: ShoppingBag },

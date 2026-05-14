@@ -12,13 +12,19 @@ function Login() {
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
-    const utilizador = await login(email, password);
-    if (utilizador) {
-      toast.success(`Bem-vindo, ${utilizador.nome}!`);
+    const resultado = await login(email, password);
+    if (resultado.ok) {
+      toast.success(`Bem-vindo, ${resultado.utilizador.nome}!`);
       navigate("/");
       window.location.reload();
     } else {
-      toast.error("Email ou palavra-passe incorretos. Tente novamente.");
+      if (resultado.code === "INACTIVE") {
+        toast.error("Conta desativada. Contacte o administrador.");
+      } else if (resultado.code === "INVALID") {
+        toast.error("Email ou palavra-passe incorretos. Tente novamente.");
+      } else {
+        toast.error("Erro ao iniciar sessão. Tente novamente.");
+      }
       setLoading(false);
     }
   };

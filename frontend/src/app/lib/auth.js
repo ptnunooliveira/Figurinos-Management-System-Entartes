@@ -12,13 +12,17 @@ async function login(email, password) {
       method: "POST",
       body: JSON.stringify({ email, password })
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      if (res.status === 403) return { ok: false, code: "INACTIVE" };
+      if (res.status === 401) return { ok: false, code: "INVALID" };
+      return { ok: false, code: "ERROR" };
+    }
     const data = await res.json();
     setToken(data.token);
     const meRes = await apiFetch("/auth/me");
     if (!meRes.ok) {
       removeToken();
-      return null;
+      return { ok: false, code: "ERROR" };
     }
     const user = await meRes.json();
     const utilizador = {
@@ -32,10 +36,10 @@ async function login(email, password) {
       perfil: user.perfil
     };
     localStorage.setItem(AUTH_KEY, JSON.stringify(utilizador));
-    return utilizador;
+    return { ok: true, utilizador };
   } catch {
     removeToken();
-    return null;
+    return { ok: false, code: "ERROR" };
   }
 }
 function logout() {

@@ -1,70 +1,66 @@
-# 1. Enquadramento
+# 1. Overview
 
-Este projeto é desenvolvido no âmbito da iniciativa Projeto 50+10 do 2.º ano da Licenciatura em Engenharia de Sistemas Informáticos do IPCA, ano letivo 2025/2026.
+This project is developed as part of the Projeto 50+10 initiative within the 2nd year of the Bachelor's Degree in Computer Systems Engineering at IPCA, during the 2025/2026 academic year.
 
-O trabalho visa a articulação prática entre as Unidades Curriculares:
+The project aims to establish a practical connection between the following Course Units:
 
-Projeto de Desenvolvimento de Software (PDS): Foco na gestão do ciclo de vida, arquitetura e desenvolvimento Back-end.
-Programação Web (PW): Foco no desenvolvimento do Front-end e experiência de utilizador.
+**Software Development Project (PDS):** Focus on lifecycle management, architecture, and Back-end development.
+**Web Programming (PW):** Focus on Front-end development and user experience.
 
+# 2. Scope and Client
 
-# 2. Âmbito e Cliente
+The central theme of the project is **"Costume Management"**, developed in collaboration with the external organization **Entartes**.
 
-O tema central do projeto é a "Gestão de Figurinos" e conta com a colaboração da entidade externa Entartes.
-O objetivo é desenvolver uma solução de software completa que responda às necessidades identificadas, desde a análise de requisitos até à entrega final do produto.
+The objective is to develop a complete software solution that addresses the identified needs, from requirements analysis through to the final product delivery.
 
+# 3. Architecture and Technology Stack
 
-# 3. Arquitetura e Stack Tecnológica
+The system follows a distributed architecture with a clear separation between client and server, communicating through a RESTful API.
 
-O sistema segue uma arquitetura distribuída com separação clara entre cliente e servidor, comunicando via API RESTful.
+**Front-end:** React
+**Back-end:** Node.js
+**Database:** PostgreSQL
+**Version Control:** Git
 
-Front-end: REACT.
-Back-end: Node.js.
-Base de Dados: Microsoft SQL Server.
-Controlo de Versões: Git.
+# 4. Work Methodology
 
+The team follows the **Scrum** methodology for iterative planning and development management.
 
-# 4. Metodologia de Trabalho
+**Sprints:** Development cycles with an average duration of 2 weeks.
+**Management:** Task (Backlog), Bug, and Sprint tracking is carried out entirely on the Azure DevOps platform.
+**Team:** 5 members.
 
-A equipa utiliza a metodologia Scrum para o planeamento e gestão iterativa do desenvolvimento.
+# 5. Main Milestones
 
-Sprints: Ciclos de desenvolvimento com duração média de 2 semanas.
-Gestão: O acompanhamento das tarefas (Backlog), Bugs e Sprints é realizado integralmente nesta plataforma Azure DevOps.
-Equipa: 5 elementos.
+The planning is aligned with the mandatory deliverables of the Course Units:
 
+**Requirements Analysis and Modelling:** Specification, diagrams (BPMN, UML), and mockups — March.
+**Beta Version (vBeta):** Main features implemented and tested — Date to be defined.
+**RTW (Ready to Web) Version:** Final, optimized version ready for production — May.
+**Final Presentation:** Project defense on May 29, 2026.
 
-# 5. Principais Milestones
+# 6. Marketplace Technical Note
 
-O planeamento está alinhado com as entregas obrigatórias da UC:
+To accelerate the implementation of the Marketplace's temporal lifecycle without modifying the E-R model at this stage, the `dataaprovacao` field has been reused as the **"date of the last decision"** for an advertisement:
 
-Análise de Requisitos e Modelação: Especificação, Diagramas (BPMN, UML) e Mockups - Março.
-Versão Beta (vBeta): Funcionalidades principais implementadas e testadas - Data a definir.
-Versão RTW (Ready to Web): Versão final, otimizada e pronta para produção - Maio.
-Apresentação Final: Defesa do projeto a 29 de Maio de 2026.
+* When an advertisement is published, `dataaprovacao` stores the publication date.
+* When an advertisement is rejected, `dataaprovacao` stores the rejection date.
 
+Based on this date and the advertisement's current status, the backend applies the following time-based checks:
 
-# 6. Nota Técnica Marketplace
+* `Rejected` for more than 3 days is moved to `Archived` (soft delete).
+* `Published` for more than 30 days is moved to `Pending Renewal`.
 
-Para acelerar a implementação do ciclo temporal do Marketplace sem alterar o modelo E-R nesta fase, o campo `dataaprovacao` foi reutilizado como "data da última decisão" do anúncio:
+# 7. Image Policy (Marketplace)
 
-- Quando um anúncio é publicado, `dataaprovacao` guarda a data de publicação.
-- Quando um anúncio é rejeitado, `dataaprovacao` guarda a data de rejeição.
+To keep the project within the free-tier limits while maintaining good performance, Marketplace advertisements follow the following policy:
 
-Com base nesta data e no estado atual do anúncio, o backend aplica verificações temporais:
+* Maximum of `5` images per advertisement.
+* Maximum size of `2MB` per image.
+* Accepted formats: `JPG`, `PNG`, and `WEBP`.
 
-- `Rejeitado` por mais de 3 dias passa para `Arquivado` (soft delete).
-- `Publicado` por mais de 30 dias passa para `PendenteRenovacao`.
+**Storage:**
 
-# 7. Política de Imagens (Marketplace)
-
-Para manter o projeto dentro dos limites gratuitos e com boa performance, os anúncios do Marketplace seguem esta política:
-
-- Máximo de `5` imagens por anúncio.
-- Tamanho máximo de `2MB` por imagem.
-- Formatos aceites: `JPG`, `PNG` e `WEBP`.
-
-Armazenamento:
-
-- As imagens são carregadas para Supabase Storage (bucket configurável por `SUPABASE_STORAGE_BUCKET`, por omissão `marketplace-images`).
-- As imagens ficam organizadas por pasta de anúncio em `marketplace/<id_anuncio>/...`.
-- As URLs públicas são resolvidas dinamicamente a partir do Storage quando os anúncios são consultados.
+* Images are uploaded to Supabase Storage (bucket configurable through `SUPABASE_STORAGE_BUCKET`, with `marketplace-images` as the default).
+* Images are organized into advertisement-specific folders under `marketplace/<id_anuncio>/...`.
+* Public URLs are dynamically resolved from Storage when advertisements are retrieved.

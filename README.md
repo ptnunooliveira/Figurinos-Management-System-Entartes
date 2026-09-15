@@ -4,12 +4,12 @@ This project is developed as part of the Projeto 50+10 initiative within the 2nd
 
 The project aims to establish a practical connection between the following Course Units:
 
-**Software Development Project (PDS):** Focus on lifecycle management, architecture, and Back-end development.
-**Web Programming (PW):** Focus on Front-end development and user experience.
+**Software Development Project (PDS):** Focus on lifecycle management, architecture, and back-end development.
+**Web Programming (PW):** Focus on front-end development and user experience.
 
 # 2. Scope and Client
 
-The central theme of the project is **"Costume Management"**, developed in collaboration with the external organization **Entartes**.
+The central theme of the project is **"Costume Management"**, developed in collaboration with the external organization **Ent'artes**.
 
 The objective is to develop a complete software solution that addresses the identified needs, from requirements analysis through to the final product delivery.
 
